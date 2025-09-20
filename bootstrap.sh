@@ -35,7 +35,6 @@ $HOME/.config/openbox/environment
 $HOME/.config/tint2
 $HOME/.config/picom/picom.conf
 $HOME/.config/alacritty
-$HOME/.config/nvim
 $HOME/.local/bin
 $HOME/.config/git/config
 $HOME/.bashrc
