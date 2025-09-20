@@ -39,6 +39,7 @@ $HOME/.local/bin
 $HOME/.config/git/config
 $HOME/.bashrc
 $HOME/.zshrc
+$HOME/.config/nvim
 P
 )
 
