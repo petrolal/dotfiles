@@ -59,22 +59,24 @@ REPO_URL=https://gitlab.com/usuario/dotfiles.git NO_AUR=1 bash -c "$(curl -fsSL 
 
 ## Estrutura
 
-> dotfiles/
-> ├── openbox/.config/openbox/
-> ├── tint2/.config/tint2/
-> ├── picom/.config/picom/
-> ├── kitty/.config/kitty/
-> ├── alacritty/.config/alacritty/
-> ├── dunst/.config/dunst/
-> ├── rofi/.config/rofi/
-> ├── gtk/.config/gtk-3.0/
-> ├── gtk2/.gtkrc-2.0
-> ├── kvantum/.config/Kvantum/
-> ├── fish/.config/fish/
-> ├── scripts/.local/bin/
-> ├── wallpapers/.wallpapers/
-> ├── fehbg/.fehbg
-> └── bootstrap.sh
+```text
+dotfiles/
+├── openbox/.config/openbox/
+├── tint2/.config/tint2/
+├── picom/.config/picom/
+├── kitty/.config/kitty/
+├── alacritty/.config/alacritty/
+├── dunst/.config/dunst/
+├── rofi/.config/rofi/
+├── gtk/.config/gtk-3.0/
+├── gtk2/.gtkrc-2.0
+├── kvantum/.config/Kvantum/
+├── fish/.config/fish/
+├── scripts/.local/bin/
+├── wallpapers/.wallpapers/
+├── fehbg/.fehbg
+└── bootstrap.sh
+```
 
 ## Observação
 
