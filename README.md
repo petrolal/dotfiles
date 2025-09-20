@@ -44,13 +44,10 @@ openbox --restart
 
 > - REPO_URL=https://gitlab.com/usuario/dotfiles.git
 >   Usar outro repositório (default é o GitHub acima).
-
 > - DOTDIR=$HOME/.meusdotfiles
 >   Alterar diretório de instalação.
-
 > - NO_AUR=1
 >   Pular instalação de pacotes AUR.
-
 > - CHSH_SKIP=1
 >   Não trocar o shell para Zsh.
 
