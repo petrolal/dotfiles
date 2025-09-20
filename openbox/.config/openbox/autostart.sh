@@ -35,3 +35,4 @@ joyd_mpd_notifier
 
 # Any additions should be added below.
 xrandr --output HDMI-1-0 --above eDP-2 --auto &
+feh --bg-fill ~/wallpapers/screen1.png ~/wallpapers/screen2.png &

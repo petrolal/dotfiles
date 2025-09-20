@@ -1,2 +1,2 @@
 #!/bin/sh
-feh --no-fehbg --bg-fill '/home/petrolal/.wallpapers/mechanical/okita-souji_FHD.jpg' 
+feh --no-fehbg --bg-fill '/home/petrolal/.wallpapers/pinksnake/pink_snake_japanese_side.png' '/home/petrolal/dotfiles/wallpapers/.wallpapers/pinksnake/pink_snake_japanese_side.png' 
