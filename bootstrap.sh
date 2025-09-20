@@ -17,7 +17,7 @@ TS="$(date +%Y%m%d-%H%M%S)"
 BK="$HOME/dotfiles_backup_$TS"
 mkdir -p "$BK"
 
-backup_if_conflict() {
+backup() {
 	local target="$1"
 	if [ -e "$target" ] && [ ! -L "$target" ]; then
 		mkdir -p "$BK$(dirname "$target")"
@@ -25,35 +25,46 @@ backup_if_conflict() {
 	fi
 }
 
-# Liste aqui os destinos críticos que podem existir
-mapfile -t paths < <(
-	cat <<P
-$HOME/.config/openbox/rc.xml
-$HOME/.config/openbox/menu.xml
-$HOME/.config/openbox/autostart
-$HOME/.config/openbox/environment
+# 3) Alvos críticos a checar
+while read -r p; do backup "$p"; done <<P
+$HOME/.config/openbox
+$HOME/.config/rofi
+$HOME/.config/gtk-3.0
+$HOME/.config/Kvantum
 $HOME/.config/tint2
-$HOME/.config/picom/picom.conf
 $HOME/.config/alacritty
+$HOME/.config/git
+$HOME/.config/kitty
+$HOME/.config/picom/picom.conf
 $HOME/.local/bin
-$HOME/.config/git/config
+$HOME/.config/dunst
+$HOME/.config/nitrogen
+$HOME/.Xresources
+$HOME/.config/fish
+$HOME/.config/starship.toml
+$HOME/.gtkrc-2.0
+$HOME/.config/mpv
+$HOME/.config/mpd
+$HOME/.config/ncmpcpp
+$HOME/.config/lazygit
+$HOME/.config/btop
 $HOME/.bashrc
 $HOME/.zshrc
-$HOME/.config/nvim
+$HOME/.config/starship.toml
+$HOME/.fonts
+$HOME/.icons
+$HOME/.themes
+$HOME/.wallpapers
+$HOME/.fehbg
+$HOME/.config/obmenu-generator
+$HOME/.config/autostart
 P
-)
 
-for p in "${paths[@]}"; do
-	backup_if_conflict "$p"
-done
-
-# 3) Stow dos pacotes
+# 4) Stow de todos os pacotes presentes
 cd "$(dirname "$0")"
-
-# Cada diretório de primeiro nível é um pacote
 for pkg in */; do
 	pkg="${pkg%/}"
-	echo "[info] stow $pkg"
+	echo "[stow] $pkg"
 	stow -v -R -t "$HOME" "$pkg"
 done
 

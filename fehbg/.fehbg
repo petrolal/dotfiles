@@ -1,0 +1,2 @@
+#!/bin/sh
+feh --no-fehbg --bg-fill '/home/petrolal/.wallpapers/mechanical/okita-souji_FHD.jpg' 
