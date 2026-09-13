@@ -224,12 +224,12 @@ include fx.conf
 ### ────────────────────────────────────────────────────────────────
 # Primary Focus Workspaces: Prefer external monitor, fallback to laptop display (eDP-1)
 workspace $ws2 output HDMI-A-1 DP-1 HDMI-1 HDMI-2 eDP-1
-workspace $ws3 output HDMI-A-1 DP-1 HDMI-1 HDMI-2 eDP-1
 workspace $ws7 output HDMI-A-1 DP-1 HDMI-1 HDMI-2 eDP-1
 workspace $ws8 output HDMI-A-1 DP-1 HDMI-1 HDMI-2 eDP-1
 
-# Secondary / Aux / Comms Workspaces: Prefer laptop display (eDP-1), fallback to external
+# Secondary / Aux / Comms / Web Workspaces: Prefer laptop display (eDP-1), fallback to external
 workspace $ws1 output eDP-1 HDMI-A-1 DP-1 HDMI-1 HDMI-2
+workspace $ws3 output eDP-1 HDMI-A-1 DP-1 HDMI-1 HDMI-2
 workspace $ws4 output eDP-1 HDMI-A-1 DP-1 HDMI-1 HDMI-2
 workspace $ws5 output eDP-1 HDMI-A-1 DP-1 HDMI-1 HDMI-2
 workspace $ws6 output eDP-1 HDMI-A-1 DP-1 HDMI-1 HDMI-2
@@ -291,13 +291,21 @@ assign [class="mpv"] $ws4
 assign [app_id="vlc"] $ws4
 assign [class="vlc"] $ws4
 assign [app_id="(?i)^steam$"] $ws4
-assign [class="(?i)^steam$"] $ws4
+assign [class="(?i)steam.*"] $ws4
+assign [instance="(?i)steam.*"] $ws4
+assign [class="(?i)steamwebhelper"] $ws4
+assign [instance="(?i)steamwebhelper"] $ws4
+assign [class="^steam_app_.*"] $ws4
 assign [class="^heroic$"] $ws4
 assign [class="^lutris$"] $ws4
 assign [app_id="gamescope"] $ws4
 assign [class="^gamescope$"] $ws4
-for_window [class="(?i)steam"] move container to workspace number 4, workspace number 4
+for_window [class="(?i)steam.*"] move container to workspace number 4, workspace number 4
+for_window [instance="(?i)steam.*"] move container to workspace number 4, workspace number 4
+for_window [class="(?i)steamwebhelper"] move container to workspace number 4, workspace number 4
+for_window [instance="(?i)steamwebhelper"] move container to workspace number 4, workspace number 4
 for_window [app_id="(?i)steam"] move container to workspace number 4, workspace number 4
+for_window [class="^steam_app_.*"] move container to workspace number 4, workspace number 4
 for_window [class="^heroic$"] move container to workspace number 4, workspace number 4
 for_window [class="^lutris$"] move container to workspace number 4, workspace number 4
 for_window [class="^gamescope$"] move container to workspace number 4, workspace number 4
