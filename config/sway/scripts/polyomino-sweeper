@@ -52,16 +52,26 @@ NUM_COLORS = {
     8: f"{ESC}38;2;248;250;252m"
 }
 
-CACHE_TARGETS = [
-    ("Thumbnails", os.path.expanduser("~/.cache/thumbnails"), "rm -rf ~/.cache/thumbnails/*"),
-    ("Yay/AUR Build Cache", os.path.expanduser("~/.cache/yay"), "rm -rf ~/.cache/yay/*"),
-    ("Pip Cache", os.path.expanduser("~/.cache/pip"), "rm -rf ~/.cache/pip/*"),
-    ("Cargo Cache", os.path.expanduser("~/.cache/cargo"), "cargo cache --autoclean 2>/dev/null || true"),
-    ("Mozilla Cache", os.path.expanduser("~/.cache/mozilla"), "rm -rf ~/.cache/mozilla/firefox/*.default*/*cache*"),
-    ("Systemd User Logs", os.path.expanduser("~/.local/share/systemd"), "journalctl --user --vacuum-size=20M"),
-    ("Pacman Cache", "/var/cache/pacman/pkg", "paccache -rk1 2>/dev/null || true"),
-    ("Trash Bin", os.path.expanduser("~/.local/share/Trash"), "rm -rf ~/.local/share/Trash/*")
-]
+def build_cache_targets():
+    targets = [
+        ("Thumbnails", os.path.expanduser("~/.cache/thumbnails"), "rm -rf ~/.cache/thumbnails/*"),
+        ("Pip Cache", os.path.expanduser("~/.cache/pip"), "rm -rf ~/.cache/pip/*"),
+        ("Cargo Cache", os.path.expanduser("~/.cache/cargo"), "cargo cache --autoclean 2>/dev/null || true"),
+        ("Mozilla Cache", os.path.expanduser("~/.cache/mozilla"), "rm -rf ~/.cache/mozilla/firefox/*.default*/*cache*"),
+        ("Systemd User Logs", os.path.expanduser("~/.local/share/systemd"), "journalctl --user --vacuum-size=20M"),
+    ]
+    if os.path.exists(os.path.expanduser("~/.cache/yay")):
+        targets.append(("Yay/AUR Build Cache", os.path.expanduser("~/.cache/yay"), "rm -rf ~/.cache/yay/*"))
+    if os.path.exists("/var/cache/pacman/pkg"):
+        targets.append(("Pacman Cache", "/var/cache/pacman/pkg", "paccache -rk1 2>/dev/null || true"))
+    if os.path.exists("/var/cache/apt/archives"):
+        targets.append(("APT Cache", "/var/cache/apt/archives", "sudo apt-get clean 2>/dev/null || rm -rf ~/.cache/apt/archives/* 2>/dev/null || true"))
+    if os.path.exists("/var/cache/dnf"):
+        targets.append(("DNF Cache", "/var/cache/dnf", "sudo dnf clean all 2>/dev/null || true"))
+    targets.append(("Trash Bin", os.path.expanduser("~/.local/share/Trash"), "rm -rf ~/.local/share/Trash/*"))
+    return targets
+
+CACHE_TARGETS = build_cache_targets()
 
 PROTECTED_PATHS = [
     "/etc",

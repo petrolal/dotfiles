@@ -53,6 +53,8 @@ config/sway/colors.conf
 config/kitty/colors.conf
 config/waybar/style.css
 config/wofi/style.css
+config/fastfetch/logos/current_logo.txt
+config/fastfetch/assets/current_logo.txt
 
 # Personal/local files
 themes/wallpapers/*

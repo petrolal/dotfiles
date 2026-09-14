@@ -360,26 +360,48 @@ object SysUtils:
   def runFastfetchLogo(ctx: Context): Either[PolyominoError, Unit] =
     val osId = try
       if os.exists(os.root / "etc" / "os-release") then
-        os.read.lines(os.root / "etc" / "os-release")
-          .find(_.startsWith("ID="))
+        val lines = os.read.lines(os.root / "etc" / "os-release")
+        val id = lines.find(_.startsWith("ID="))
           .map(_.stripPrefix("ID=").replace("\"", "").trim.toLowerCase)
-          .getOrElse("linux")
+          .getOrElse("")
+        val idLike = lines.find(_.startsWith("ID_LIKE="))
+          .map(_.stripPrefix("ID_LIKE=").replace("\"", "").trim.toLowerCase)
+          .getOrElse("")
+        s"$id $idLike".trim
       else "linux"
     catch
       case _: Exception => "linux"
 
-    val logoName = osId match
-      case "arch" => "polyonimo_arch_tetris.txt"
-      case "ubuntu" => "polyonimo_ubuntu_tetris.txt"
-      case _ => "polyomino_tetris.txt"
+    val logoName =
+      if osId.contains("arch") || osId.contains("endeavouros") || osId.contains("cachyos") || osId.contains("artix") || osId.contains("manjaro") then
+        "polyomino_arch_tetris.txt"
+      else if osId.contains("debian") then
+        "polyomino_debian_tetris.txt"
+      else if osId.contains("ubuntu") || osId.contains("pop") || osId.contains("mint") then
+        "polyomino_ubuntu_tetris.txt"
+      else if osId.contains("fedora") || osId.contains("rhel") || osId.contains("centos") || osId.contains("rocky") then
+        "polyomino_fedora_tetris.txt"
+      else if osId.contains("nixos") then
+        "polyomino_nixos_tetris.txt"
+      else
+        "polyomino_arch_tetris.txt"
 
+    val repoLogosDir = ctx.dotfilesDir / "config" / "fastfetch" / "logos"
+    val logosDir = ctx.configDir / "fastfetch" / "logos"
     val repoAssetsDir = ctx.dotfilesDir / "config" / "fastfetch" / "assets"
     val assetsDir = ctx.configDir / "fastfetch" / "assets"
-    os.makeDir.all(assetsDir)
-    val currentLogoSymlink = assetsDir / "current_logo.txt"
 
-    val targetLogo = if os.exists(assetsDir / logoName) then Some(assetsDir / logoName)
+    os.makeDir.all(logosDir)
+    os.makeDir.all(assetsDir)
+
+    val targetLogo =
+      if os.exists(logosDir / logoName) then Some(logosDir / logoName)
+      else if os.exists(repoLogosDir / logoName) then Some(repoLogosDir / logoName)
+      else if os.exists(assetsDir / logoName) then Some(assetsDir / logoName)
       else if os.exists(repoAssetsDir / logoName) then Some(repoAssetsDir / logoName)
+      else if os.exists(assetsDir / s"polyonimo_${logoName.stripPrefix("polyomino_")}") then Some(assetsDir / s"polyonimo_${logoName.stripPrefix("polyomino_")}")
+      else if os.exists(logosDir / "polyomino_arch_tetris.txt") then Some(logosDir / "polyomino_arch_tetris.txt")
+      else if os.exists(repoLogosDir / "polyomino_arch_tetris.txt") then Some(repoLogosDir / "polyomino_arch_tetris.txt")
       else if os.exists(assetsDir / "polyomino_tetris.txt") then Some(assetsDir / "polyomino_tetris.txt")
       else if os.exists(repoAssetsDir / "polyomino_tetris.txt") then Some(repoAssetsDir / "polyomino_tetris.txt")
       else None
@@ -387,9 +409,16 @@ object SysUtils:
     targetLogo match
       case Some(logoFile) =>
         try
-          if os.exists(currentLogoSymlink) || os.isLink(currentLogoSymlink) then
-            os.remove(currentLogoSymlink)
-          os.symlink(currentLogoSymlink, logoFile)
+          val currentLogosSymlink = logosDir / "current_logo.txt"
+          if os.exists(currentLogosSymlink) || os.isLink(currentLogosSymlink) then
+            os.remove(currentLogosSymlink)
+          os.symlink(currentLogosSymlink, logoFile)
+
+          val currentAssetsSymlink = assetsDir / "current_logo.txt"
+          if os.exists(currentAssetsSymlink) || os.isLink(currentAssetsSymlink) then
+            os.remove(currentAssetsSymlink)
+          os.symlink(currentAssetsSymlink, logoFile)
+
           Right(())
         catch
           case e: Exception => Left(CommandError(s"Fastfetch logo symlink failed: ${e.getMessage}"))

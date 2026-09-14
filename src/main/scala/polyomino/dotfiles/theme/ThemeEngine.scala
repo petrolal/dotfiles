@@ -44,6 +44,18 @@ object ThemeEngine:
     val nextFlavor = if currentIdx == -1 then approvedFlavors.head else approvedFlavors((currentIdx + 1) % approvedFlavors.length)
     run(ctx, List(nextFlavor))
 
+  private def getDistroSubtitle(): String =
+    val osName = try
+      if os.exists(os.root / "etc" / "os-release") then
+        os.read.lines(os.root / "etc" / "os-release")
+          .find(l => l.startsWith("NAME=") || l.startsWith("PRETTY_NAME="))
+          .map(_.split("=", 2)(1).replace("\"", "").replace("'", "").trim)
+          .getOrElse("Linux")
+      else "Linux"
+    catch
+      case _: Exception => "Linux"
+    s"$osName · SwayFX"
+
   def getActivePalette(ctx: Context): Palette =
     val stateFile = ctx.configDir / "polyomino" / "theme" / "state"
     if os.exists(stateFile) then
@@ -732,7 +744,7 @@ object ThemeEngine:
          |}
          |textbox-header-subtitle {
          |    expand:           false;
-         |    str:              "Arch Linux · SwayFX";
+         |    str:              "${getDistroSubtitle()}";
          |    font:             "JetBrainsMono Nerd Font 9";
          |    text-color:       @fg-secondary;
          |}
@@ -951,7 +963,7 @@ object ThemeEngine:
          |}
          |textbox-header-subtitle {
          |    expand:           false;
-         |    str:              "Arch Linux · SwayFX";
+         |    str:              "${getDistroSubtitle()}";
          |    font:             "JetBrainsMono Nerd Font 9";
          |    text-color:       @fg-secondary;
          |}

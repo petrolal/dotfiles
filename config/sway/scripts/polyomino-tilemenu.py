@@ -809,11 +809,25 @@ class BentoTileMenu(Gtk.Window):
         return False
 
 
+def get_os_subtitle():
+    try:
+        if os.path.exists("/etc/os-release"):
+            with open("/etc/os-release") as f:
+                for line in f:
+                    if line.startswith("NAME=") or line.startswith("PRETTY_NAME="):
+                        name = line.strip().split("=", 1)[1].strip('"\'')
+                        return f"{name} · SwayFX"
+    except Exception:
+        pass
+    return "Linux · SwayFX"
+
+
 def main():
+    default_sub = get_os_subtitle()
     parser = argparse.ArgumentParser(description="Polyomino Bento Menu & Application Launcher")
     parser.add_argument("--drun", action="store_true", help="Launch desktop application grid")
     parser.add_argument("--title", default="POLYOMINO // APP LAUNCHER")
-    parser.add_argument("--subtitle", default="Arch Linux · SwayFX")
+    parser.add_argument("--subtitle", default=default_sub)
     parser.add_argument("--badge", default="DRAWER")
     parser.add_argument("--columns", type=int, default=3)
     parser.add_argument("--width", type=int, default=980)
@@ -853,7 +867,7 @@ def main():
     if args.drun:
         tiles = get_installed_desktop_apps()
         title = "POLYOMINO // APP LAUNCHER"
-        subtitle = "Arch Linux · SwayFX"
+        subtitle = args.subtitle if args.subtitle != "Arch Linux · SwayFX" else default_sub
         badge = "DRAWER"
         columns = 3
     else:

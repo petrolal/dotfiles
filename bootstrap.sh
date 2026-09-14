@@ -405,9 +405,9 @@ install_system_deps() {
   local opt_pkgs=""
   local browser_pkgs_pacman="" browser_pkgs_apt="" browser_pkgs_dnf=""
   case "$BROWSER_MODE" in
-    chromium) browser_pkgs_pacman="chromium"; browser_pkgs_apt="chromium-browser"; browser_pkgs_dnf="" ;;
+    chromium) browser_pkgs_pacman="chromium"; browser_pkgs_apt="chromium-browser"; browser_pkgs_dnf="chromium" ;;
     firefox)  browser_pkgs_pacman="firefox"; browser_pkgs_apt="firefox"; browser_pkgs_dnf="firefox" ;;
-    both)     browser_pkgs_pacman="chromium firefox"; browser_pkgs_apt="firefox chromium-browser"; browser_pkgs_dnf="firefox" ;;
+    both)     browser_pkgs_pacman="chromium firefox"; browser_pkgs_apt="firefox chromium-browser"; browser_pkgs_dnf="firefox chromium" ;;
     *)        browser_pkgs_pacman=""; browser_pkgs_apt=""; browser_pkgs_dnf="" ;;
   esac
 

@@ -6,6 +6,18 @@ import polyomino.dotfiles.theme.ThemeEngine
 
 object WofiPickers:
 
+  private def getDistroSubtitle(): String =
+    val osName = try
+      if os.exists(os.root / "etc" / "os-release") then
+        os.read.lines(os.root / "etc" / "os-release")
+          .find(l => l.startsWith("NAME=") || l.startsWith("PRETTY_NAME="))
+          .map(_.split("=", 2)(1).replace("\"", "").replace("'", "").trim)
+          .getOrElse("Linux")
+      else "Linux"
+    catch
+      case _: Exception => "Linux"
+    s"$osName · SwayFX"
+
   /** Path to the shared GTK tile-menu script (grid of tiles, glass/blur
     * backdrop) that all pickers below use in place of a wofi dmenu list. */
   private def tilemenuScript(ctx: Context): os.Path =
@@ -27,7 +39,7 @@ object WofiPickers:
     width: Int,
     height: Int,
     info: Boolean = false,
-    subtitle: String = "Arch Linux · SwayFX",
+    subtitle: String = getDistroSubtitle(),
     badge: String = "MENU"
   ): String =
     val script = tilemenuScript(ctx)
@@ -309,7 +321,7 @@ object WofiPickers:
           width = 980,
           height = 560,
           info = true,
-          subtitle = "Arch Linux · SwayFX",
+          subtitle = getDistroSubtitle(),
           badge = "SHORTCUTS"
         )
         Right(())

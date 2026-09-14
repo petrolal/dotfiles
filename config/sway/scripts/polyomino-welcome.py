@@ -54,6 +54,26 @@ DEFAULT_PALETTE = {
     "accent_teal_glow": "#22d3ee",
 }
 
+def get_os_pretty_name():
+    try:
+        if os.path.exists("/etc/os-release"):
+            with open("/etc/os-release") as f:
+                for line in f:
+                    if line.startswith("NAME=") or line.startswith("PRETTY_NAME="):
+                        return line.strip().split("=", 1)[1].strip('"\'')
+    except Exception:
+        pass
+    return "Linux"
+
+def get_package_manager_hint():
+    if shutil.which("pacman"):
+        return "pacman/AUR (yay)"
+    elif shutil.which("apt-get") or shutil.which("apt"):
+        return "APT (apt)"
+    elif shutil.which("dnf"):
+        return "DNF (dnf)"
+    return "system package manager"
+
 def load_settings():
     if SETTINGS_FILE.exists():
         try:
@@ -982,7 +1002,8 @@ class WelcomeWindow(Gtk.Window):
         title = Gtk.Label(label="POLYOMINO WELCOME CENTER", xalign=0)
         title.get_style_context().add_class("header-title")
 
-        subtitle = Gtk.Label(label="Arch Linux · SwayFX CAD Desktop & Gaming Workstation", xalign=0)
+        os_name = get_os_pretty_name()
+        subtitle = Gtk.Label(label=f"{os_name} · SwayFX CAD Desktop & Gaming Workstation", xalign=0)
         subtitle.get_style_context().add_class("header-subtitle")
 
         text_box.pack_start(title, False, False, 0)
@@ -1475,8 +1496,9 @@ class WelcomeWindow(Gtk.Window):
             badge_text="BATCH", badge_style="tool")]
         for emu_id, label in EMULATOR_LABELS.items():
             installed = find_emulator_binary(emu_id) is not None
+            pkg_hint = get_package_manager_hint()
             cards.append(self.create_gc_card(
-                "🧩", label, "Already installed." if installed else "Install via pacman/AUR (yay).",
+                "🧩", label, "Already installed." if installed else f"Install via {pkg_hint}.",
                 "Reinstall →" if installed else "Install →",
                 lambda eid=emu_id: run_cmd(["polyomino", "install-emulator", eid], in_terminal=True),
                 badge_text="READY" if installed else "TOOL",

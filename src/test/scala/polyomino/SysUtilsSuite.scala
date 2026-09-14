@@ -111,14 +111,18 @@ class SysUtilsSuite extends FunSuite:
       assert(res.isRight)
     }
 
-  test("SysUtils.runFastfetchLogo symlinks matching logo in assets directory"):
+  test("SysUtils.runFastfetchLogo symlinks matching logo in assets and logos directories"):
     withIsolatedContext { ctx =>
       val assetsDir = ctx.configDir / "fastfetch" / "assets"
+      val logosDir = ctx.configDir / "fastfetch" / "logos"
       os.makeDir.all(assetsDir)
+      os.makeDir.all(logosDir)
       os.write(assetsDir / "polyomino_tetris.txt", "TEST_LOGO")
+      os.write(logosDir / "polyomino_arch_tetris.txt", "ARCH_LOGO")
       val res = SysUtils.runFastfetchLogo(ctx)
       assert(res.isRight)
       assert(os.exists(assetsDir / "current_logo.txt") || os.isLink(assetsDir / "current_logo.txt"))
+      assert(os.exists(logosDir / "current_logo.txt") || os.isLink(logosDir / "current_logo.txt"))
     }
 
   test("SysUtils.runWelcome succeeds when script exists and fails when missing"):
