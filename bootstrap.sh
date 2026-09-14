@@ -17,9 +17,11 @@ ENABLE_ALL=false
 ENABLE_MINIMAL=false
 
 # Optional component flags (unset by default to allow prompting)
-ENABLE_TETRAVIM=""
+ENABLE_CHROME=""
+ENABLE_FIREFOX=""
 ENABLE_BROWSER=""
-BROWSER_MODE=""    # chromium | firefox | both | none
+BROWSER_MODE=""    # chrome | firefox | both | none
+ENABLE_TETRAVIM=""
 ENABLE_TUI_TOOLS=""
 ENABLE_DEVOPS=""
 ENABLE_DEV_RUNTIMES=""
@@ -39,6 +41,18 @@ for arg in "$@"; do
     --non-interactive|-n)
       NON_INTERACTIVE=true
       ;;
+    --chrome|--with-chrome)
+      ENABLE_CHROME=true
+      ;;
+    --without-chrome|--no-chrome)
+      ENABLE_CHROME=false
+      ;;
+    --firefox|--with-firefox)
+      ENABLE_FIREFOX=true
+      ;;
+    --without-firefox|--no-firefox)
+      ENABLE_FIREFOX=false
+      ;;
     --gaming|--with-gaming|-g)
       ENABLE_GAMING=true
       ;;
@@ -53,9 +67,13 @@ for arg in "$@"; do
       ;;
     --browser|--with-browser)
       ENABLE_BROWSER=true
+      ENABLE_CHROME=true
+      ENABLE_FIREFOX=true
       ;;
     --without-browser|--no-browser)
       ENABLE_BROWSER=false
+      ENABLE_CHROME=false
+      ENABLE_FIREFOX=false
       ;;
     --tui|--with-tui|--tools|--with-tools)
       ENABLE_TUI_TOOLS=true
@@ -251,11 +269,160 @@ prompt_tetromino_select() {
   fi
 }
 
+prompt_checkbox_menu() {
+  local -a labels=(
+    "Google Chrome Stable (Official Web Browser)"
+    "Mozilla Firefox (Secondary Web Browser)"
+    "Neovim & Tetravim (Polyomino IDE Distribution)"
+    "TUI Productivity Suite (spotify_player, bluetui, impala, aerc, yazi, zoxide, fastfetch)"
+    "DevOps & Cloud Tooling (Docker, Terraform, Ansible, kubectl, Helm, cloud CLIs)"
+    "Developer Runtimes (Node.js/npm via NVM, SDKMAN! & Kotlin)"
+    "Desktop Apps (Telegram Desktop, Discord, TETR.IO)"
+    "Gaming Stack & Emulators (GameMode, Gamescope, MangoHud, Steam, Emulators)"
+  )
+  local -a states=(1 1 1 1 0 0 0 0)
+
+  # If explicit CLI flags were provided, respect them
+  [ "${ENABLE_CHROME:-}" = true ] && states[0]=1
+  [ "${ENABLE_CHROME:-}" = false ] && states[0]=0
+  [ "${ENABLE_FIREFOX:-}" = true ] && states[1]=1
+  [ "${ENABLE_FIREFOX:-}" = false ] && states[1]=0
+  [ "${ENABLE_TETRAVIM:-}" = true ] && states[2]=1
+  [ "${ENABLE_TETRAVIM:-}" = false ] && states[2]=0
+  [ "${ENABLE_TUI_TOOLS:-}" = true ] && states[3]=1
+  [ "${ENABLE_TUI_TOOLS:-}" = false ] && states[3]=0
+  [ "${ENABLE_DEVOPS:-}" = true ] && states[4]=1
+  [ "${ENABLE_DEVOPS:-}" = false ] && states[4]=0
+  [ "${ENABLE_DEV_RUNTIMES:-}" = true ] && states[5]=1
+  [ "${ENABLE_DEV_RUNTIMES:-}" = false ] && states[5]=0
+  [ "${ENABLE_DESKTOP_APPS:-}" = true ] && states[6]=1
+  [ "${ENABLE_DESKTOP_APPS:-}" = false ] && states[6]=0
+  [ "${ENABLE_GAMING:-}" = true ] && states[7]=1
+  [ "${ENABLE_GAMING:-}" = false ] && states[7]=0
+
+  if _tetris_noninteractive; then
+    echo -e "  ${T_CYAN}[INFO]${T_RESET} Non-interactive mode: using configured component selection." >&2
+  else
+    local cursor=0
+    local num_items=${#labels[@]}
+    local tty_in="/dev/tty"
+    [ -r /dev/tty ] || tty_in="-"
+
+    echo -en "\033[?25l" >&2
+
+    draw_checkbox_menu() {
+      echo -e "  ${T_PURPLE}┌── POLYOMINO // OPTIONAL COMPONENT CHECKBOXES ─────────────────────────────────┐${T_RESET}" >&2
+      echo -e "  ${T_PURPLE}│${T_RESET}  ${T_GRAY}Navigate: ↑/↓ or j/k • Toggle: Space • Direct: [1-8] • Confirm: Enter      ${T_RESET}${T_PURPLE}│${T_RESET}" >&2
+      echo -e "  ${T_PURPLE}├───────────────────────────────────────────────────────────────────────────────┤${T_RESET}" >&2
+      local i
+      for i in "${!labels[@]}"; do
+        local mark=" "
+        local mark_color="$T_GRAY"
+        if [ "${states[$i]}" -eq 1 ]; then
+          mark="✔"
+          mark_color="$T_GREEN"
+        fi
+        local pointer="  "
+        local item_color="$T_RESET"
+        if [ "$i" -eq "$cursor" ]; then
+          pointer="${T_CYAN}❯${T_RESET} "
+          item_color="${T_BOLD}${T_CYAN}"
+        fi
+        local num_tag="${T_YELLOW}[$((i+1))]${T_RESET}"
+        local box="${mark_color}[${mark}]${T_RESET}"
+        printf "  ${T_PURPLE}│${T_RESET} %b%b %b %b%-60s${T_PURPLE}│${T_RESET}\n" "$pointer" "$box" "$num_tag" "$item_color" "${labels[$i]}" >&2
+      done
+      echo -e "  ${T_PURPLE}├───────────────────────────────────────────────────────────────────────────────┤${T_RESET}" >&2
+      echo -e "  ${T_PURPLE}│${T_RESET}  ${T_CYAN}[A]${T_RESET} Select All     ${T_YELLOW}[N]${T_RESET} Deselect All     ${T_GREEN}[Enter]${T_RESET} Confirm & Proceed          ${T_PURPLE}│${T_RESET}" >&2
+      echo -e "  ${T_PURPLE}└───────────────────────────────────────────────────────────────────────────────┘${T_RESET}" >&2
+    }
+
+    local total_lines=$((num_items + 6))
+    draw_checkbox_menu
+
+    while true; do
+      local key=""
+      if [ "$tty_in" = "/dev/tty" ]; then
+        IFS= read -rsn1 key < /dev/tty || key=""
+      else
+        IFS= read -rsn1 key || key=""
+      fi
+
+      if [ "$key" = $'\x1b' ]; then
+        local rest=""
+        if [ "$tty_in" = "/dev/tty" ]; then
+          IFS= read -rsn2 -t 0.1 rest < /dev/tty || rest=""
+        else
+          IFS= read -rsn2 -t 0.1 rest || rest=""
+        fi
+        if [ "$rest" = "[A" ]; then key="UP"; fi
+        if [ "$rest" = "[B" ]; then key="DOWN"; fi
+      fi
+
+      case "$key" in
+        UP|k|K)
+          cursor=$(( (cursor - 1 + num_items) % num_items ))
+          ;;
+        DOWN|j|J)
+          cursor=$(( (cursor + 1) % num_items ))
+          ;;
+        " ")
+          states[$cursor]=$(( 1 - states[$cursor] ))
+          ;;
+        [1-8])
+          local idx=$((key - 1))
+          states[$idx]=$(( 1 - states[$idx] ))
+          ;;
+        a|A)
+          for i in "${!states[@]}"; do states[$i]=1; done
+          ;;
+        n|N)
+          for i in "${!states[@]}"; do states[$i]=0; done
+          ;;
+        "")
+          break
+          ;;
+      esac
+
+      echo -en "\033[${total_lines}A" >&2
+      draw_checkbox_menu
+    done
+
+    echo -en "\033[?25h" >&2
+    echo "" >&2
+  fi
+
+  [ "${states[0]}" -eq 1 ] && ENABLE_CHROME=true || ENABLE_CHROME=false
+  [ "${states[1]}" -eq 1 ] && ENABLE_FIREFOX=true || ENABLE_FIREFOX=false
+  [ "${states[2]}" -eq 1 ] && ENABLE_TETRAVIM=true || ENABLE_TETRAVIM=false
+  [ "${states[3]}" -eq 1 ] && ENABLE_TUI_TOOLS=true || ENABLE_TUI_TOOLS=false
+  [ "${states[4]}" -eq 1 ] && ENABLE_DEVOPS=true || ENABLE_DEVOPS=false
+  [ "${states[5]}" -eq 1 ] && ENABLE_DEV_RUNTIMES=true || ENABLE_DEV_RUNTIMES=false
+  [ "${states[6]}" -eq 1 ] && ENABLE_DESKTOP_APPS=true || ENABLE_DESKTOP_APPS=false
+  [ "${states[7]}" -eq 1 ] && ENABLE_GAMING=true || ENABLE_GAMING=false
+
+  if [ "$ENABLE_CHROME" = true ] && [ "$ENABLE_FIREFOX" = true ]; then
+    BROWSER_MODE="both"
+    ENABLE_BROWSER=true
+  elif [ "$ENABLE_CHROME" = true ]; then
+    BROWSER_MODE="chrome"
+    ENABLE_BROWSER=true
+  elif [ "$ENABLE_FIREFOX" = true ]; then
+    BROWSER_MODE="firefox"
+    ENABLE_BROWSER=true
+  else
+    BROWSER_MODE="none"
+    ENABLE_BROWSER=false
+  fi
+}
+
 prompt_optional_dependencies() {
   if [ "$ENABLE_ALL" = true ]; then
-    ENABLE_TETRAVIM=true
+    ENABLE_CHROME=true
+    ENABLE_FIREFOX=true
     ENABLE_BROWSER=true
-    BROWSER_MODE="${BROWSER_MODE:-both}"
+    BROWSER_MODE="both"
+    ENABLE_TETRAVIM=true
     ENABLE_TUI_TOOLS=true
     ENABLE_DEVOPS=true
     ENABLE_DEV_RUNTIMES=true
@@ -265,116 +432,20 @@ prompt_optional_dependencies() {
   fi
 
   if [ "$ENABLE_MINIMAL" = true ]; then
-    ENABLE_TETRAVIM="${ENABLE_TETRAVIM:-false}"
-    ENABLE_BROWSER="${ENABLE_BROWSER:-false}"
-    BROWSER_MODE="${BROWSER_MODE:-none}"
-    ENABLE_TUI_TOOLS="${ENABLE_TUI_TOOLS:-false}"
-    ENABLE_DEVOPS="${ENABLE_DEVOPS:-false}"
-    ENABLE_DEV_RUNTIMES="${ENABLE_DEV_RUNTIMES:-false}"
-    ENABLE_DESKTOP_APPS="${ENABLE_DESKTOP_APPS:-false}"
-    ENABLE_GAMING="${ENABLE_GAMING:-false}"
+    ENABLE_CHROME=false
+    ENABLE_FIREFOX=false
+    ENABLE_BROWSER=false
+    BROWSER_MODE="none"
+    ENABLE_TETRAVIM=false
+    ENABLE_TUI_TOOLS=false
+    ENABLE_DEVOPS=false
+    ENABLE_DEV_RUNTIMES=false
+    ENABLE_DESKTOP_APPS=false
+    ENABLE_GAMING=false
     return
   fi
 
-  echo -e "  ${T_PURPLE}[polyomino]${T_RESET} Configuring non-obligatory dependency installations:"
-  echo -e "  ${T_GRAY}A piece is falling for each optional dependency. Hard Drop to install, Hold to skip.${T_RESET}"
-  echo ""
-
-  # 1. Neovim & Tetravim
-  if [ -z "$ENABLE_TETRAVIM" ]; then
-    if [ "$NON_INTERACTIVE" = true ]; then
-      ENABLE_TETRAVIM=true
-    else
-      choice="$(prompt_tetris_yn I "$T_CYAN" "Install Neovim & Tetravim distribution?" true)"
-      ENABLE_TETRAVIM="$choice"
-    fi
-  fi
-  echo ""
-
-  # 2. Web Browser (multi-select: which browser(s) to drop in)
-  if [ -z "$BROWSER_MODE" ] && [ -n "$ENABLE_BROWSER" ]; then
-    # Set explicitly via CLI flag (--browser / --no-browser); skip the picker.
-    if [ "$ENABLE_BROWSER" = true ]; then BROWSER_MODE="both"; else BROWSER_MODE="none"; fi
-  fi
-  if [ -z "$BROWSER_MODE" ]; then
-    if [ "$NON_INTERACTIVE" = true ]; then
-      BROWSER_MODE="both"
-    else
-      sel="$(prompt_tetromino_select "HOLD: BROWSER" \
-        "Chromium|O|$T_YELLOW" \
-        "Firefox|O|$T_ORANGE" \
-        "Both|I|$T_CYAN" \
-        "Skip|Z|$T_GRAY")"
-      case "$sel" in
-        1) BROWSER_MODE="chromium" ;;
-        2) BROWSER_MODE="firefox" ;;
-        3) BROWSER_MODE="both" ;;
-        *) BROWSER_MODE="none" ;;
-      esac
-    fi
-  fi
-  if [ "$BROWSER_MODE" = "none" ]; then
-    ENABLE_BROWSER=false
-  else
-    ENABLE_BROWSER=true
-  fi
-  echo ""
-
-  # 3. TUI Productivity Tools
-  if [ -z "$ENABLE_TUI_TOOLS" ]; then
-    if [ "$NON_INTERACTIVE" = true ]; then
-      ENABLE_TUI_TOOLS=true
-    else
-      choice="$(prompt_tetris_yn T "$T_GREEN" "Install TUI tools (spotify_player, bluetui, impala, aerc, zoxide, fastfetch)?" true)"
-      ENABLE_TUI_TOOLS="$choice"
-    fi
-  fi
-  echo ""
-
-  # 4. DevOps & Cloud Tools
-  if [ -z "$ENABLE_DEVOPS" ]; then
-    if [ "$NON_INTERACTIVE" = true ]; then
-      ENABLE_DEVOPS=false
-    else
-      choice="$(prompt_tetris_yn S "$T_GREEN" "Install DevOps tools (Docker, Terraform, Ansible, kubectl, Helm, cloud CLIs)?" false)"
-      ENABLE_DEVOPS="$choice"
-    fi
-  fi
-  echo ""
-
-  # 5. Developer Runtimes
-  if [ -z "$ENABLE_DEV_RUNTIMES" ]; then
-    if [ "$NON_INTERACTIVE" = true ]; then
-      ENABLE_DEV_RUNTIMES=false
-    else
-      choice="$(prompt_tetris_yn Z "$T_RED" "Install Developer runtimes (Node.js/npm via NVM, SDKMAN! & Kotlin)?" false)"
-      ENABLE_DEV_RUNTIMES="$choice"
-    fi
-  fi
-  echo ""
-
-  # 6. Desktop Apps (Telegram)
-  if [ -z "$ENABLE_DESKTOP_APPS" ]; then
-    if [ "$NON_INTERACTIVE" = true ]; then
-      ENABLE_DESKTOP_APPS=false
-    else
-      choice="$(prompt_tetris_yn J "$T_BLUE" "Install Telegram Desktop?" false)"
-      ENABLE_DESKTOP_APPS="$choice"
-    fi
-  fi
-  echo ""
-
-  # 7. Gaming Performance Stack
-  if [ -z "$ENABLE_GAMING" ]; then
-    if [ "$NON_INTERACTIVE" = true ]; then
-      ENABLE_GAMING=false
-    else
-      choice="$(prompt_tetris_yn L "$T_ORANGE" "Install gaming optimizations & tools (gamemode, gamescope, mangohud, steam)?" false)"
-      ENABLE_GAMING="$choice"
-    fi
-  fi
-
-  echo ""
+  prompt_checkbox_menu
 }
 
 # Step 1: Detect package manager & install system dependencies
@@ -405,10 +476,26 @@ install_system_deps() {
   local opt_pkgs=""
   local browser_pkgs_pacman="" browser_pkgs_apt="" browser_pkgs_dnf=""
   case "$BROWSER_MODE" in
-    chromium) browser_pkgs_pacman="chromium"; browser_pkgs_apt="chromium-browser"; browser_pkgs_dnf="chromium" ;;
-    firefox)  browser_pkgs_pacman="firefox"; browser_pkgs_apt="firefox"; browser_pkgs_dnf="firefox" ;;
-    both)     browser_pkgs_pacman="chromium firefox"; browser_pkgs_apt="firefox chromium-browser"; browser_pkgs_dnf="firefox chromium" ;;
-    *)        browser_pkgs_pacman=""; browser_pkgs_apt=""; browser_pkgs_dnf="" ;;
+    chrome)
+      browser_pkgs_pacman=""
+      browser_pkgs_apt=""
+      browser_pkgs_dnf=""
+      ;;
+    firefox)
+      browser_pkgs_pacman="firefox"
+      browser_pkgs_apt="firefox"
+      browser_pkgs_dnf="firefox"
+      ;;
+    both)
+      browser_pkgs_pacman="firefox"
+      browser_pkgs_apt="firefox"
+      browser_pkgs_dnf="firefox"
+      ;;
+    *)
+      browser_pkgs_pacman=""
+      browser_pkgs_apt=""
+      browser_pkgs_dnf=""
+      ;;
   esac
 
   case "$pkg_mgr" in
@@ -479,6 +566,33 @@ install_system_deps() {
       echo -e "  \033[33m[NOTE]\033[0m Package manager '$pkg_mgr' not automatically managed. Skipping installation."
       ;;
   esac
+
+  # Google Chrome Stable installation
+  if [ "${ENABLE_CHROME:-false}" = true ]; then
+    if ! command -v google-chrome &>/dev/null && ! command -v google-chrome-stable &>/dev/null; then
+      echo -e "  \033[1;36m[polyomino]\033[0m Installing Google Chrome Stable..."
+      case "$pkg_mgr" in
+        apt-get)
+          local chrome_deb="/tmp/google-chrome-stable_current_amd64.deb"
+          curl -fsSL "https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb" -o "$chrome_deb" 2>/dev/null || true
+          if [ -f "$chrome_deb" ]; then
+            sudo apt-get install -y "$chrome_deb" 2>/dev/null || sudo apt-get install -f -y 2>/dev/null || true
+            rm -f "$chrome_deb"
+          fi
+          ;;
+        pacman)
+          if command -v yay &>/dev/null; then
+            yay -S --needed --noconfirm --answerclean None --answerdiff None google-chrome 2>/dev/null || true
+          fi
+          ;;
+        dnf)
+          sudo dnf install -y fedora-workstation-repositories 2>/dev/null || true
+          sudo dnf config-manager --set-enabled google-chrome 2>/dev/null || true
+          sudo dnf install -y google-chrome-stable 2>/dev/null || true
+          ;;
+      esac
+    fi
+  fi
 }
 
 install_java() {

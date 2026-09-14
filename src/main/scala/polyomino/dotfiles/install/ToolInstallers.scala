@@ -106,13 +106,62 @@ object ToolInstallers:
 
   private def installBrowser(ctx: Context): Either[PolyominoError, Unit] =
     val pm = detectPackageManager()
-    println(s"\u001b[1;36m[polyomino install-browser]\u001b[0m Installing web browser (PM: $pm)...")
+    val isChromeInstalled = isAvailable("google-chrome") || isAvailable("google-chrome-stable") || isAvailable("chrome")
+    if isChromeInstalled then
+      println("  \u001b[32m[OK]\u001b[0m Google Chrome Stable is already installed.")
+      return Right(())
+
+    println(s"\u001b[1;36m[polyomino install-browser]\u001b[0m Installing Google Chrome Stable (PM: $pm)...")
     pm match
-      case PackageManager.Pacman => runPkgInstall("sudo", Seq("pacman", "-S", "--needed", "--noconfirm", "chromium"))
-      case PackageManager.Dnf => runPkgInstall("sudo", Seq("dnf", "install", "-y", "chromium"))
-      case PackageManager.Apt => runPkgInstall("sudo", Seq("apt-get", "install", "-y", "firefox"))
-      case PackageManager.Brew => runPkgInstall("brew", Seq("install", "--cask", "chromium"))
-      case _ => Right(println("  \u001b[32m[OK]\u001b[0m Browser provisioned."))
+      case PackageManager.Pacman =>
+        if isAvailable("yay") then
+          val yayRes = os.proc("yay", "-S", "--needed", "--noconfirm", "--answerclean", "None", "--answerdiff", "None", "google-chrome")
+            .call(stdin = os.Inherit, stdout = os.Inherit, stderr = os.Inherit, check = false)
+          if yayRes.exitCode == 0 then
+            println("  \u001b[32m[OK]\u001b[0m Google Chrome installed successfully via yay.")
+            Right(())
+          else
+            runPkgInstall("sudo", Seq("pacman", "-S", "--needed", "--noconfirm", "firefox"))
+        else
+          println("  \u001b[36m[INFO]\u001b[0m yay not available for google-chrome; installing firefox...")
+          runPkgInstall("sudo", Seq("pacman", "-S", "--needed", "--noconfirm", "firefox"))
+
+      case PackageManager.Dnf =>
+        try
+          os.proc("sudo", "dnf", "install", "-y", "fedora-workstation-repositories").call(check = false)
+          os.proc("sudo", "dnf", "config-manager", "--set-enabled", "google-chrome").call(check = false)
+        catch case _: Exception => ()
+        val dnfRes = runPkgInstall("sudo", Seq("dnf", "install", "-y", "google-chrome-stable"))
+        if isAvailable("google-chrome-stable") then dnfRes
+        else runPkgInstall("sudo", Seq("dnf", "install", "-y", "firefox"))
+
+      case PackageManager.Apt =>
+        println("  \u001b[36m[INFO]\u001b[0m Downloading official Google Chrome Stable .deb package...")
+        try
+          val chromeDeb = os.temp(prefix = "google-chrome-stable-", suffix = ".deb")
+          val dlRes = os.proc("curl", "-fsSL", "https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb", "-o", chromeDeb.toString).call(check = false)
+          if dlRes.exitCode == 0 then
+            val aptRes = os.proc("sudo", "apt-get", "install", "-y", chromeDeb.toString)
+              .call(stdin = os.Inherit, stdout = os.Inherit, stderr = os.Inherit, check = false)
+            if aptRes.exitCode == 0 then
+              println("  \u001b[32m[OK]\u001b[0m Google Chrome Stable installed successfully.")
+              Right(())
+            else
+              os.proc("sudo", "apt-get", "install", "-f", "-y").call(check = false)
+              Right(())
+          else
+            runPkgInstall("sudo", Seq("apt-get", "install", "-y", "firefox"))
+        catch
+          case e: Exception =>
+            println(s"  \u001b[33m[NOTE]\u001b[0m Chrome download skipped (${e.getMessage}); installing firefox fallback...")
+            runPkgInstall("sudo", Seq("apt-get", "install", "-y", "firefox"))
+
+      case PackageManager.Brew =>
+        runPkgInstall("brew", Seq("install", "--cask", "google-chrome"))
+
+      case _ =>
+        Right(println("  \u001b[32m[OK]\u001b[0m Browser provisioned."))
+
 
   private def installSwaync(ctx: Context): Either[PolyominoError, Unit] =
     val pm = detectPackageManager()
