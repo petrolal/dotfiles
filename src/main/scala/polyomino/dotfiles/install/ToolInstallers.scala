@@ -664,14 +664,54 @@ object ToolInstallers:
 
     Right(())
 
+  def ensureWaylandSession(ctx: Context): Unit =
+    val swayBin = if os.exists(ctx.home / ".local" / "bin" / "sway") then
+      (ctx.home / ".local" / "bin" / "sway").toString
+    else if os.exists(os.Path("/usr/local/bin/sway")) then
+      "/usr/local/bin/sway"
+    else
+      "sway"
+
+    val waylandSessionsDir = ctx.home / ".local" / "share" / "wayland-sessions"
+    try
+      os.makeDir.all(waylandSessionsDir)
+      val desktopContent =
+        s"""[Desktop Entry]
+           |Name=SwayFX
+           |Comment=An i3-compatible Wayland compositor with FX
+           |Exec=$swayBin
+           |Type=Application
+           |DesktopNames=sway
+           |""".stripMargin
+      os.write.over(waylandSessionsDir / "sway.desktop", desktopContent)
+      os.write.over(waylandSessionsDir / "swayfx.desktop", desktopContent)
+    catch
+      case _: Exception => ()
+
+    try
+      os.proc("sudo", "cp", (waylandSessionsDir / "sway.desktop").toString, "/usr/share/wayland-sessions/sway.desktop").call(check = false)
+      os.proc("sudo", "cp", (waylandSessionsDir / "swayfx.desktop").toString, "/usr/share/wayland-sessions/swayfx.desktop").call(check = false)
+    catch
+      case _: Exception => ()
+
+    if os.exists(ctx.home / ".local" / "bin" / "sway") then
+      try
+        os.proc("sudo", "ln", "-sf", s"${ctx.home}/.local/bin/sway", "/usr/local/bin/sway").call(check = false)
+        os.proc("sudo", "ln", "-sf", s"${ctx.home}/.local/bin/swaymsg", "/usr/local/bin/swaymsg").call(check = false)
+        os.proc("sudo", "ln", "-sf", s"${ctx.home}/.local/bin/swaybar", "/usr/local/bin/swaybar").call(check = false)
+        os.proc("sudo", "ln", "-sf", s"${ctx.home}/.local/bin/swaynag", "/usr/local/bin/swaynag").call(check = false)
+      catch
+        case _: Exception => ()
+
   private def installSwayfx(ctx: Context): Either[PolyominoError, Unit] =
     val pm = detectPackageManager()
     println(s"\u001b[1;36m[polyomino install-swayfx]\u001b[0m Checking/Installing SwayFX / Sway (PM: $pm)...")
     if isSwayfxInstalled then
       println("  \u001b[32m[OK]\u001b[0m SwayFX is already installed.")
+      ensureWaylandSession(ctx)
       Right(())
     else
-      pm match
+      val res = pm match
         case PackageManager.Pacman =>
           if isAvailable("yay") then
             if isSwayInstalled then
@@ -737,28 +777,6 @@ object ToolInstallers:
               val installRes = os.proc("ninja", "-C", "build", "install").call(cwd = buildDir, check = false)
               if installRes.exitCode == 0 then
                 println(s"  \u001b[32m[OK]\u001b[0m SwayFX built and installed successfully to ${ctx.home}/.local/bin/sway.")
-                val waylandSessionsDir = ctx.home / ".local" / "share" / "wayland-sessions"
-                os.makeDir.all(waylandSessionsDir)
-                val desktopContent =
-                  s"""[Desktop Entry]
-                     |Name=SwayFX
-                     |Comment=An i3-compatible Wayland compositor with FX
-                     |Exec=${ctx.home}/.local/bin/sway
-                     |Type=Application
-                     |DesktopNames=sway
-                     |""".stripMargin
-                os.write.over(waylandSessionsDir / "sway.desktop", desktopContent)
-                os.write.over(waylandSessionsDir / "swayfx.desktop", desktopContent)
-                try {
-                  os.proc("sudo", "cp", (waylandSessionsDir / "sway.desktop").toString, "/usr/share/wayland-sessions/sway.desktop").call(check = false)
-                  os.proc("sudo", "cp", (waylandSessionsDir / "swayfx.desktop").toString, "/usr/share/wayland-sessions/swayfx.desktop").call(check = false)
-                } catch { case _: Exception => () }
-                try {
-                  os.proc("sudo", "ln", "-sf", s"${ctx.home}/.local/bin/sway", "/usr/local/bin/sway").call(check = false)
-                  os.proc("sudo", "ln", "-sf", s"${ctx.home}/.local/bin/swaymsg", "/usr/local/bin/swaymsg").call(check = false)
-                  os.proc("sudo", "ln", "-sf", s"${ctx.home}/.local/bin/swaybar", "/usr/local/bin/swaybar").call(check = false)
-                  os.proc("sudo", "ln", "-sf", s"${ctx.home}/.local/bin/swaynag", "/usr/local/bin/swaynag").call(check = false)
-                } catch { case _: Exception => () }
               else
                 println(s"  \u001b[33m[NOTE]\u001b[0m SwayFX install exited with code ${installRes.exitCode}; base sway is installed.")
             Right(())
@@ -770,6 +788,8 @@ object ToolInstallers:
           runPkgInstall("brew", Seq("install", "sway"))
         case _ =>
           Right(println("  \u001b[33m[NOTE]\u001b[0m Manual installation of SwayFX/Sway required for current OS."))
+      ensureWaylandSession(ctx)
+      res
 
   private def installTelegram(ctx: Context): Either[PolyominoError, Unit] =
     val pm = detectPackageManager()

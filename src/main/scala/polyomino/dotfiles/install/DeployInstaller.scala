@@ -246,6 +246,7 @@ object DeployInstaller:
     if !ctx.isTest then
       val activePalette = polyomino.dotfiles.theme.ThemeEngine.getActivePalette(ctx)
       polyomino.dotfiles.theme.ThemeEngine.applyTheme(ctx, activePalette.name)
+      ToolInstallers.ensureWaylandSession(ctx)
 
     if !args.contains("--links-only") then
       println("\n[1;32m[polyomino full-install][0m Installing all system dependencies, desktop apps, fonts, and tooling...")
