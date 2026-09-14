@@ -1,14 +1,1 @@
-[Unit]
-Description=Mako notification daemon
-Documentation=man:mako(1)
-PartOf=graphical-session.target
-After=graphical-session-pre.target
-
-[Service]
-Type=dbus
-BusName=org.freedesktop.Notifications
-ExecStart=/usr/bin/mako
-Restart=on-failure
-
-[Install]
-WantedBy=graphical-session.target
+/home/luhenr@ad.global/polyomino.dotfiles/config/systemd/user/mako.service

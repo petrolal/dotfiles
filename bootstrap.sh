@@ -747,6 +747,22 @@ install_swayfx() {
         ninja -C "$build_dir/build" install 2>/dev/null || true
         if [ -f "$HOME/.local/bin/sway" ]; then
           echo -e "  \033[32m[OK]\033[0m SwayFX compiled and installed to $HOME/.local/bin/sway"
+          mkdir -p "$HOME/.local/share/wayland-sessions"
+          cat << EOF > "$HOME/.local/share/wayland-sessions/swayfx.desktop"
+[Desktop Entry]
+Name=SwayFX
+Comment=An i3-compatible Wayland compositor with FX
+Exec=$HOME/.local/bin/sway
+Type=Application
+DesktopNames=sway
+EOF
+          cp -f "$HOME/.local/share/wayland-sessions/swayfx.desktop" "$HOME/.local/share/wayland-sessions/sway.desktop"
+          sudo cp -f "$HOME/.local/share/wayland-sessions/swayfx.desktop" /usr/share/wayland-sessions/ 2>/dev/null || true
+          sudo cp -f "$HOME/.local/share/wayland-sessions/sway.desktop" /usr/share/wayland-sessions/ 2>/dev/null || true
+          sudo ln -sf "$HOME/.local/bin/sway" /usr/local/bin/sway 2>/dev/null || true
+          [ -f "$HOME/.local/bin/swaymsg" ] && sudo ln -sf "$HOME/.local/bin/swaymsg" /usr/local/bin/swaymsg 2>/dev/null || true
+          [ -f "$HOME/.local/bin/swaybar" ] && sudo ln -sf "$HOME/.local/bin/swaybar" /usr/local/bin/swaybar 2>/dev/null || true
+          [ -f "$HOME/.local/bin/swaynag" ] && sudo ln -sf "$HOME/.local/bin/swaynag" /usr/local/bin/swaynag 2>/dev/null || true
         fi
       fi
       ;;
