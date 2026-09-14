@@ -102,9 +102,9 @@ def handle_volume(action, step="5%"):
         step = f"{step}%"
 
     if action == "raise":
-        run_cmd(["wpctl", "set-volume", "-l", "1.5", "@DEFAULT_AUDIO_SINK@", f"{step}+"])
+        run_cmd(["wpctl", "set-volume", "-l", "1.0", "@DEFAULT_AUDIO_SINK@", f"{step}+"])
         if shutil.which("swayosd-client"):
-            run_cmd(["swayosd-client", "--output-volume", "raise"])
+            run_cmd(["swayosd-client", "--output-volume", "raise", "--max-volume", "100"])
     elif action == "lower":
         run_cmd(["wpctl", "set-volume", "@DEFAULT_AUDIO_SINK@", f"{step}-"])
         if shutil.which("swayosd-client"):
@@ -120,11 +120,13 @@ def handle_volume(action, step="5%"):
 
     if action == "mic-mute":
         pct, is_muted = get_volume_info(source=True)
+        pct = min(100, pct)
         glyph = "󰍭" if is_muted else "󰍬"
         title = "Microphone"
         notify_osd(title, glyph, pct, is_muted=is_muted, subtitle="Input Muted")
     else:
         pct, is_muted = get_volume_info(source=False)
+        pct = min(100, pct)
         if is_muted:
             glyph = "󰝟"
         elif pct >= 67:
@@ -141,7 +143,12 @@ def handle_brightness(action, step="5%"):
         step = f"{step}%"
 
     if action == "up":
-        run_cmd(["brightnessctl", "set", f"+{step}"])
+        cur_pct = get_brightness_info()
+        step_val = int(step.rstrip("%")) if step.rstrip("%").isdigit() else 5
+        if cur_pct + step_val >= 100:
+            run_cmd(["brightnessctl", "set", "100%"])
+        else:
+            run_cmd(["brightnessctl", "set", f"+{step}"])
         if shutil.which("swayosd-client"):
             run_cmd(["swayosd-client", "--brightness", "raise"])
     elif action == "down":
@@ -149,7 +156,7 @@ def handle_brightness(action, step="5%"):
         if shutil.which("swayosd-client"):
             run_cmd(["swayosd-client", "--brightness", "lower"])
 
-    pct = get_brightness_info()
+    pct = min(100, get_brightness_info())
     if pct >= 75:
         glyph = "󰃠"
     elif pct >= 50:
