@@ -586,3 +586,107 @@ object WofiPickers:
     "Mod4+Print               → Screenshot region selection",
     "Mod4+Shift+Print         → Screenshot active window"
   )
+
+  def runAudioPicker(ctx: Context, args: List[String] = Nil): Either[PolyominoError, Unit] =
+    try
+      val checkRes = os.proc("pgrep", "-f", "polyomino-tilemenu.*AUDIO").call(check = false)
+      if checkRes.exitCode == 0 then
+        val pids = checkRes.out.text().trim.split("\\s+").filter(_.nonEmpty)
+        for pid <- pids do
+          try os.proc("kill", pid).call(check = false) catch case _: Exception => ()
+        return Right(())
+    catch
+      case _: Exception => ()
+
+    val (currentVol, isMuted) = try
+      val res = os.proc("wpctl", "get-volume", "@DEFAULT_AUDIO_SINK@").call(check = false).out.text().trim
+      val muted = res.contains("[MUTED]")
+      val pct = "([0-9]+\\.[0-9]+|[0-9]+)".r.findFirstIn(res).map(v => (v.toDouble * 100).round.toInt).getOrElse(50)
+      (pct, muted)
+    catch
+      case _: Exception => (50, false)
+
+    val tiles = Seq(
+      tile("100", "󰕾", "100% Volume", "Maximum audio level", "accent", badge = if currentVol >= 95 && !isMuted then Some("CURRENT") else None),
+      tile("80", "󰕾", "80% Volume", "High audio level", "teal", badge = if currentVol >= 75 && currentVol < 95 && !isMuted then Some("CURRENT") else None),
+      tile("60", "󰖀", "60% Volume", "Comfortable indoor audio", "blue", badge = if currentVol >= 55 && currentVol < 75 && !isMuted then Some("CURRENT") else None),
+      tile("40", "󰕿", "40% Volume", "Moderate audio level", "sky", badge = if currentVol >= 35 && currentVol < 55 && !isMuted then Some("CURRENT") else None),
+      tile("20", "󰕿", "20% Volume", "Low night audio level", "subtext0", badge = if currentVol < 35 && !isMuted then Some("CURRENT") else None),
+      tile("mute", "󰝟", "Toggle Output Mute", if isMuted then "Output is muted (click to unmute)" else "Mute speaker audio output", "red", badge = if isMuted then Some("MUTED") else None),
+      tile("mic-mute", "󰍭", "Toggle Mic Mute", "Mute or unmute microphone input", "yellow"),
+      tile("mixer", "󰓃", "Audio Mixer (Pavucontrol)", "Open graphical audio controller", "mauve")
+    )
+
+    val selected = tilePick(ctx, "POLYOMINO // AUDIO CONTROL", tiles, columns = 2, width = 640, height = 440, badge = "AUDIO")
+    if selected.isEmpty then return Right(())
+
+    selected match
+      case "mute" =>
+        try os.proc(ctx.dotfilesDir / "config" / "sway" / "scripts" / "polyomino-osd", "volume", "mute").call(check = false) catch case _: Exception => ()
+      case "mic-mute" =>
+        try os.proc(ctx.dotfilesDir / "config" / "sway" / "scripts" / "polyomino-osd", "volume", "mic-mute").call(check = false) catch case _: Exception => ()
+      case "mixer" =>
+        try
+          if os.proc("which", "pavucontrol").call(check = false).exitCode == 0 then
+            os.proc("pavucontrol").spawn(stdout = os.Inherit, stderr = os.Inherit)
+          else
+            os.proc("kitty", "--class=floating-term", "-T", "ncpamixer", "-e", "ncpamixer").spawn(stdout = os.Inherit, stderr = os.Inherit)
+        catch case _: Exception => ()
+      case vol if vol.forall(_.isDigit) =>
+        try
+          os.proc("wpctl", "set-volume", "@DEFAULT_AUDIO_SINK@", s"${vol}%").call(check = false)
+          os.proc(ctx.dotfilesDir / "config" / "sway" / "scripts" / "polyomino-osd", "volume", "raise", "0%").call(check = false)
+        catch case _: Exception => ()
+      case _ => ()
+
+    Right(())
+
+  def runBrightnessPicker(ctx: Context, args: List[String] = Nil): Either[PolyominoError, Unit] =
+    try
+      val checkRes = os.proc("pgrep", "-f", "polyomino-tilemenu.*BRIGHTNESS").call(check = false)
+      if checkRes.exitCode == 0 then
+        val pids = checkRes.out.text().trim.split("\\s+").filter(_.nonEmpty)
+        for pid <- pids do
+          try os.proc("kill", pid).call(check = false) catch case _: Exception => ()
+        return Right(())
+    catch
+      case _: Exception => ()
+
+    val currentPct = try
+      val res = os.proc("brightnessctl", "-m").call(check = false).out.text().trim
+      val parts = res.split(",")
+      if parts.length >= 4 then parts(3).stripSuffix("%").toIntOption.getOrElse(75) else 75
+    catch
+      case _: Exception => 75
+
+    val tiles = Seq(
+      tile("100", "󰃠", "100% Brightness", "Full daylight maximum backlight", "yellow", badge = if currentPct >= 95 then Some("CURRENT") else None),
+      tile("80", "󰃠", "80% Brightness", "High brightness level", "accent", badge = if currentPct >= 75 && currentPct < 95 then Some("CURRENT") else None),
+      tile("60", "󰃟", "60% Brightness", "Balanced indoor backlight", "teal", badge = if currentPct >= 55 && currentPct < 75 then Some("CURRENT") else None),
+      tile("40", "󰃞", "40% Brightness", "Relaxed eye-comfort backlight", "blue", badge = if currentPct >= 35 && currentPct < 55 then Some("CURRENT") else None),
+      tile("20", "󰃝", "20% Brightness", "Dim night workspace backlight", "sky", badge = if currentPct >= 15 && currentPct < 35 then Some("CURRENT") else None),
+      tile("10", "󰃝", "10% Brightness", "Minimum screen backlight", "subtext0", badge = if currentPct < 15 then Some("CURRENT") else None),
+      tile("nightlight", "󰖔", "Toggle Night Light", "Warm color temperature for eye comfort", "peach")
+    )
+
+    val selected = tilePick(ctx, "POLYOMINO // BRIGHTNESS CONTROL", tiles, columns = 2, width = 640, height = 400, badge = "BRIGHTNESS")
+    if selected.isEmpty then return Right(())
+
+    selected match
+      case "nightlight" =>
+        try
+          val check = os.proc("pgrep", "-x", "wlsunset").call(check = false)
+          if check.exitCode == 0 then
+            os.proc("pkill", "-x", "wlsunset").call(check = false)
+          else
+            os.proc("wlsunset", "-t", "4000", "-T", "6500").spawn(stdout = os.Inherit, stderr = os.Inherit)
+        catch case _: Exception => ()
+      case pct if pct.forall(_.isDigit) =>
+        try
+          os.proc("brightnessctl", "set", s"${pct}%").call(check = false)
+          os.proc(ctx.dotfilesDir / "config" / "sway" / "scripts" / "polyomino-osd", "brightness", "up", "0%").call(check = false)
+        catch case _: Exception => ()
+      case _ => ()
+
+    Right(())
+

@@ -38,7 +38,7 @@ object DeployInstaller:
     "install-fonts", "install-apps", "install-sway", "install-swayfx", "install-swaync", "install-notifications", "install-browser", "install-devops", "install-zsh", "install-sdkman",
     "install-tools", "install-telegram", "install-discord", "install-tetrio", "install-tetr-io", "install-tetrio-desktop", "install-node", "install-npm", "install-npx", "install-nvm", "install-yazi", "install-fastfetch", "install-spotify", "install-spotify-player", "full-install", "theme-picker", "theme-cycle", "wallpaper", "wallpaper-picker", "whichkey", "wichkey", "launcher", "app-launcher", "drun", "menu", "config", "edit-config", "configs", "projects", "project-launcher", "sway-project-launcher", "media-status", "fastfetch-logo", "power-menu", "powermenu",
     "rom-launcher", "patch-rom", "sokoban", "2048", "sweeper", "lightsout", "nonogram",
-    "osd", "volume", "brightness"
+    "osd", "volume", "brightness", "audio-menu", "audio-picker", "volume-menu", "brightness-menu", "brightness-picker", "backlight-menu"
   )
 
   def run(ctx: Context, args: List[String]): Either[PolyominoError, Unit] =

@@ -101,6 +101,10 @@ object Main:
         runScript(ctx.dotfilesDir / "config" / "sway" / "scripts" / "polyomino-osd", "volume", "volume" :: args)
       case "brightness" =>
         runScript(ctx.dotfilesDir / "config" / "sway" / "scripts" / "polyomino-osd", "brightness", "brightness" :: args)
+      case "audio-menu" | "audio-picker" | "volume-menu" =>
+        polyomino.dotfiles.pickers.WofiPickers.runAudioPicker(ctx, args)
+      case "brightness-menu" | "brightness-picker" | "backlight-menu" =>
+        polyomino.dotfiles.pickers.WofiPickers.runBrightnessPicker(ctx, args)
       case name if name.startsWith("install-") => polyomino.dotfiles.install.ToolInstallers.runTool(name, ctx, args)
       case "full-install" => polyomino.dotfiles.install.ToolInstallers.runTool("full-install", ctx, args)
       case other => Left(UnknownCommandError(other))
@@ -145,6 +149,8 @@ object Main:
       |  osd              on-screen display bar indicator for volume and brightness
       |  volume           adjust output/input volume with visual OSD bar indicator (raise|lower|mute|mic-mute)
       |  brightness       adjust display brightness with visual OSD bar indicator (up|down)
+      |  audio-menu       wofi/tilemenu quick-settings popup for audio volume and mutes
+      |  brightness-menu  wofi/tilemenu quick-settings popup for display brightness and night light
       |  install-deps     install system & build dependencies (sbt, gcc, git, etc.)
       |  install-gaming   install gaming dependencies & tools (gamemode/gamescope/mangohud/etc.)
       |  install-emulator <name>  install one emulator (mesen/bsnes/sameboy/mgba/mame/flycast/blastem/duckstation/simple64)
