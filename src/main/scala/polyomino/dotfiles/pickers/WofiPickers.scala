@@ -226,33 +226,55 @@ object WofiPickers:
           spawn(Seq(term, "-e", "sh", "-c", s"'$polyomino' healthcheck; printf '\\n[enter to close] '; read _"))
           Right(())
         case "edit" =>
-          val editor = sys.env.get("EDITOR").filter(_.nonEmpty)
-            .orElse(Some("nvim").filter(e => os.proc("sh", "-c", s"command -v $e").call(check = false).exitCode == 0))
-            .getOrElse("vi")
-          val candidates = Seq(
-            ("sway/config", "sway/config", "Sway Window Manager", "sky"),
-            ("waybar/config.jsonc", "waybar/config.jsonc", "Waybar Bar Layout", "teal"),
-            ("waybar/modules.jsonc", "waybar/modules.jsonc", "Waybar Modules", "teal"),
-            ("waybar/style.css", "waybar/style.css", "Waybar Stylesheet", "teal"),
-            ("kitty/kitty.conf", "kitty/kitty.conf", "Kitty Terminal", "green"),
-            ("swaync/config.json", "swaync/config.json", "SwayNC Notification Center", "sapphire"),
-            ("mako/config", "mako/config", "Mako Notifications", "sapphire"),
-            ("dunst/dunstrc", "dunst/dunstrc", "Dunst Notifications", "sapphire")
-          ).map { case (id, rel, desc, accent) => (id, ctx.configDir / os.RelPath(rel), desc, accent) }
-            ++ Seq(("zsh/.zshrc", ctx.dotfilesDir / "zsh" / ".zshrc", "Zsh Shell Config", "peach"))
-          val existing = candidates.filter { case (_, p, _, _) => os.exists(p) }
-          if existing.isEmpty then Right(())
-          else
-            val configTiles = existing.map { case (id, _, desc, accent) => tile(id, "⚙", id, desc, accent) }
-            val chosenId = tilePick(ctx, "POLYOMINO // EDIT CONFIG", configTiles, columns = 2, width = 640, height = 440, badge = "CONFIG")
-            existing.find(_._1 == chosenId) match
-              case Some((_, path, _, _)) =>
-                spawn(Seq(term, "-e", editor, path.toString))
-                Right(())
-              case None => Right(())
+          runConfigPicker(ctx, args)
         case _ => Right(())
     catch
       case e: Exception => Left(CommandError(s"Menu failed: ${e.getMessage}"))
+
+  def runConfigPicker(ctx: Context, args: List[String] = Nil): Either[PolyominoError, Unit] =
+    // Toggle: close if already open
+    try
+      val checkRes = os.proc("pgrep", "-f", "polyomino-tilemenu.*EDIT CONFIG").call(check = false)
+      if checkRes.exitCode == 0 then
+        val pids = checkRes.out.text().trim.split("\\s+").filter(_.nonEmpty)
+        for pid <- pids do
+          try os.proc("kill", pid).call(check = false) catch case _: Exception => ()
+        return Right(())
+    catch
+      case _: Exception => ()
+
+    val term = sys.env.get("TERMINAL").filter(_.nonEmpty).getOrElse("kitty")
+    val editor = sys.env.get("EDITOR").filter(_.nonEmpty)
+      .orElse(Some("nvim").filter(e => os.proc("sh", "-c", s"command -v $e").call(check = false).exitCode == 0))
+      .getOrElse("vi")
+    val candidates = Seq(
+      ("sway/config", "sway/config", "Sway Window Manager", "sky"),
+      ("waybar/config.jsonc", "waybar/config.jsonc", "Waybar Bar Layout", "teal"),
+      ("waybar/modules.jsonc", "waybar/modules.jsonc", "Waybar Modules", "teal"),
+      ("waybar/style.css", "waybar/style.css", "Waybar Stylesheet", "teal"),
+      ("kitty/kitty.conf", "kitty/kitty.conf", "Kitty Terminal", "green"),
+      ("swaync/config.json", "swaync/config.json", "SwayNC Notification Center", "sapphire"),
+      ("mako/config", "mako/config", "Mako Notifications", "sapphire"),
+      ("dunst/dunstrc", "dunst/dunstrc", "Dunst Notifications", "sapphire"),
+      ("gamemode/gamemode.ini", "gamemode/gamemode.ini", "GameMode Settings", "green"),
+      ("MangoHud/MangoHud.conf", "MangoHud/MangoHud.conf", "MangoHud Overlay", "peach"),
+      ("fastfetch/config.jsonc", "fastfetch/config.jsonc", "Fastfetch System Info", "mauve")
+    ).map { case (id, rel, desc, accent) => (id, ctx.configDir / os.RelPath(rel), desc, accent) }
+      ++ Seq(("zsh/.zshrc", ctx.dotfilesDir / "zsh" / ".zshrc", "Zsh Shell Config", "peach"))
+    val existing = candidates.filter { case (_, p, _, _) => os.exists(p) }
+    if existing.isEmpty then Right(())
+    else
+      val configTiles = existing.map { case (id, _, desc, accent) => tile(id, "⚙", id, desc, accent) }
+      val chosenId = tilePick(ctx, "POLYOMINO // EDIT CONFIG", configTiles, columns = 2, width = 640, height = 440, badge = "CONFIG")
+      existing.find(_._1 == chosenId) match
+        case Some((_, path, _, _)) =>
+          val hasSetsid = os.proc("sh", "-c", "command -v setsid").call(check = false).exitCode == 0
+          val cmd = Seq(term, "-e", editor, path.toString)
+          val full = if hasSetsid then "setsid" +: cmd else cmd
+          val shellable: Seq[os.Shellable] = full.map(s => (s: os.Shellable))
+          os.proc(shellable*).spawn(stdout = os.Inherit, stderr = os.Inherit)
+          Right(())
+        case None => Right(())
 
   def runWhichkey(ctx: Context, args: List[String]): Either[PolyominoError, Unit] =
     // Toggle behavior: check if whichkey is already running

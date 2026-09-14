@@ -882,25 +882,18 @@ object ToolInstallers:
 
   private def installTetrio(ctx: Context): Either[PolyominoError, Unit] =
     val pm = detectPackageManager()
-    val localBin = ctx.home / ".local" / "bin"
-    val isTetrioInstalled = isAvailable("tetrio") || isAvailable("tetrio-desktop") || isAvailable("TETR.IO") ||
-      os.exists(localBin / "tetrio") || os.exists(localBin / "TETR.IO")
-
-    if isTetrioInstalled then
-      println("  \u001b[32m[OK]\u001b[0m TETR.IO is already installed.")
-      return Right(())
 
     if ctx.isTest then
       println("  \u001b[32m[OK]\u001b[0m Test environment detected; TETR.IO installation simulated.")
-      return Right(())
+      return configureTetrio(ctx)
 
-    println(s"\u001b[1;36m[polyomino install-tetrio]\u001b[0m Installing TETR.IO desktop client (PM: $pm)...")
-    pm match
+    println(s"\u001b[1;36m[polyomino install-tetrio]\u001b[0m Installing/Updating TETR.IO desktop client (PM: $pm)...")
+    val installRes = pm match
       case PackageManager.Pacman if isAvailable("yay") =>
         val yayRes = os.proc("yay", "-S", "--needed", "--noconfirm", "--answerclean", "None", "--answerdiff", "None", "tetrio-desktop")
           .call(stdin = os.Inherit, stdout = os.Inherit, stderr = os.Inherit, check = false)
         if yayRes.exitCode == 0 then
-          println("  \u001b[32m[OK]\u001b[0m TETR.IO installed successfully via yay (AUR).")
+          println("  \u001b[32m[OK]\u001b[0m TETR.IO installed/updated successfully via yay (AUR).")
           Right(())
         else
           installTetrioAppImage(ctx)
@@ -915,7 +908,7 @@ object ToolInstallers:
             val aptRes = os.proc("sudo", "apt-get", "install", "-y", tmpDeb.toString)
               .call(stdin = os.Inherit, stdout = os.Inherit, stderr = os.Inherit, check = false)
             if aptRes.exitCode == 0 then
-              println("  \u001b[32m[OK]\u001b[0m TETR.IO installed successfully via apt/dpkg.")
+              println("  \u001b[32m[OK]\u001b[0m TETR.IO installed/updated successfully via apt/dpkg.")
               Right(())
             else
               os.proc("sudo", "apt-get", "install", "-f", "-y").call(check = false)
@@ -933,6 +926,43 @@ object ToolInstallers:
 
       case _ =>
         installTetrioAppImage(ctx)
+
+    installRes.flatMap(_ => configureTetrio(ctx))
+
+  private def configureTetrio(ctx: Context): Either[PolyominoError, Unit] =
+    val sourceConfig = ctx.dotfilesDir / "config" / "games" / "tetr_io" / "config.ttc"
+    if !os.exists(sourceConfig) then
+      return Right(())
+
+    println("\u001b[1;36m[polyomino install-tetrio]\u001b[0m Setting up TETR.IO custom configuration (config.ttc)...")
+    try
+      // 1. Seed to ~/.config/games/tetr_io/config.ttc
+      val destDir = ctx.configDir / "games" / "tetr_io"
+      os.makeDir.all(destDir)
+      val destConfig = destDir / "config.ttc"
+      os.copy.over(sourceConfig, destConfig)
+      println(s"  \u001b[32m[OK]\u001b[0m Deployed TETR.IO configuration -> $destConfig")
+
+      // 2. Also ensure TETR.IO profile/data directories have the configuration
+      val appDirs = Seq(
+        ctx.configDir / "tetrio",
+        ctx.configDir / "TETR.IO",
+        ctx.configDir / "tetrio-desktop",
+        ctx.home / ".local" / "share" / "tetrio"
+      )
+      for appDir <- appDirs do
+        try
+          os.makeDir.all(appDir)
+          os.copy.over(sourceConfig, appDir / "config.ttc")
+        catch
+          case _: Exception => ()
+
+      println("  \u001b[32m[OK]\u001b[0m TETR.IO configuration ready.")
+      Right(())
+    catch
+      case e: Exception =>
+        println(s"  \u001b[33m[NOTE]\u001b[0m TETR.IO configuration setup skipped: ${e.getMessage}")
+        Right(())
 
   private def installTetrioAppImage(ctx: Context): Either[PolyominoError, Unit] =
     val localBin = ctx.home / ".local" / "bin"

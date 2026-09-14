@@ -324,38 +324,40 @@ assign [class="Docker Desktop"] $ws7
 assign [app_id="lens"] $ws7
 assign [class="Lens"] $ws7
 
-# 8: GAMES (Steam games, TETR.IO, Heroic, Lutris, Gamescope, Emulators)
+# 8: GAMES (Steam games, TETR.IO, Heroic, Lutris, Gamescope, Emulators, Wine/Proton)
 # Steam Games (running games launched via Steam)
-assign [class="^steam_app_.*"] $ws8
-assign [instance="^steam_app_.*"] $ws8
-for_window [class="^steam_app_.*"] move container to workspace number 8, workspace number 8
-for_window [instance="^steam_app_.*"] move container to workspace number 8, workspace number 8
+assign [class="(?i)^steam_app_.*"] $ws8
+assign [instance="(?i)^steam_app_.*"] $ws8
+assign [app_id="(?i)^steam_app_.*"] $ws8
+for_window [class="(?i)^steam_app_.*"] move container to workspace number 8, workspace number 8
+for_window [instance="(?i)^steam_app_.*"] move container to workspace number 8, workspace number 8
+for_window [app_id="(?i)^steam_app_.*"] move container to workspace number 8, workspace number 8
 
 # TETR.IO Desktop & modern stackers
 assign [app_id="(?i).*tetr\.?io.*"] $ws8
 assign [class="(?i).*tetr\.?io.*"] $ws8
+assign [instance="(?i).*tetr\.?io.*"] $ws8
 for_window [app_id="(?i).*tetr\.?io.*"] move container to workspace number 8, workspace number 8
 for_window [class="(?i).*tetr\.?io.*"] move container to workspace number 8, workspace number 8
+for_window [instance="(?i).*tetr\.?io.*"] move container to workspace number 8, workspace number 8
 
-# Game Launchers & Runners
-assign [class="^heroic$"] $ws8
-assign [app_id="^heroic$"] $ws8
-assign [class="^lutris$"] $ws8
-assign [app_id="^lutris$"] $ws8
-assign [app_id="gamescope"] $ws8
-assign [class="^gamescope$"] $ws8
-for_window [class="^heroic$"] move container to workspace number 8, workspace number 8
-for_window [app_id="^heroic$"] move container to workspace number 8, workspace number 8
-for_window [class="^lutris$"] move container to workspace number 8, workspace number 8
-for_window [app_id="^lutris$"] move container to workspace number 8, workspace number 8
-for_window [class="^gamescope$"] move container to workspace number 8, workspace number 8
-for_window [app_id="gamescope"] move container to workspace number 8, workspace number 8
+# Wine & Proton Windows (.exe games)
+assign [class="(?i).*\.exe$"] $ws8
+assign [instance="(?i).*\.exe$"] $ws8
+for_window [class="(?i).*\.exe$"] move container to workspace number 8, workspace number 8
+for_window [instance="(?i).*\.exe$"] move container to workspace number 8, workspace number 8
 
-# Emulators (polyomino install-emulator suite + common third-party emulators)
-for_window [app_id="(?i)^(mesen|bsnes|sameboy|mgba-qt|mgba|mame|flycast|blastem|duckstation|simple64|retroarch|dolphin-emu|citra-qt|yuzu|ryujinx|cemu|ppsspp|pcsx2-qt|pcsx2|rpcs3)$"] move container to workspace number 8, workspace number 8
-for_window [class="(?i)^(mesen|bsnes|sameboy|mgba-qt|mgba|mame|flycast|blastem|duckstation|simple64|retroarch|dolphin-emu|citra-qt|yuzu|ryujinx|cemu|ppsspp|pcsx2-qt|pcsx2|rpcs3)$"] move container to workspace number 8, workspace number 8
-assign [app_id="(?i)^(mesen|bsnes|sameboy|mgba-qt|mgba|mame|flycast|blastem|duckstation|simple64|retroarch|dolphin-emu|citra-qt|yuzu|ryujinx|cemu|ppsspp|pcsx2-qt|pcsx2|rpcs3)$"] $ws8
-assign [class="(?i)^(mesen|bsnes|sameboy|mgba-qt|mgba|mame|flycast|blastem|duckstation|simple64|retroarch|dolphin-emu|citra-qt|yuzu|ryujinx|cemu|ppsspp|pcsx2-qt|pcsx2|rpcs3)$"] $ws8
+# Game Launchers, Sandboxes & Runners
+assign [class="(?i)^(heroic|lutris|gamescope|prismlauncher|minecraft-launcher)$"] $ws8
+assign [app_id="(?i)^(heroic|lutris|gamescope|prismlauncher|org\.prismlauncher\.PrismLauncher|minecraft-launcher)$"] $ws8
+for_window [class="(?i)^(heroic|lutris|gamescope|prismlauncher|minecraft-launcher)$"] move container to workspace number 8, workspace number 8
+for_window [app_id="(?i)^(heroic|lutris|gamescope|prismlauncher|org\.prismlauncher\.PrismLauncher|minecraft-launcher)$"] move container to workspace number 8, workspace number 8
+
+# Emulators (polyomino install-emulator suite + third-party emulators)
+for_window [app_id="(?i)^(mesen|bsnes|sameboy|mgba-qt|mgba|mame|flycast|blastem|duckstation|simple64|retroarch|dolphin-emu|citra-qt|yuzu|ryujinx|cemu|ppsspp|pcsx2-qt|pcsx2|rpcs3|snes9x|fceux|mednafen|desmume|melonds|vita3k|shadps4|ryubing)$"] move container to workspace number 8, workspace number 8
+for_window [class="(?i)^(mesen|bsnes|sameboy|mgba-qt|mgba|mame|flycast|blastem|duckstation|simple64|retroarch|dolphin-emu|citra-qt|yuzu|ryujinx|cemu|ppsspp|pcsx2-qt|pcsx2|rpcs3|snes9x|fceux|mednafen|desmume|melonds|vita3k|shadps4|ryubing)$"] move container to workspace number 8, workspace number 8
+assign [app_id="(?i)^(mesen|bsnes|sameboy|mgba-qt|mgba|mame|flycast|blastem|duckstation|simple64|retroarch|dolphin-emu|citra-qt|yuzu|ryujinx|cemu|ppsspp|pcsx2-qt|pcsx2|rpcs3|snes9x|fceux|mednafen|desmume|melonds|vita3k|shadps4|ryubing)$"] $ws8
+assign [class="(?i)^(mesen|bsnes|sameboy|mgba-qt|mgba|mame|flycast|blastem|duckstation|simple64|retroarch|dolphin-emu|citra-qt|yuzu|ryujinx|cemu|ppsspp|pcsx2-qt|pcsx2|rpcs3|snes9x|fceux|mednafen|desmume|melonds|vita3k|shadps4|ryubing)$"] $ws8
 
 # Auto-tabbed layouts for multi-window communication & web workspaces
 for_window [workspace="^5$"] layout tabbed

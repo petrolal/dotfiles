@@ -78,6 +78,7 @@ object Main:
       case "whichkey" | "wichkey" => polyomino.dotfiles.pickers.WofiPickers.runWhichkey(ctx, args)
       case "launcher" | "app-launcher" | "drun" => polyomino.dotfiles.pickers.WofiPickers.runLauncher(ctx, args)
       case "menu" => polyomino.dotfiles.pickers.WofiPickers.runMenu(ctx, args)
+      case "config" | "edit-config" | "configs" => polyomino.dotfiles.pickers.WofiPickers.runConfigPicker(ctx, args)
       case "projects" | "project-launcher" | "sway-project-launcher" => polyomino.dotfiles.pickers.WofiPickers.runProjects(ctx, args)
       case "media-status" | "waybar-media" | "media" => polyomino.dotfiles.sysutils.SysUtils.runMediaStatus(ctx)
       case "fastfetch-logo" | "set-logo" => polyomino.dotfiles.sysutils.SysUtils.runFastfetchLogo(ctx)

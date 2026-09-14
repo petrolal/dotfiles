@@ -1905,9 +1905,9 @@ class WelcomeWindow(Gtk.Window):
             icon="⚙️",
             title="Edit Configs",
             desc="Open Sway, Kitty, or Zsh configs.",
-            action_hint="Menu",
+            action_hint="Edit",
             accent_color="teal",
-            on_click_fn=lambda: run_cmd(["polyomino", "menu"])
+            on_click_fn=lambda: run_cmd(["polyomino", "config"])
         )
 
         outer = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=18)

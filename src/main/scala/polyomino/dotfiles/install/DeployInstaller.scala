@@ -36,7 +36,7 @@ object DeployInstaller:
     "install", "deploy", "uninstall", "welcome", "gamemode", "install-deps", "install-gaming", "install-games", "install-gamemode", "install-brew", "install-homebrew",
     "install-gh", "install-github-cli",
     "install-fonts", "install-apps", "install-sway", "install-swayfx", "install-swaync", "install-notifications", "install-browser", "install-devops", "install-zsh", "install-sdkman",
-    "install-tools", "install-telegram", "install-discord", "install-tetrio", "install-tetr-io", "install-tetrio-desktop", "install-node", "install-npm", "install-npx", "install-nvm", "install-yazi", "install-fastfetch", "install-spotify", "install-spotify-player", "full-install", "theme-picker", "theme-cycle", "wallpaper", "wallpaper-picker", "whichkey", "wichkey", "launcher", "app-launcher", "drun", "menu", "projects", "project-launcher", "sway-project-launcher", "media-status", "fastfetch-logo", "power-menu", "powermenu",
+    "install-tools", "install-telegram", "install-discord", "install-tetrio", "install-tetr-io", "install-tetrio-desktop", "install-node", "install-npm", "install-npx", "install-nvm", "install-yazi", "install-fastfetch", "install-spotify", "install-spotify-player", "full-install", "theme-picker", "theme-cycle", "wallpaper", "wallpaper-picker", "whichkey", "wichkey", "launcher", "app-launcher", "drun", "menu", "config", "edit-config", "configs", "projects", "project-launcher", "sway-project-launcher", "media-status", "fastfetch-logo", "power-menu", "powermenu",
     "rom-launcher", "patch-rom", "sokoban", "2048", "sweeper", "lightsout", "nonogram"
   )
 
@@ -125,6 +125,8 @@ object DeployInstaller:
       (ctx.configDir / "spotify-player", ctx.dotfilesDir / "config" / "spotify-player"),
       (ctx.configDir / "gamemode", ctx.dotfilesDir / "config" / "gamemode"),
       (ctx.configDir / "MangoHud", ctx.dotfilesDir / "config" / "MangoHud"),
+      (ctx.configDir / "games", ctx.dotfilesDir / "config" / "games"),
+      (ctx.configDir / "polyomino" / "games", ctx.dotfilesDir / "config" / "games"),
       (ctx.configDir / "systemd" / "user" / "mako.service", ctx.dotfilesDir / "config" / "systemd" / "user" / "mako.service")
     )
 
