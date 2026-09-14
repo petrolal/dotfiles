@@ -205,8 +205,6 @@ bindsym --whole-window $mod+button3 floating toggle
 ### ────────────────────────────────────────────────────────────────
 font pango:JetBrainsMono Nerd Font 10
 
-corner_radius 8
-smart_corner_radius off
 default_border pixel 2
 default_floating_border pixel 2
 gaps inner 8
