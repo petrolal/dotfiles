@@ -737,6 +737,28 @@ object ToolInstallers:
               val installRes = os.proc("ninja", "-C", "build", "install").call(cwd = buildDir, check = false)
               if installRes.exitCode == 0 then
                 println(s"  \u001b[32m[OK]\u001b[0m SwayFX built and installed successfully to ${ctx.home}/.local/bin/sway.")
+                val waylandSessionsDir = ctx.home / ".local" / "share" / "wayland-sessions"
+                os.makeDir.all(waylandSessionsDir)
+                val desktopContent =
+                  s"""[Desktop Entry]
+                     |Name=SwayFX
+                     |Comment=An i3-compatible Wayland compositor with FX
+                     |Exec=${ctx.home}/.local/bin/sway
+                     |Type=Application
+                     |DesktopNames=sway
+                     |""".stripMargin
+                os.write.over(waylandSessionsDir / "sway.desktop", desktopContent)
+                os.write.over(waylandSessionsDir / "swayfx.desktop", desktopContent)
+                try {
+                  os.proc("sudo", "cp", (waylandSessionsDir / "sway.desktop").toString, "/usr/share/wayland-sessions/sway.desktop").call(check = false)
+                  os.proc("sudo", "cp", (waylandSessionsDir / "swayfx.desktop").toString, "/usr/share/wayland-sessions/swayfx.desktop").call(check = false)
+                } catch { case _: Exception => () }
+                try {
+                  os.proc("sudo", "ln", "-sf", s"${ctx.home}/.local/bin/sway", "/usr/local/bin/sway").call(check = false)
+                  os.proc("sudo", "ln", "-sf", s"${ctx.home}/.local/bin/swaymsg", "/usr/local/bin/swaymsg").call(check = false)
+                  os.proc("sudo", "ln", "-sf", s"${ctx.home}/.local/bin/swaybar", "/usr/local/bin/swaybar").call(check = false)
+                  os.proc("sudo", "ln", "-sf", s"${ctx.home}/.local/bin/swaynag", "/usr/local/bin/swaynag").call(check = false)
+                } catch { case _: Exception => () }
               else
                 println(s"  \u001b[33m[NOTE]\u001b[0m SwayFX install exited with code ${installRes.exitCode}; base sway is installed.")
             Right(())
@@ -1499,8 +1521,14 @@ object ToolInstallers:
 
   private def isSwayfxInstalled: Boolean =
     isAvailable("swayfx") || {
-      try os.proc("sway", "--version").call(check = false).out.text().toLowerCase.contains("swayfx")
-      catch case _: Exception => false
+      try {
+        val homeLocal = sys.env.get("HOME").map(h => os.Path(h) / ".local" / "bin" / "sway")
+        val usrLocal = os.Path("/usr/local/bin/sway")
+        val bin = if homeLocal.exists(os.exists) then homeLocal.get.toString
+        else if os.exists(usrLocal) then usrLocal.toString
+        else "sway"
+        os.proc(bin, "--version").call(check = false).out.text().toLowerCase.contains("swayfx")
+      } catch case _: Exception => false
     } || {
       try isAvailable("pacman") && os.proc("pacman", "-Qq", "swayfx").call(check = false).exitCode == 0
       catch case _: Exception => false

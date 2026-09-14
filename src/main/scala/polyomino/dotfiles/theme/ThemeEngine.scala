@@ -157,11 +157,15 @@ object ThemeEngine:
          |""".stripMargin
     os.write.over(swayColorsFile, swayColorsContent)
     val isSystemSwayfx = try {
-      val v = if os.exists(os.Path("/usr/bin/sway")) then
-        os.proc("/usr/bin/sway", "--version").call(check = false).out.text().toLowerCase
-      else
-        os.proc("sway", "--version").call(check = false).out.text().toLowerCase
-      v.contains("swayfx")
+      val localSway = ctx.home / ".local" / "bin" / "sway"
+      val usrLocalSway = os.Path("/usr/local/bin/sway")
+      val usrSway = os.Path("/usr/bin/sway")
+      val bin = if os.exists(localSway) then localSway.toString
+      else if os.exists(usrLocalSway) then usrLocalSway.toString
+      else if os.proc("which", "sway").call(check = false).exitCode == 0 then "sway"
+      else if os.exists(usrSway) then usrSway.toString
+      else "sway"
+      os.proc(bin, "--version").call(check = false).out.text().toLowerCase.contains("swayfx")
     } catch {
       case _: Exception => false
     }
