@@ -91,6 +91,10 @@ object Main:
       case "uninstall" => polyomino.dotfiles.install.DeployInstaller.uninstall(ctx, args)
       case "gamemode" => polyomino.dotfiles.gamemode.GameModeEngine.run(ctx, args)
       case "welcome" | "hello" => polyomino.dotfiles.sysutils.SysUtils.runWelcome(ctx, args)
+      case "rom-launcher" =>
+        runScript(ctx.dotfilesDir / "config" / "sway" / "scripts" / "polyomino-rom-launcher.sh", "rom-launcher", args)
+      case "patch-rom" =>
+        runScript(ctx.dotfilesDir / "config" / "sway" / "scripts" / "polyomino-patch-rom.sh", "patch-rom", args)
       case name if name.startsWith("install-") => polyomino.dotfiles.install.ToolInstallers.runTool(name, ctx, args)
       case "full-install" => polyomino.dotfiles.install.ToolInstallers.runTool("full-install", ctx, args)
       case other => Left(UnknownCommandError(other))
@@ -173,3 +177,16 @@ object Main:
       Right(())
     catch
       case NonFatal(e) => Left(polyomino.dotfiles.error.CommandError(s"$name failed: ${e.getMessage}"))
+
+  private def runScript(script: os.Path, name: String, args: List[String]): Either[PolyominoError, Unit] =
+    if !os.exists(script) then
+      Left(polyomino.dotfiles.error.CommandError(s"Script not found at $script"))
+    else
+      try
+        val fullCmd: Seq[os.Shellable] = Seq("bash": os.Shellable, script.toString: os.Shellable) ++ args.map(a => (a: os.Shellable))
+        val res = os.proc(fullCmd*).call(stdin = os.Inherit, stdout = os.Inherit, stderr = os.Inherit, check = false)
+        if res.exitCode == 0 then Right(())
+        else Left(polyomino.dotfiles.error.CommandError(s"$name exited with code ${res.exitCode}", res.exitCode))
+      catch
+        case NonFatal(e) => Left(polyomino.dotfiles.error.CommandError(s"$name failed: ${e.getMessage}"))
+

@@ -66,7 +66,7 @@ object Palette:
   )
 
   def listAll(ctx: Context): Seq[String] = {
-    val discovered = discoverConfFiles(ctx).keys.toSeq
+    val discovered = discoverConfFiles(ctx).values.map(_.name.toLowerCase).toSeq
     val core = Seq("matriz", "encruza", "caravela", "aruanda")
     (discovered ++ core).distinct.sorted
   }

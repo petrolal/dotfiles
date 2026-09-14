@@ -527,26 +527,27 @@ install_java() {
 }
 
 install_polyomino_binary() {
-  echo -e "  \033[1;36m[polyomino]\033[0m Installing polyomino native binary..."
+  echo -e "  \033[1;36m[polyomino]\033[0m Installing & deploying polyomino native binary..."
   mkdir -p "$BIN_DIR"
 
-  # 1. If local native binary exists, install it
+  # 1. Pull latest dotfiles changes if this is a git repo
+  if [ -d "$SCRIPT_DIR/.git" ]; then
+    echo -e "  \033[36m[INFO]\033[0m Pulling latest dotfiles updates in $SCRIPT_DIR..."
+    git -C "$SCRIPT_DIR" pull --ff-only 2>/dev/null || true
+  fi
+
+  # 2. Compile standalone GraalVM native binary if sbt is available
+  if command -v sbt &>/dev/null && [ -f "$SCRIPT_DIR/build.sbt" ]; then
+    echo -e "  \033[36m[INFO]\033[0m Compiling Polyomino native binary (sbt nativeImage)..."
+    (cd "$SCRIPT_DIR" && sbt nativeImage) || true
+  fi
+
+  # 3. Copy compiled binary to $BIN_DIR/polyomino or download release fallback
   if [ -f "$SCRIPT_DIR/target/native-image/polyomino" ]; then
     cp --remove-destination "$SCRIPT_DIR/target/native-image/polyomino" "$BIN_DIR/polyomino"
     chmod +x "$BIN_DIR/polyomino"
-    echo -e "  \033[32m[OK]\033[0m Installed local native binary to $BIN_DIR/polyomino"
-  elif command -v sbt &>/dev/null && [ -f "$SCRIPT_DIR/build.sbt" ]; then
-    echo -e "  \033[36m[INFO]\033[0m Compiling standalone GraalVM native binary..."
-    (cd "$SCRIPT_DIR" && sbt nativeImage) || true
-    if [ -f "$SCRIPT_DIR/target/native-image/polyomino" ]; then
-      cp --remove-destination "$SCRIPT_DIR/target/native-image/polyomino" "$BIN_DIR/polyomino"
-      chmod +x "$BIN_DIR/polyomino"
-      echo -e "  \033[32m[OK]\033[0m Built & installed native binary to $BIN_DIR/polyomino"
-    fi
-  fi
-
-  # 2. If not installed yet, download latest native binary from GitHub Releases
-  if [ ! -f "$BIN_DIR/polyomino" ]; then
+    echo -e "  \033[32m[OK]\033[0m Installed native binary to $BIN_DIR/polyomino"
+  elif [ ! -f "$BIN_DIR/polyomino" ]; then
     echo -e "  \033[36m[INFO]\033[0m Fetching latest native binary release from GitHub..."
     if curl -fL "https://github.com/petrolal/polyomino.dotfiles/releases/latest/download/polyomino-x86_64-linux" -o "$BIN_DIR/polyomino" 2>/dev/null; then
       chmod +x "$BIN_DIR/polyomino"
@@ -556,9 +557,11 @@ install_polyomino_binary() {
     fi
   fi
 
-  # 3. Create helper symlinks if binary is present
+  # 4. Deploy dotfiles, symlinks, themes, and apply configurations to system
   if [ -x "$BIN_DIR/polyomino" ]; then
+    echo -e "  \033[36m[INFO]\033[0m Deploying dotfiles configurations and symlinks..."
     "$BIN_DIR/polyomino" deploy 2>/dev/null || true
+    "$BIN_DIR/polyomino" fastfetch-logo 2>/dev/null || true
   fi
 }
 
@@ -658,30 +661,44 @@ install_tools() {
 setup_zsh_and_ohmyzsh() {
   echo -e "  \033[1;36m[polyomino]\033[0m Setting up Zsh, Oh-My-Zsh, and plugins..."
 
-  # 1. Install Oh-My-Zsh if missing
+  # 1. Install or update Oh-My-Zsh
   if [ ! -d "$HOME/.oh-my-zsh" ]; then
     echo -e "  \033[36m[INFO]\033[0m Cloning Oh-My-Zsh..."
     git clone --depth=1 https://github.com/ohmyzsh/ohmyzsh.git "$HOME/.oh-my-zsh" 2>/dev/null || true
+  elif [ -d "$HOME/.oh-my-zsh/.git" ]; then
+    echo -e "  \033[36m[INFO]\033[0m Updating Oh-My-Zsh..."
+    git -C "$HOME/.oh-my-zsh" pull --ff-only 2>/dev/null || true
   fi
 
-  # 2. Custom Plugins
+  # 2. Custom Plugins (clone or update)
   local custom_plugins="$HOME/.oh-my-zsh/custom/plugins"
   mkdir -p "$custom_plugins"
   if [ ! -d "$custom_plugins/zsh-autosuggestions" ]; then
     git clone --depth=1 https://github.com/zsh-users/zsh-autosuggestions "$custom_plugins/zsh-autosuggestions" 2>/dev/null || true
+  elif [ -d "$custom_plugins/zsh-autosuggestions/.git" ]; then
+    git -C "$custom_plugins/zsh-autosuggestions" pull --ff-only 2>/dev/null || true
   fi
+
   if [ ! -d "$custom_plugins/zsh-syntax-highlighting" ]; then
     git clone --depth=1 https://github.com/zsh-users/zsh-syntax-highlighting.git "$custom_plugins/zsh-syntax-highlighting" 2>/dev/null || true
+  elif [ -d "$custom_plugins/zsh-syntax-highlighting/.git" ]; then
+    git -C "$custom_plugins/zsh-syntax-highlighting" pull --ff-only 2>/dev/null || true
   fi
 
   # 3. Set default shell to zsh
   local zsh_path
   zsh_path="$(command -v zsh 2>/dev/null || echo "/usr/bin/zsh")"
-  if [ -x "$zsh_path" ] && [ "${SHELL:-}" != "$zsh_path" ]; then
-    echo -e "  \033[36m[INFO]\033[0m Setting default shell to $zsh_path..."
-    if command -v chsh &>/dev/null; then
-      chsh -s "$zsh_path" 2>/dev/null || sudo chsh -s "$zsh_path" "$USER" 2>/dev/null || true
-    fi
+  # 4. Ensure ~/.bashrc seamless interactive auto-switch to Zsh
+  if [ -f "$HOME/.bashrc" ] && ! grep -q "Polyomino Zsh auto-switch" "$HOME/.bashrc"; then
+    cat << 'EOF' >> "$HOME/.bashrc"
+
+# Polyomino Zsh auto-switch
+if [ -t 1 ] && [ -n "$PS1" ] && [ -z "$POLYOMINO_SHELL_SWITCHED" ] && command -v zsh >/dev/null 2>&1; then
+  export POLYOMINO_SHELL_SWITCHED=1
+  export SHELL="$(command -v zsh)"
+  exec zsh
+fi
+EOF
   fi
   echo -e "  \033[32m[OK]\033[0m Zsh & Oh-My-Zsh environment ready"
 }
@@ -693,7 +710,7 @@ setup_workspace_and_tetravim() {
   mkdir -p "$HOME/Projects"
   echo -e "  \033[32m[OK]\033[0m Workspace directory ready at $HOME/Projects"
 
-  # 2. Clone Tetravim (git@github.com:petrolal/tetravim.nvim.git) with HTTPS fallback
+  # 2. Clone or update Tetravim (git@github.com:petrolal/tetravim.nvim.git) with HTTPS fallback
   local tetravim_dir="$HOME/tetravim.nvim"
   local nvim_config_dir="$HOME/.config/nvim"
 
@@ -706,7 +723,9 @@ setup_workspace_and_tetravim() {
       }
     fi
   else
-    echo -e "  \033[32m[OK]\033[0m Tetravim repo already present at $tetravim_dir"
+    echo -e "  \033[36m[INFO]\033[0m Pulling latest updates for Tetravim..."
+    git -C "$tetravim_dir" pull --ff-only 2>/dev/null || true
+    echo -e "  \033[32m[OK]\033[0m Tetravim up to date at $tetravim_dir"
   fi
 
   # 3. Symlink ~/.config/nvim -> ~/tetravim.nvim

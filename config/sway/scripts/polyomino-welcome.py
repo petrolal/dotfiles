@@ -93,9 +93,16 @@ def save_settings(settings):
 
 def run_cmd(cmd_list, in_terminal=False):
     term = os.environ.get("TERMINAL", "kitty")
+    poly_bin = os.path.expanduser("~/.local/bin/polyomino")
+    if cmd_list:
+        if cmd_list[0] == "polyomino" and os.path.exists(poly_bin):
+            cmd_list = [poly_bin] + cmd_list[1:]
+        elif shutil.which(cmd_list[0]) is None and os.path.exists(os.path.expanduser(f"~/.local/bin/{cmd_list[0]}")):
+            cmd_list = [os.path.expanduser(f"~/.local/bin/{cmd_list[0]}")] + cmd_list[1:]
+
     if in_terminal:
         cmd_str = shlex.join(cmd_list)
-        full_cmd = [term, "-e", "bash", "-c", f"{cmd_str}; echo ''; read -n 1 -s -r -p 'Press any key to close...'"]
+        full_cmd = [term, "-e", "bash", "-c", f"export PATH=\"$HOME/.local/bin:$PATH\"; {cmd_str}; echo ''; read -n 1 -s -r -p 'Press any key to close...'"]
     else:
         full_cmd = cmd_list
     subprocess.Popen(full_cmd, start_new_session=True)

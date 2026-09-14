@@ -49,7 +49,11 @@ case "${1:-}" in
     [ "${1:-}" ] || { echo "Usage: $0 --auto <base_rom> [patch_dir]" >&2; exit 1; }
     if [ "${2:-}" ]; then auto_patch "$1" "$2"; else auto_patch "$1"; fi
     ;;
-  -h|--help|"")
+  -h|--help)
+    echo "Usage: $0 <base_rom> <patch_file> | --auto <base_rom> [patch_dir]"
+    exit 0
+    ;;
+  "")
     echo "Usage: $0 <base_rom> <patch_file> | --auto <base_rom> [patch_dir]" >&2
     exit 1
     ;;

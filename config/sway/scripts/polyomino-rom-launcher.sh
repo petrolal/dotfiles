@@ -88,6 +88,7 @@ rofi_pick() {
 case "${1:-}" in
   --list) list_roms ;;
   --rofi) rofi_pick ;;
-  -h|--help|"") echo "Usage: $0 [--list|--rofi|<rom_path>]" >&2; exit 1 ;;
+  -h|--help) echo "Usage: $0 [--list|--rofi|<rom_path>]"; exit 0 ;;
+  "") echo "Usage: $0 [--list|--rofi|<rom_path>]" >&2; exit 1 ;;
   *) launch_rom "$1" ;;
 esac
