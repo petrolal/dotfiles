@@ -37,7 +37,8 @@ object DeployInstaller:
     "install-gh", "install-github-cli",
     "install-fonts", "install-apps", "install-sway", "install-swayfx", "install-swaync", "install-notifications", "install-browser", "install-devops", "install-zsh", "install-sdkman",
     "install-tools", "install-telegram", "install-discord", "install-tetrio", "install-tetr-io", "install-tetrio-desktop", "install-node", "install-npm", "install-npx", "install-nvm", "install-yazi", "install-fastfetch", "install-spotify", "install-spotify-player", "full-install", "theme-picker", "theme-cycle", "wallpaper", "wallpaper-picker", "whichkey", "wichkey", "launcher", "app-launcher", "drun", "menu", "config", "edit-config", "configs", "projects", "project-launcher", "sway-project-launcher", "media-status", "fastfetch-logo", "power-menu", "powermenu",
-    "rom-launcher", "patch-rom", "sokoban", "2048", "sweeper", "lightsout", "nonogram"
+    "rom-launcher", "patch-rom", "sokoban", "2048", "sweeper", "lightsout", "nonogram",
+    "osd", "volume", "brightness"
   )
 
   def run(ctx: Context, args: List[String]): Either[PolyominoError, Unit] =
@@ -226,6 +227,8 @@ object DeployInstaller:
         ctx.dotfilesDir / "config" / "sway" / "scripts" / "polyomino-lightsout"
       else if cmd == "nonogram" then
         ctx.dotfilesDir / "config" / "sway" / "scripts" / "polyomino-nonogram"
+      else if cmd == "osd" then
+        ctx.dotfilesDir / "config" / "sway" / "scripts" / "polyomino-osd"
       else mainBinary
       try
         if os.exists(symlinkPath) || os.isLink(symlinkPath) then os.remove(symlinkPath)

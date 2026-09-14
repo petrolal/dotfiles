@@ -1,0 +1,187 @@
+#!/usr/bin/env python3
+"""
+polyomino-osd — Fast On-Screen Display (OSD) Bar Indicator for Volume & Brightness
+Part of the Polyomino Dotfiles Suite.
+
+Controls hardware Volume & Brightness and broadcasts synchronous On-Screen Display
+notifications with real-time level indicators and custom glyphs.
+"""
+
+import sys
+import os
+import shutil
+import subprocess
+import re
+
+def run_cmd(cmd_list):
+    try:
+        res = subprocess.run(cmd_list, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=False)
+        return res.stdout.strip(), res.returncode
+    except Exception:
+        return "", 1
+
+def make_bar(pct, length=18):
+    pct = max(0, min(100, pct))
+    filled = int(round(length * (pct / 100.0)))
+    empty = length - filled
+    return f"[{'█' * filled}{'░' * empty}] {pct}%"
+
+def notify_osd(title, icon_glyph, pct, is_muted=False, subtitle=""):
+    bar_str = "[MUTED]" if is_muted else make_bar(pct)
+    display_title = f"{icon_glyph}  {title}"
+    if is_muted:
+        display_body = f"{subtitle} (Muted)" if subtitle else "Muted"
+    else:
+        display_body = f"{bar_str}"
+
+    notify_cmd = [
+        "notify-send",
+        "-a", "polyomino-osd",
+        "-h", "string:x-canonical-private-synchronous:polyomino-osd",
+        "-h", "string:synchronous:polyomino-osd",
+        "-h", f"int:value:{0 if is_muted else pct}",
+        "-h", "string:category:osd",
+        "-u", "low",
+        "-t", "1200",
+        display_title,
+        display_body
+    ]
+    try:
+        subprocess.run(notify_cmd, check=False)
+    except Exception:
+        pass
+
+def get_volume_info(source=False):
+    target = "@DEFAULT_AUDIO_SOURCE@" if source else "@DEFAULT_AUDIO_SINK@"
+    out, code = run_cmd(["wpctl", "get-volume", target])
+    if code == 0 and out:
+        is_muted = "[MUTED]" in out
+        match = re.search(r"([0-9]+\.[0-9]+|[0-9]+)", out)
+        if match:
+            vol_float = float(match.group(1))
+            pct = int(round(vol_float * 100))
+            return pct, is_muted
+    
+    # Fallback to pactl
+    cmd = ["pactl", "get-source-volume", "@DEFAULT_SOURCE@"] if source else ["pactl", "get-sink-volume", "@DEFAULT_SINK@"]
+    out, code = run_cmd(cmd)
+    if code == 0 and out:
+        match = re.search(r"([0-9]+)%", out)
+        pct = int(match.group(1)) if match else 50
+        mute_cmd = ["pactl", "get-source-mute", "@DEFAULT_SOURCE@"] if source else ["pactl", "get-sink-mute", "@DEFAULT_SINK@"]
+        mute_out, _ = run_cmd(mute_cmd)
+        is_muted = "yes" in mute_out.lower()
+        return pct, is_muted
+
+    return 50, False
+
+def get_brightness_info():
+    out, code = run_cmd(["brightnessctl", "-m"])
+    if code == 0 and out:
+        parts = out.split(",")
+        if len(parts) >= 4:
+            pct_str = parts[3].strip().rstrip("%")
+            try:
+                return int(pct_str)
+            except ValueError:
+                pass
+    
+    # Fallback to raw get/max
+    cur, c1 = run_cmd(["brightnessctl", "get"])
+    max_b, c2 = run_cmd(["brightnessctl", "max"])
+    if c1 == 0 and c2 == 0 and cur and max_b:
+        try:
+            return int(round(float(cur) / float(max_b) * 100))
+        except (ValueError, ZeroDivisionError):
+            pass
+
+    return 50
+
+def handle_volume(action, step="5%"):
+    if not step.endswith("%"):
+        step = f"{step}%"
+
+    if action == "raise":
+        run_cmd(["wpctl", "set-volume", "-l", "1.5", "@DEFAULT_AUDIO_SINK@", f"{step}+"])
+        if shutil.which("swayosd-client"):
+            run_cmd(["swayosd-client", "--output-volume", "raise"])
+    elif action == "lower":
+        run_cmd(["wpctl", "set-volume", "@DEFAULT_AUDIO_SINK@", f"{step}-"])
+        if shutil.which("swayosd-client"):
+            run_cmd(["swayosd-client", "--output-volume", "lower"])
+    elif action == "mute":
+        run_cmd(["wpctl", "set-mute", "@DEFAULT_AUDIO_SINK@", "toggle"])
+        if shutil.which("swayosd-client"):
+            run_cmd(["swayosd-client", "--output-volume", "mute-toggle"])
+    elif action == "mic-mute":
+        run_cmd(["wpctl", "set-mute", "@DEFAULT_AUDIO_SOURCE@", "toggle"])
+        if shutil.which("swayosd-client"):
+            run_cmd(["swayosd-client", "--input-volume", "mute-toggle"])
+
+    if action == "mic-mute":
+        pct, is_muted = get_volume_info(source=True)
+        glyph = "󰍭" if is_muted else "󰍬"
+        title = "Microphone"
+        notify_osd(title, glyph, pct, is_muted=is_muted, subtitle="Input Muted")
+    else:
+        pct, is_muted = get_volume_info(source=False)
+        if is_muted:
+            glyph = "󰝟"
+        elif pct >= 67:
+            glyph = "󰕾"
+        elif pct >= 33:
+            glyph = "󰖀"
+        else:
+            glyph = "󰕿"
+        title = "Volume"
+        notify_osd(title, glyph, pct, is_muted=is_muted)
+
+def handle_brightness(action, step="5%"):
+    if not step.endswith("%"):
+        step = f"{step}%"
+
+    if action == "up":
+        run_cmd(["brightnessctl", "set", f"+{step}"])
+        if shutil.which("swayosd-client"):
+            run_cmd(["swayosd-client", "--brightness", "raise"])
+    elif action == "down":
+        run_cmd(["brightnessctl", "set", f"{step}-"])
+        if shutil.which("swayosd-client"):
+            run_cmd(["swayosd-client", "--brightness", "lower"])
+
+    pct = get_brightness_info()
+    if pct >= 75:
+        glyph = "󰃠"
+    elif pct >= 50:
+        glyph = "󰃟"
+    elif pct >= 25:
+        glyph = "󰃞"
+    else:
+        glyph = "󰃝"
+    title = "Brightness"
+    notify_osd(title, glyph, pct)
+
+def main():
+    args = sys.argv[1:]
+    if not args or args[0] in ("-h", "--help", "help"):
+        print("Usage:")
+        print("  polyomino-osd volume [raise|lower|mute|mic-mute] [step]")
+        print("  polyomino-osd brightness [up|down] [step]")
+        return 0
+
+    category = args[0].lower()
+    action = args[1].lower() if len(args) > 1 else "status"
+    step = args[2] if len(args) > 2 else "5%"
+
+    if category in ("volume", "vol", "audio"):
+        handle_volume(action, step)
+    elif category in ("brightness", "bright", "backlight", "mon"):
+        handle_brightness(action, step)
+    else:
+        print(f"Unknown category '{category}'. Expected 'volume' or 'brightness'.", file=sys.stderr)
+        return 1
+
+    return 0
+
+if __name__ == "__main__":
+    sys.exit(main())

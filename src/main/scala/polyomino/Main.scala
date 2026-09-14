@@ -95,6 +95,12 @@ object Main:
         runScript(ctx.dotfilesDir / "config" / "sway" / "scripts" / "polyomino-rom-launcher.sh", "rom-launcher", args)
       case "patch-rom" =>
         runScript(ctx.dotfilesDir / "config" / "sway" / "scripts" / "polyomino-patch-rom.sh", "patch-rom", args)
+      case "osd" =>
+        runScript(ctx.dotfilesDir / "config" / "sway" / "scripts" / "polyomino-osd", "osd", args)
+      case "volume" =>
+        runScript(ctx.dotfilesDir / "config" / "sway" / "scripts" / "polyomino-osd", "volume", "volume" :: args)
+      case "brightness" =>
+        runScript(ctx.dotfilesDir / "config" / "sway" / "scripts" / "polyomino-osd", "brightness", "brightness" :: args)
       case name if name.startsWith("install-") => polyomino.dotfiles.install.ToolInstallers.runTool(name, ctx, args)
       case "full-install" => polyomino.dotfiles.install.ToolInstallers.runTool("full-install", ctx, args)
       case other => Left(UnknownCommandError(other))
@@ -136,6 +142,9 @@ object Main:
       |  notify-config    configure installed apps to use system notifications
       |  media-status     Waybar MPRIS player metadata monitor (JSON)
       |  fastfetch-logo   set distro-specific Fastfetch ASCII logo
+      |  osd              on-screen display bar indicator for volume and brightness
+      |  volume           adjust output/input volume with visual OSD bar indicator (raise|lower|mute|mic-mute)
+      |  brightness       adjust display brightness with visual OSD bar indicator (up|down)
       |  install-deps     install system & build dependencies (sbt, gcc, git, etc.)
       |  install-gaming   install gaming dependencies & tools (gamemode/gamescope/mangohud/etc.)
       |  install-emulator <name>  install one emulator (mesen/bsnes/sameboy/mgba/mame/flycast/blastem/duckstation/simple64)
@@ -183,7 +192,16 @@ object Main:
       Left(polyomino.dotfiles.error.CommandError(s"Script not found at $script"))
     else
       try
-        val fullCmd: Seq[os.Shellable] = Seq("bash": os.Shellable, script.toString: os.Shellable) ++ args.map(a => (a: os.Shellable))
+        val interpreter: Seq[os.Shellable] =
+          if script.last.endsWith(".sh") then Seq("bash": os.Shellable)
+          else if script.last.endsWith(".py") then Seq("python3": os.Shellable)
+          else
+            val firstLine = try os.read.lines(script).headOption.getOrElse("") catch case _: Exception => ""
+            if firstLine.contains("python") then Seq("python3": os.Shellable)
+            else if firstLine.contains("bash") || firstLine.contains("sh") then Seq("bash": os.Shellable)
+            else Seq.empty
+
+        val fullCmd: Seq[os.Shellable] = interpreter ++ Seq(script.toString: os.Shellable) ++ args.map(a => (a: os.Shellable))
         val res = os.proc(fullCmd*).call(stdin = os.Inherit, stdout = os.Inherit, stderr = os.Inherit, check = false)
         if res.exitCode == 0 then Right(())
         else Left(polyomino.dotfiles.error.CommandError(s"$name exited with code ${res.exitCode}", res.exitCode))

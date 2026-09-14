@@ -85,3 +85,16 @@ class MainSuite extends FunSuite:
     val code = dispatch(Array("patch-rom", "--help"))
     assertEquals(code, 0)
 
+  test("Main.dispatch routes osd --help"):
+    val code = dispatch(Array("osd", "--help"))
+    assertEquals(code, 0)
+
+  test("Main.dispatch routes volume --help"):
+    val code = dispatch(Array("volume", "--help"))
+    assertEquals(code, 0)
+
+  test("Main.dispatch routes brightness --help"):
+    val code = dispatch(Array("brightness", "--help"))
+    assertEquals(code, 0)
+
+
