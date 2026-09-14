@@ -105,7 +105,11 @@ done
 prompt_read() {
   local prompt_text="$1"
   local choice=""
-  if [ -e /dev/tty ] && [ -r /dev/tty ]; then
+  if _tetris_noninteractive; then
+    echo ""
+    return
+  fi
+  if [ -c /dev/tty ] && [ -r /dev/tty ] && { : < /dev/tty; } 2>/dev/null; then
     read -r -p "$prompt_text" choice < /dev/tty || choice=""
   else
     read -r -p "$prompt_text" choice || choice=""
@@ -147,23 +151,41 @@ _tetromino_glyph() {
 # Ensure cursor is restored on exit/interrupt
 trap 'echo -en "\033[?25h"' EXIT INT TERM
 
-# Non-blocking check: true if we should skip the interactive prompt entirely
-# (CI, forced non-interactive, or no controlling terminal at all).
+# Robust check: true if we should skip interactive prompts entirely
+# (CI, non-interactive flags, missing controlling tty, or piped stdin).
 _tetris_noninteractive() {
-  [ "${CI:-}" = "1" ] || [ "${NON_INTERACTIVE:-false}" = true ] || { [ ! -t 0 ] && [ ! -e /dev/tty ]; }
+  [ "${CI:-}" = "1" ] && return 0
+  [ "${NON_INTERACTIVE:-false}" = "true" ] && return 0
+  [ "${DEBIAN_FRONTEND:-}" = "noninteractive" ] && return 0
+
+  # If stdin is an interactive terminal
+  if [ -t 0 ]; then
+    return 1
+  fi
+
+  # If stdin is redirected/piped, check if controlling /dev/tty is valid and readable
+  if [ -c /dev/tty ] && [ -r /dev/tty ] && [ -w /dev/tty ] && { : < /dev/tty; } 2>/dev/null; then
+    return 1
+  fi
+
+  return 0
 }
 
-# Ensure sudo credentials are cached prior to running background steps
+# Ensure sudo credentials are cached prior to running background steps (non-blocking if headless)
 ensure_sudo() {
   if [ "$EUID" -ne 0 ] && command -v sudo &>/dev/null; then
     if ! sudo -n true 2>/dev/null; then
-      echo -e "  ${T_YELLOW}[INFO]${T_RESET} Sudo privileges required. Please authenticate:"
-      sudo -v || true
+      if _tetris_noninteractive; then
+        echo -e "  ${T_YELLOW}[INFO]${T_RESET} Non-interactive runner: skipping blocking sudo prompt."
+      else
+        echo -e "  ${T_YELLOW}[INFO]${T_RESET} Sudo privileges required. Please authenticate:"
+        sudo -v || true
+      fi
     fi
   fi
 }
 
-# Palette for Puzzle and Arcade animations
+## Palette for Puzzle and Arcade animations
 C_WHITE=$'\033[38;2;245;245;245m'
 C_RED=$'\033[38;2;239;68;68m'
 C_ORANGE=$'\033[38;2;249;115;22m'
@@ -173,13 +195,13 @@ C_BLUE=$'\033[38;2;59;130;246m'
 C_PURPLE=$'\033[38;2;168;85;247m'
 C_CYAN=$'\033[38;2;6;182;212m'
 
-# Animated spinner & background task runner
-# Randomly selects between:
-#   - 0: Tetris Falling Down (Gravity, Hard Drop & Line Clear)
-#   - 1: Rubik's Cube 3x3 Colored Face Grid (Layer Turns & Solved State)
-#   - 2: Sudoku (3x3 Mini-grid Solving & Elimination)
-#   - 3: 2048 (Tile Merging & Number Cascade)
-#   - 4: Crossword (Word Grid & Clue Solving)
+# Animated squared card spinner & background task runner
+# Randomly selects between 5 retro squared puzzle games:
+#   - 0: Tetris 2D Matrix Well (Gravity & Hard Drop)
+#   - 1: Rubik's Cube 3x3 Face Grid (Layer Turns & Solved State)
+#   - 2: Sudoku 3x3 Mini-grid (Candidates & Elimination)
+#   - 3: 2048 3x3 Number Board (Sliding & Merges)
+#   - 4: Crossword 3x3 Grid (Word Fitting & Clues)
 # Usage: run_tetris_step "Step Description" <command or function> [args...]
 run_tetris_step() {
   local title="$1"
@@ -231,69 +253,49 @@ run_tetris_step() {
     fi
   fi
 
-  # ── 0: Tetris Falling Down ──
-  local -a tetris_frames=(
-    "${C_CYAN}[ ■■■■ · · · · ]${T_RESET}|(Sky Spawn)"
-    "${C_CYAN}[ · ■■■■ · · · ]${T_RESET}|(Gravity 1G)"
-    "${C_CYAN}[ · · ■■■■ · · ]${T_RESET}|(Gravity 2G)"
-    "${C_CYAN}[ · · · · ■■■■ ]${T_RESET}|(Hard Drop)"
-    "${T_PURPLE}[ ▓▓▓■■■■▓▓▓▓▓ ]${T_RESET}|(Lock Delay)"
-    "${C_GREEN}[ ✨ LINE CLEAR ✨ ]${T_RESET}|(Line Clear)"
-    "${C_YELLOW}[   ■■ · · · · ]${T_RESET}|(O-Drop 1/3)"
-    "${C_YELLOW}[ · · ■■ · · · ]${T_RESET}|(O-Drop 2/3)"
-    "${C_YELLOW}[ · · · · ■■   ]${T_RESET}|(O-Hard Drop)"
-    "${T_PURPLE}[ ▓▓▓■■▓▓▓▓▓▓▓ ]${T_RESET}|(Lock Delay)"
-    "${C_GREEN}[ ✨ LINE CLEAR ✨ ]${T_RESET}|(Line Clear)"
-    "${C_PURPLE}[   · ■ · · ·  ]${T_RESET}|(T-Spawn)"
-    "${C_PURPLE}[   ■■■ · · ·  ]${T_RESET}|(T-Gravity)"
-    "${C_PURPLE}[ · · · ■/■■■  ]${T_RESET}|(T-Spin Drop)"
-    "${T_PURPLE}[ ▓▓■■■▓▓▓▓▓▓▓ ]${T_RESET}|(Lock Delay)"
-    "${C_GREEN}[ ✨ LINE CLEAR ✨ ]${T_RESET}|(Line Clear)"
+  # ── 0: Tetris 2D Squared Well (r1|r2|r3|i1|i2|i3) ──
+  local -a tetris_cards=(
+    "${C_CYAN} ■■■■     ${T_RESET}|          | ▓▓▓  ▓▓▓▓ |Piece:  ${C_CYAN}I-Piece${T_RESET}|Action: Sky Spawn|Matrix: Level 1"
+    "          |${C_CYAN}  ■■■■    ${T_RESET}| ▓▓▓  ▓▓▓▓ |Piece:  ${C_CYAN}I-Piece${T_RESET}|Action: Gravity 1G|Matrix: Level 2"
+    "          |          | ▓▓▓${C_CYAN}■■■■${T_RESET}▓▓ |Piece:  ${C_CYAN}I-Piece${T_RESET}|Action: Hard Drop|Matrix: Line Full!"
+    "          |${C_GREEN} ✨CLEAR✨ ${T_RESET}|${C_GREEN} ✨LINE ✨ ${T_RESET}|Piece:  ${C_GREEN}LINE CLEAR${T_RESET}|Action: +1200 Pts|Matrix: Cleared"
+    "${C_YELLOW}   ■■     ${T_RESET}|${C_YELLOW}   ■■     ${T_RESET}| ▓▓    ▓▓▓ |Piece:  ${C_YELLOW}O-Piece${T_RESET}|Action: Drop 1/2|Matrix: Level 1"
+    "          |${C_YELLOW}   ■■     ${T_RESET}| ▓▓${C_YELLOW}■■${T_RESET}  ▓▓▓ |Piece:  ${C_YELLOW}O-Piece${T_RESET}|Action: Hard Drop|Matrix: Locked"
+    "${C_PURPLE}    ■     ${T_RESET}|${C_PURPLE}   ■■■    ${T_RESET}| ▓▓    ▓▓▓ |Piece:  ${C_PURPLE}T-Piece${T_RESET}|Action: T-Spin Spin|Matrix: Setup"
+    "          |${C_PURPLE}    ■     ${T_RESET}| ▓▓${C_PURPLE}■■■${T_RESET} ▓▓▓ |Piece:  ${C_GREEN}T-SPIN CLEAR${T_RESET}|Action: +800 Pts|Matrix: Cleared"
   )
 
-  # ── 1: Rubik's Cube 3x3 Colored Face Grid ──
-  local -a cube_frames=(
-    "${C_ORANGE}■${C_WHITE}■${C_BLUE}■${T_RESET}/${C_GREEN}■${C_YELLOW}■${C_RED}■${T_RESET}/${C_WHITE}■${C_GREEN}■${C_BLUE}■${T_RESET}|R  (Right Turn)"
-    "${C_BLUE}■${C_WHITE}■${C_ORANGE}■${T_RESET}/${C_RED}■${C_YELLOW}■${C_GREEN}■${T_RESET}/${C_GREEN}■${C_WHITE}■${C_BLUE}■${T_RESET}|U  (Top Turn)"
-    "${C_WHITE}■${C_RED}■${C_GREEN}■${T_RESET}/${C_YELLOW}■${C_ORANGE}■${C_BLUE}■${T_RESET}/${C_RED}■${C_BLUE}■${C_YELLOW}■${T_RESET}|F' (Front CCW)"
-    "${C_GREEN}■${C_GREEN}■${C_ORANGE}■${T_RESET}/${C_WHITE}■${C_YELLOW}■${C_YELLOW}■${T_RESET}/${C_BLUE}■${C_RED}■${C_RED}■${T_RESET}|L  (Left Turn)"
-    "${C_YELLOW}■${C_BLUE}■${C_ORANGE}■${T_RESET}/${C_GREEN}■${C_WHITE}■${C_RED}■${T_RESET}/${C_YELLOW}■${C_BLUE}■${C_ORANGE}■${T_RESET}|D' (Down CCW)"
-    "${C_BLUE}■${C_BLUE}■${C_WHITE}■${T_RESET}/${C_ORANGE}■${C_ORANGE}■${C_YELLOW}■${T_RESET}/${C_GREEN}■${C_GREEN}■${C_RED}■${T_RESET}|R2 (180° Turn)"
-    "${C_WHITE}■${C_WHITE}■${C_WHITE}■${T_RESET}/${C_RED}■${C_RED}■${C_RED}■${T_RESET}/${C_BLUE}■${C_BLUE}■${C_BLUE}■${T_RESET}|F2 (Align Cross)"
-    "${C_YELLOW}■${C_YELLOW}■${C_YELLOW}■${T_RESET}/${C_ORANGE}■${C_ORANGE}■${C_ORANGE}■${T_RESET}/${C_GREEN}■${C_GREEN}■${C_GREEN}■${T_RESET}|PLL (Permute)"
-    "${C_GREEN}■${C_GREEN}■${C_GREEN}■${T_RESET}/${C_GREEN}■${C_GREEN}■${C_GREEN}■${T_RESET}/${C_GREEN}■${C_GREEN}■${C_GREEN}■${T_RESET}|(SOLVED!)"
+  # ── 1: Rubik's Cube 3x3 Face Grid ──
+  local -a cube_cards=(
+    "${C_ORANGE}■${T_RESET} ${C_WHITE}■${T_RESET} ${C_BLUE}■${T_RESET}   |${C_GREEN}■${T_RESET} ${C_YELLOW}■${T_RESET} ${C_RED}■${T_RESET}   |${C_WHITE}■${T_RESET} ${C_GREEN}■${T_RESET} ${C_BLUE}■${T_RESET}   |Move:   ${T_YELLOW}R (Right Turn)${T_RESET}|Phase:  First 2 Layers|State:  Scrambled 3x3"
+    "${C_BLUE}■${T_RESET} ${C_WHITE}■${T_RESET} ${C_ORANGE}■${T_RESET}   |${C_RED}■${T_RESET} ${C_YELLOW}■${T_RESET} ${C_GREEN}■${T_RESET}   |${C_GREEN}■${T_RESET} ${C_WHITE}■${T_RESET} ${C_BLUE}■${T_RESET}   |Move:   ${T_YELLOW}U (Top Layer)${T_RESET}|Phase:  Orient Cross|State:  Solving F2L"
+    "${C_WHITE}■${T_RESET} ${C_RED}■${T_RESET} ${C_GREEN}■${T_RESET}   |${C_YELLOW}■${T_RESET} ${C_ORANGE}■${T_RESET} ${C_BLUE}■${T_RESET}   |${C_RED}■${T_RESET} ${C_BLUE}■${T_RESET} ${C_YELLOW}■${T_RESET}   |Move:   ${T_YELLOW}F' (Front CCW)${T_RESET}|Phase:  OLL Algorithms|State:  Corner Align"
+    "${C_GREEN}■${T_RESET} ${C_GREEN}■${T_RESET} ${C_ORANGE}■${T_RESET}   |${C_WHITE}■${T_RESET} ${C_YELLOW}■${T_RESET} ${C_YELLOW}■${T_RESET}   |${C_BLUE}■${T_RESET} ${C_RED}■${T_RESET} ${C_RED}■${T_RESET}   |Move:   ${T_YELLOW}L (Left Turn)${T_RESET}|Phase:  PLL Permute|State:  Edge Cycles"
+    "${C_YELLOW}■${T_RESET} ${C_BLUE}■${T_RESET} ${C_ORANGE}■${T_RESET}   |${C_GREEN}■${T_RESET} ${C_WHITE}■${T_RESET} ${C_RED}■${T_RESET}   |${C_YELLOW}■${T_RESET} ${C_BLUE}■${T_RESET} ${C_ORANGE}■${T_RESET}   |Move:   ${T_YELLOW}D' (Bottom CCW)${T_RESET}|Phase:  Final Rotations|State:  Last Layer"
+    "${C_GREEN}■${T_RESET} ${C_GREEN}■${T_RESET} ${C_GREEN}■${T_RESET}   |${C_GREEN}■${T_RESET} ${C_GREEN}■${T_RESET} ${C_GREEN}■${T_RESET}   |${C_GREEN}■${T_RESET} ${C_GREEN}■${T_RESET} ${C_GREEN}■${T_RESET}   |Move:   ${C_GREEN}SOLVED!${T_RESET}|Phase:  ${C_GREEN}Complete 3x3${T_RESET}|State:  All Match!"
   )
 
-  # ── 2: Sudoku 3x3 Solving & Candidates ──
-  local -a sudoku_frames=(
-    "${C_CYAN}5${T_RESET} · ${C_BLUE}2${T_RESET} / · ${C_PURPLE}8${T_RESET} · / ${C_GREEN}1${T_RESET} · ${C_RED}9${T_RESET}|(Candidate 4)"
-    "${C_CYAN}5${T_RESET} ${C_YELLOW}4${T_RESET} ${C_BLUE}2${T_RESET} / · ${C_PURPLE}8${T_RESET} · / ${C_GREEN}1${T_RESET} · ${C_RED}9${T_RESET}|(Naked Single)"
-    "${C_CYAN}5${T_RESET} ${C_YELLOW}4${T_RESET} ${C_BLUE}2${T_RESET} / ${C_ORANGE}7${T_RESET} ${C_PURPLE}8${T_RESET} · / ${C_GREEN}1${T_RESET} · ${C_RED}9${T_RESET}|(Hidden Pair)"
-    "${C_CYAN}5${T_RESET} ${C_YELLOW}4${T_RESET} ${C_BLUE}2${T_RESET} / ${C_ORANGE}7${T_RESET} ${C_PURPLE}8${T_RESET} ${C_CYAN}3${T_RESET} / ${C_GREEN}1${T_RESET} · ${C_RED}9${T_RESET}|(Box Eliminate)"
-    "${C_CYAN}5${T_RESET} ${C_YELLOW}4${T_RESET} ${C_BLUE}2${T_RESET} / ${C_ORANGE}7${T_RESET} ${C_PURPLE}8${T_RESET} ${C_CYAN}3${T_RESET} / ${C_GREEN}1${T_RESET} ${C_PURPLE}6${T_RESET} ${C_RED}9${T_RESET}|(GRID FULL!)"
-    "${C_GREEN}[ ✨ SUDOKU SOLVED ✨ ]${T_RESET}|(Valid Solution)"
+  # ── 2: Sudoku 3x3 Mini-Grid ──
+  local -a sudoku_cards=(
+    "${C_CYAN}5${T_RESET}  ${T_GRAY}·${T_RESET}  ${C_BLUE}2${T_RESET}   |${T_GRAY}·${T_RESET}  ${C_PURPLE}8${T_RESET}  ${T_GRAY}·${T_RESET}   |${C_GREEN}1${T_RESET}  ${T_GRAY}·${T_RESET}  ${C_RED}9${T_RESET}   |Method: ${T_CYAN}Candidate Scan${T_RESET}|Box:    Grid Center #5|State:  Candidates..."
+    "${C_CYAN}5${T_RESET}  ${C_YELLOW}4${T_RESET}  ${C_BLUE}2${T_RESET}   |${T_GRAY}·${T_RESET}  ${C_PURPLE}8${T_RESET}  ${T_GRAY}·${T_RESET}   |${C_GREEN}1${T_RESET}  ${T_GRAY}·${T_RESET}  ${C_RED}9${T_RESET}   |Method: ${T_CYAN}Naked Single${T_RESET}|Box:    Row 1 Column 2|State:  Placed 4"
+    "${C_CYAN}5${T_RESET}  ${C_YELLOW}4${T_RESET}  ${C_BLUE}2${T_RESET}   |${C_ORANGE}7${T_RESET}  ${C_PURPLE}8${T_RESET}  ${C_CYAN}3${T_RESET}   |${C_GREEN}1${T_RESET}  ${T_GRAY}·${T_RESET}  ${C_RED}9${T_RESET}   |Method: ${T_CYAN}Box Eliminate${T_RESET}|Box:    Row 2 Complete|State:  Placed 7, 3"
+    "${C_CYAN}5${T_RESET}  ${C_YELLOW}4${T_RESET}  ${C_BLUE}2${T_RESET}   |${C_ORANGE}7${T_RESET}  ${C_PURPLE}8${T_RESET}  ${C_CYAN}3${T_RESET}   |${C_GREEN}1${T_RESET}  ${C_PURPLE}6${T_RESET}  ${C_RED}9${T_RESET}   |Method: ${C_GREEN}GRID FULL!${T_RESET}|Box:    All 1..9 Valid|State:  Validated!"
   )
 
-  # ── 3: 2048 Tile Merging ──
-  local -a game2048_frames=(
-    "${C_CYAN}  2   2  ·   · ${T_RESET}|(Swipe Left)"
-    "${C_YELLOW}  4   4  ·   · ${T_RESET}|(Merge 4+4)"
-    "${C_ORANGE}  8   8  ·   · ${T_RESET}|(Merge 8+8)"
-    "${C_RED} 16  16  ·   · ${T_RESET}|(Cascade 32)"
-    "${C_PURPLE} 64  64  ·   · ${T_RESET}|(Cascade 128)"
-    "${C_BLUE}256 256  ·   · ${T_RESET}|(Cascade 512)"
-    "${C_YELLOW}1024 1024 ·   · ${T_RESET}|(COMBO x4)"
-    "${C_GREEN}[ ✨ 2048 TILE ✨ ]${T_RESET}|(2048 WON!)"
+  # ── 3: 2048 3x3 Number Board ──
+  local -a game2048_cards=(
+    "${C_CYAN} 2 ${T_RESET} ${C_CYAN} 2 ${T_RESET} ${T_GRAY} · ${T_RESET} |${C_YELLOW} 4 ${T_RESET} ${C_YELLOW} 4 ${T_RESET} ${T_GRAY} · ${T_RESET} |${C_RED}16 ${T_RESET} ${C_PURPLE}64 ${T_RESET} ${T_GRAY} · ${T_RESET} |Move:   ${T_ORANGE}Swipe Left ←${T_RESET}|Combo:  Double Merge|Target: 2048 Master"
+    "${C_YELLOW} 4 ${T_RESET} ${T_GRAY} · ${T_RESET} ${T_GRAY} · ${T_RESET} |${C_ORANGE} 8 ${T_RESET} ${T_GRAY} · ${T_RESET} ${T_GRAY} · ${T_RESET} |${C_RED}16 ${T_RESET} ${C_PURPLE}64 ${T_RESET} ${T_GRAY} · ${T_RESET} |Move:   ${T_ORANGE}Swipe Down ↓${T_RESET}|Combo:  Cascade 8+16|Target: 2048 Master"
+    "${C_BLUE}128${T_RESET} ${C_PURPLE}256${T_RESET} ${T_GRAY} · ${T_RESET} |${C_YELLOW}512${T_RESET} ${C_YELLOW}512${T_RESET} ${T_GRAY} · ${T_RESET}|${C_GREEN}1024${T_RESET}${C_GREEN}1024${T_RESET}${T_GRAY}·${T_RESET}|Move:   ${T_ORANGE}Merge 1024!${T_RESET}|Combo:  COMBO x4!|Target: MAX TILE!"
+    "${C_BLUE}128${T_RESET} ${C_PURPLE}256${T_RESET} ${T_GRAY} · ${T_RESET} |${C_YELLOW}512${T_RESET} ${T_GRAY} · ${T_RESET} ${T_GRAY} · ${T_RESET} |${C_GREEN}✨ 2048 ✨${T_RESET}   |Move:   ${C_GREEN}2048 WON!${T_RESET}|Combo:  Score: 28,400|Target: Achieved!"
   )
 
-  # ── 4: Crossword Clue Matching ──
-  local -a crossword_frames=(
-    "${C_CYAN}P _ _ _ Y ■ D _ T${T_RESET}|(1-Across: Shell)"
-    "${C_YELLOW}P O L Y ■ D _ T${T_RESET}|(1-Down: Dotfile)"
-    "${C_ORANGE}P O L Y ■ D O T${T_RESET}|(2-Down: Config)"
-    "${C_PURPLE}P O L Y O M I N O${T_RESET}|(Word Complete)"
-    "${C_BLUE}■ D O T F I L E S ■${T_RESET}|(Cross Intersect)"
-    "${C_GREEN}[ ✨ ALL CLUES MATCH ✨ ]${T_RESET}|(Grid Solved)"
+  # ── 4: Crossword 3x3 Word Box ──
+  local -a crossword_cards=(
+    "${C_CYAN}P${T_RESET} ${C_CYAN}O${T_RESET} ${C_CYAN}L${T_RESET} ${C_CYAN}Y${T_RESET}   |${T_GRAY}■${T_RESET} ${T_GRAY}·${T_RESET} ${T_GRAY}·${T_RESET} ${T_GRAY}·${T_RESET}   |${C_PURPLE}M${T_RESET} ${C_PURPLE}I${T_RESET} ${C_PURPLE}N${T_RESET} ${C_PURPLE}O${T_RESET}   |Clue:   ${T_PURPLE}1-Across: Shell${T_RESET}|Word:   P O L Y|State:  Solving..."
+    "${C_CYAN}P${T_RESET} ${C_CYAN}O${T_RESET} ${C_CYAN}L${T_RESET} ${C_CYAN}Y${T_RESET}   |${T_GRAY}■${T_RESET} ${C_YELLOW}D${T_RESET} ${C_YELLOW}O${T_RESET} ${C_YELLOW}T${T_RESET}   |${C_PURPLE}M${T_RESET} ${C_PURPLE}I${T_RESET} ${C_PURPLE}N${T_RESET} ${C_PURPLE}O${T_RESET}   |Clue:   ${T_PURPLE}1-Down: Dotfiles${T_RESET}|Word:   D O T|State:  Intersecting"
+    "${C_CYAN}P${T_RESET} ${C_CYAN}O${T_RESET} ${C_CYAN}L${T_RESET} ${C_CYAN}Y${T_RESET}   |${C_GREEN}O${T_RESET} ${C_GREEN}M${T_RESET} ${C_GREEN}I${T_RESET} ${C_GREEN}N${T_RESET}   |${C_GREEN}O${T_RESET} ${T_GRAY}■${T_RESET} ${C_YELLOW}F${T_RESET} ${C_YELLOW}X${T_RESET}   |Clue:   ${C_GREEN}ALL MATCH!${T_RESET}|Word:   P O L Y O M I N O|State:  Grid Complete"
   )
 
   local start_time
@@ -317,61 +319,38 @@ run_tetris_step() {
     local timer
     printf -v timer "%02d:%02d" "$mins" "$secs"
 
+    local raw=""
     case "$anim_mode" in
-      0)
-        # Tetris Falling Down
-        local total_f=${#tetris_frames[@]}
-        local idx=$(( frame % total_f ))
-        local raw="${tetris_frames[$idx]}"
-        local art="${raw%%|*}"
-        local label="${raw##*|}"
-        printf "\r  ${T_PURPLE}│${T_RESET} ${T_GRAY}[%s]${T_RESET} %b %-14s ${T_PURPLE}│${T_RESET} %-40s" \
-          "$timer" "$art" "${T_GRAY}${label}${T_RESET}" "${title}..."
-        ;;
-      1)
-        # Rubik's Cube 3x3 Face
-        local total_f=${#cube_frames[@]}
-        local idx=$(( frame % total_f ))
-        local raw="${cube_frames[$idx]}"
-        local art="${raw%%|*}"
-        local label="${raw##*|}"
-        printf "\r  ${T_PURPLE}│${T_RESET} ${T_GRAY}[%s]${T_RESET} [ %b ] %-16s ${T_PURPLE}│${T_RESET} %-40s" \
-          "$timer" "$art" "${T_YELLOW}${label}${T_RESET}" "${title}..."
-        ;;
-      2)
-        # Sudoku
-        local total_f=${#sudoku_frames[@]}
-        local idx=$(( frame % total_f ))
-        local raw="${sudoku_frames[$idx]}"
-        local art="${raw%%|*}"
-        local label="${raw##*|}"
-        printf "\r  ${T_PURPLE}│${T_RESET} ${T_GRAY}[%s]${T_RESET} [ %b ] %-16s ${T_PURPLE}│${T_RESET} %-40s" \
-          "$timer" "$art" "${T_CYAN}${label}${T_RESET}" "${title}..."
-        ;;
-      3)
-        # 2048
-        local total_f=${#game2048_frames[@]}
-        local idx=$(( frame % total_f ))
-        local raw="${game2048_frames[$idx]}"
-        local art="${raw%%|*}"
-        local label="${raw##*|}"
-        printf "\r  ${T_PURPLE}│${T_RESET} ${T_GRAY}[%s]${T_RESET} [ %b ] %-16s ${T_PURPLE}│${T_RESET} %-40s" \
-          "$timer" "$art" "${T_ORANGE}${label}${T_RESET}" "${title}..."
-        ;;
-      4)
-        # Crossword
-        local total_f=${#crossword_frames[@]}
-        local idx=$(( frame % total_f ))
-        local raw="${crossword_frames[$idx]}"
-        local art="${raw%%|*}"
-        local label="${raw##*|}"
-        printf "\r  ${T_PURPLE}│${T_RESET} ${T_GRAY}[%s]${T_RESET} [ %b ] %-16s ${T_PURPLE}│${T_RESET} %-40s" \
-          "$timer" "$art" "${T_PURPLE}${label}${T_RESET}" "${title}..."
-        ;;
+      0) raw="${tetris_cards[$(( frame % ${#tetris_cards[@]} ))]}" ;;
+      1) raw="${cube_cards[$(( frame % ${#cube_cards[@]} ))]}" ;;
+      2) raw="${sudoku_cards[$(( frame % ${#sudoku_cards[@]} ))]}" ;;
+      3) raw="${game2048_cards[$(( frame % ${#game2048_cards[@]} ))]}" ;;
+      4) raw="${crossword_cards[$(( frame % ${#crossword_cards[@]} ))]}" ;;
     esac
 
+    local r1 r2 r3 i1 i2 i3
+    IFS='|' read -r r1 r2 r3 i1 i2 i3 <<< "$raw"
+
+    local clean_title
+    clean_title="$(printf "%.65s" "$title")"
+
+    # Move cursor up 8 lines if not first frame
+    if [ "$frame" -gt 0 ]; then
+      echo -en "\033[8A"
+    fi
+
+    # Render 8-line 2D squared retro card
+    printf "  ${T_PURPLE}┌── POLYOMINO // STEP RUNNER ───────────────────────────────────────────┐${T_RESET}\n"
+    printf "  ${T_PURPLE}│${T_RESET}  ${T_BOLD}%-68.68s${T_RESET}\n" "$clean_title..."
+    printf "  ${T_PURPLE}├─── Matrix View ──────────────┬─── Telemetry ──────────────────────────┤${T_RESET}\n"
+    printf "  ${T_PURPLE}│${T_RESET}   ${T_GRAY}[ %s ]${T_RESET}   ${T_PURPLE}┌────────────┐${T_RESET}  ${T_PURPLE}│${T_RESET}  %b\n" "$timer" "$i1"
+    printf "  ${T_PURPLE}│${T_RESET}              ${T_PURPLE}│${T_RESET} %b ${T_PURPLE}│${T_RESET}  ${T_PURPLE}│${T_RESET}  %b\n" "$r1" "$i2"
+    printf "  ${T_PURPLE}│${T_RESET}              ${T_PURPLE}│${T_RESET} %b ${T_PURPLE}│${T_RESET}  ${T_PURPLE}│${T_RESET}  %b\n" "$r2" "$i3"
+    printf "  ${T_PURPLE}│${T_RESET}              ${T_PURPLE}│${T_RESET} %b ${T_PURPLE}│${T_RESET}  ${T_PURPLE}│${T_RESET}\n" "$r3"
+    printf "  ${T_PURPLE}└──────────────┴────────────┴──┴────────────────────────────────────────┘${T_RESET}\n"
+
     frame=$(( frame + 1 ))
-    sleep 0.14
+    sleep 0.16
   done
 
   wait "$pid"
@@ -381,8 +360,10 @@ run_tetris_step() {
   # Show cursor
   echo -en "\033[?25h"
 
-  # Clear line
-  printf "\r\033[2K"
+  # Clear the 8-line squared card and print clean single status line
+  if [ "$frame" -gt 0 ]; then
+    echo -en "\033[8A\033[J"
+  fi
 
   if [ $exit_code -eq 0 ]; then
     case "$anim_mode" in
@@ -397,9 +378,9 @@ run_tetris_step() {
     case "$anim_mode" in
       0) echo -e "  ${T_RED}[ ✘ TOP OUT ]${T_RESET} ${T_BOLD}${title}${T_RESET} ${T_RED}FAILED${T_RESET} ${T_GRAY}(${total_elapsed}s)${T_RESET}" >&2 ;;
       1) echo -e "  ${T_RED}[ ✘ DNF / SCRAMBLED ]${T_RESET} ${T_BOLD}${title}${T_RESET} ${T_RED}FAILED${T_RESET} ${T_GRAY}(${total_elapsed}s)${T_RESET}" >&2 ;;
-      2) echo -e "  ${T_RED}[ ✘ INVALID BOARD ]${T_RESET} ${T_BOLD}${title}${T_RESET} ${T_RED}FAILED${T_RESET} ${T_GRAY}(${total_elapsed}s)${T_RESET}" >&2 ;;
-      3) echo -e "  ${T_RED}[ ✘ NO MOVES LEFT ]${T_RESET} ${T_BOLD}${title}${T_RESET} ${T_RED}FAILED${T_RESET} ${T_GRAY}(${total_elapsed}s)${T_RESET}" >&2 ;;
-      4) echo -e "  ${T_RED}[ ✘ WRONG GUESS ]${T_RESET} ${T_BOLD}${title}${T_RESET} ${T_RED}FAILED${T_RESET} ${T_GRAY}(${total_elapsed}s)${T_RESET}" >&2 ;;
+      2) echo -e "  ${T_RED}[ ✘ INVALID BOARD ]${T_RESET} ${title} ${T_RED}FAILED${T_RESET} ${T_GRAY}(${total_elapsed}s)${T_RESET}" >&2 ;;
+      3) echo -e "  ${T_RED}[ ✘ NO MOVES LEFT ]${T_RESET} ${title} ${T_RED}FAILED${T_RESET} ${T_GRAY}(${total_elapsed}s)${T_RESET}" >&2 ;;
+      4) echo -e "  ${T_RED}[ ✘ WRONG GUESS ]${T_RESET} ${title} ${T_RED}FAILED${T_RESET} ${T_GRAY}(${total_elapsed}s)${T_RESET}" >&2 ;;
     esac
     echo -e "  ${T_YELLOW}── Last 20 lines of log (${log_file}) ──${T_RESET}" >&2
     tail -n 20 "$log_file" | sed 's/^/    /' >&2 || true
@@ -532,11 +513,11 @@ prompt_checkbox_menu() {
     "Google Chrome Stable (Official Web Browser)"
     "Mozilla Firefox (Secondary Web Browser)"
     "Neovim & Tetravim (Polyomino IDE Distribution)"
-    "TUI Productivity Suite (spotify_player, bluetui, impala, aerc, yazi, zoxide, fastfetch)"
-    "DevOps & Cloud Tooling (Docker, Terraform, Ansible, kubectl, Helm, cloud CLIs)"
+    "TUI Suite (spotify_player, bluetui, aerc, yazi, zoxide)"
+    "DevOps Tooling (Docker, Terraform, Ansible, kubectl, Helm)"
     "Developer Runtimes (Node.js/npm via NVM, SDKMAN! & Kotlin)"
     "Desktop Apps (Telegram Desktop, Discord, TETR.IO)"
-    "Gaming Stack & Emulators (GameMode, Gamescope, MangoHud, Steam, Emulators)"
+    "Gaming Stack (GameMode, Gamescope, MangoHud, Steam)"
   )
   local -a states=(1 1 1 1 0 0 0 0)
 
@@ -569,9 +550,9 @@ prompt_checkbox_menu() {
     echo -en "\033[?25l" >&2
 
     draw_checkbox_menu() {
-      echo -e "  ${T_PURPLE}┌── POLYOMINO // OPTIONAL COMPONENT CHECKBOXES ─────────────────────────────────┐${T_RESET}" >&2
-      echo -e "  ${T_PURPLE}│${T_RESET}  ${T_GRAY}Navigate: ↑/↓ or j/k • Toggle: Space • Direct: [1-8] • Confirm: Enter      ${T_RESET}${T_PURPLE}│${T_RESET}" >&2
-      echo -e "  ${T_PURPLE}├───────────────────────────────────────────────────────────────────────────────┤${T_RESET}" >&2
+      echo -e "  ${T_PURPLE}┌── POLYOMINO // OPTIONAL COMPONENT CHECKBOXES ─────────────────────────────┐${T_RESET}" >&2
+      echo -e "  ${T_PURPLE}│${T_RESET}  ${T_GRAY}Navigate: ↑/↓/j/k  •  Toggle: Space/[1-8]  •  Confirm: Enter            ${T_PURPLE}│${T_RESET}" >&2
+      echo -e "  ${T_PURPLE}├───────────────────────────────────────────────────────────────────────────┤${T_RESET}" >&2
       local i
       for i in "${!labels[@]}"; do
         local mark=" "
@@ -588,11 +569,11 @@ prompt_checkbox_menu() {
         fi
         local num_tag="${T_YELLOW}[$((i+1))]${T_RESET}"
         local box="${mark_color}[${mark}]${T_RESET}"
-        printf "  ${T_PURPLE}│${T_RESET} %b%b %b %b%-60s${T_PURPLE}│${T_RESET}\n" "$pointer" "$box" "$num_tag" "$item_color" "${labels[$i]}" >&2
+        printf "  ${T_PURPLE}│${T_RESET} %b%b %b %b%-60.60s${T_RESET} ${T_PURPLE}│${T_RESET}\n" "$pointer" "$box" "$num_tag" "$item_color" "${labels[$i]}" >&2
       done
-      echo -e "  ${T_PURPLE}├───────────────────────────────────────────────────────────────────────────────┤${T_RESET}" >&2
-      echo -e "  ${T_PURPLE}│${T_RESET}  ${T_CYAN}[A]${T_RESET} Select All     ${T_YELLOW}[N]${T_RESET} Deselect All     ${T_GREEN}[Enter]${T_RESET} Confirm & Proceed          ${T_PURPLE}│${T_RESET}" >&2
-      echo -e "  ${T_PURPLE}└───────────────────────────────────────────────────────────────────────────────┘${T_RESET}" >&2
+      echo -e "  ${T_PURPLE}├───────────────────────────────────────────────────────────────────────────┤${T_RESET}" >&2
+      echo -e "  ${T_PURPLE}│${T_RESET}  ${T_CYAN}[A]${T_RESET} Select All       ${T_YELLOW}[N]${T_RESET} Deselect All       ${T_GREEN}[Enter]${T_RESET} Confirm Selection   ${T_PURPLE}│${T_RESET}" >&2
+      echo -e "  ${T_PURPLE}└───────────────────────────────────────────────────────────────────────────┘${T_RESET}" >&2
     }
 
     local total_lines=$((num_items + 6))
@@ -600,10 +581,16 @@ prompt_checkbox_menu() {
 
     while true; do
       local key=""
+      local read_ok=0
       if [ "$tty_in" = "/dev/tty" ]; then
-        IFS= read -rsn1 key < /dev/tty || key=""
+        IFS= read -rsn1 key < /dev/tty && read_ok=1 || read_ok=0
       else
-        IFS= read -rsn1 key || key=""
+        IFS= read -rsn1 key && read_ok=1 || read_ok=0
+      fi
+
+      # Break immediately on EOF or read failure
+      if [ "$read_ok" -eq 0 ]; then
+        break
       fi
 
       if [ "$key" = $'\x1b' ]; then
@@ -637,7 +624,7 @@ prompt_checkbox_menu() {
         n|N)
           for i in "${!states[@]}"; do states[$i]=0; done
           ;;
-        "")
+        ""|$'\n'|$'\r'|q|Q)
           break
           ;;
       esac
