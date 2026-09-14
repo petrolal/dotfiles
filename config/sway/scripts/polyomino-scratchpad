@@ -40,15 +40,15 @@ def toggle_or_spawn(target):
     if target == "term":
         app_id = "scratchpad-term"
         title = "scratchpad-term"
-        cmd = ["kitty", "--app-id=scratchpad-term", "--title=scratchpad-term", "-e", "zsh"]
+        cmd = ["kitty", "--class=scratchpad-term", "--title=scratchpad-term", "-e", "zsh"]
     elif target == "aerc":
         app_id = "scratchpad-comms"
         title = "aerc"
-        cmd = ["kitty", "--app-id=scratchpad-comms", "--title=aerc", "-e", "aerc"]
+        cmd = ["kitty", "--class=scratchpad-comms", "--title=aerc", "-e", "aerc"]
     elif target == "spotify":
         app_id = "spotify_player"
         title = "spotify"
-        cmd = ["kitty", "--app-id=spotify_player", "--title=spotify", "-e", "spotify_player"]
+        cmd = ["kitty", "--class=spotify_player", "--title=spotify", "-e", "spotify_player"]
     else:
         app_id = target
         title = target

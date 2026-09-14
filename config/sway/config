@@ -372,7 +372,7 @@ bindsym $mod+Shift+q kill
 bindsym $mod+d exec $launcher
 bindsym $mod+Shift+b exec google-chrome-stable, workspace $ws3
 bindsym $mod+Shift+f exec $term -e yazi
-bindsym $mod+Shift+m exec $term --app-id spotify_player --title spotify -e spotify_player, workspace $ws4
+bindsym $mod+Shift+m exec $term --class=spotify_player --title=spotify -e spotify_player, workspace $ws4
 bindsym $mod+Shift+o exec obsidian, workspace $ws6
 bindsym $mod+Shift+u exec $term --title bluetui -e bluetui
 bindsym $mod+Shift+v exec $term --title pulsemixer -e sh -c 'wiremix || pulsemixer || ncpamixer'
@@ -384,7 +384,7 @@ bindsym $mod+Mod1+n exec swaync-client -d -sw # Toggle Do Not Disturb
 bindsym $mod+Shift+g exec ~/.local/bin/polyomino-gamemode toggle # Toggle Gaming Performance Mode
 bindsym $mod+Shift+c reload
 bindsym $mod+Shift+r restart
-bindsym $mod+Shift+e exec swaynag -t warning -m 'You pressed the exit shortcut. Do you really want to exit sway? This will end your Wayland session.' -B 'Yes, exit sway' 'swaymsg exit'
+bindsym $mod+Shift+e exec $term --class=polyomino-power -o initial_window_width=80c -o initial_window_height=36c -o font_size=12 -e ~/.local/bin/polyomino power-menu
 
 # Moving around
 bindsym $mod+$left focus left
@@ -483,14 +483,14 @@ bindsym $mod+F6 exec ~/.local/bin/polyomino wallpaper next
 
 # Lock screen & Power menu
 bindsym $mod+Escape exec ~/.local/bin/polyomino-rubik-lock
-bindsym $mod+Control+Escape exec $term --class=polyomino-power --app-id=polyomino-power -o initial_window_width=80c -o initial_window_height=36c -o font_size=12 -e ~/.local/bin/polyomino power-menu
+bindsym $mod+Control+Escape exec $term --class=polyomino-power -o initial_window_width=80c -o initial_window_height=36c -o font_size=12 -e ~/.local/bin/polyomino power-menu
 
 # Puzzle Micro-Utilities (Sokoban, 2048, Sweeper, LightsOut, Nonogram)
-bindsym $mod+Mod1+s exec $term --class=polyomino-puzzle-sokoban --app-id=polyomino-puzzle-sokoban -o initial_window_width=80c -o initial_window_height=36c -o font_size=12 -e ~/.local/bin/polyomino-sokoban
-bindsym $mod+Mod1+m exec $term --class=polyomino-puzzle-2048 --app-id=polyomino-puzzle-2048 -o initial_window_width=80c -o initial_window_height=36c -o font_size=12 -e ~/.local/bin/polyomino-2048
-bindsym $mod+Mod1+c exec $term --class=polyomino-puzzle-sweeper --app-id=polyomino-puzzle-sweeper -o initial_window_width=80c -o initial_window_height=36c -o font_size=12 -e ~/.local/bin/polyomino-sweeper
-bindsym $mod+Mod1+l exec $term --class=polyomino-puzzle-lightsout --app-id=polyomino-puzzle-lightsout -o initial_window_width=80c -o initial_window_height=36c -o font_size=12 -e ~/.local/bin/polyomino-lightsout
-bindsym $mod+Mod1+p exec $term --class=polyomino-puzzle-nonogram --app-id=polyomino-puzzle-nonogram -o initial_window_width=80c -o initial_window_height=36c -o font_size=12 -e ~/.local/bin/polyomino-nonogram
+bindsym $mod+Mod1+s exec $term --class=polyomino-puzzle-sokoban -o initial_window_width=80c -o initial_window_height=36c -o font_size=12 -e ~/.local/bin/polyomino-sokoban
+bindsym $mod+Mod1+m exec $term --class=polyomino-puzzle-2048 -o initial_window_width=80c -o initial_window_height=36c -o font_size=12 -e ~/.local/bin/polyomino-2048
+bindsym $mod+Mod1+c exec $term --class=polyomino-puzzle-sweeper -o initial_window_width=80c -o initial_window_height=36c -o font_size=12 -e ~/.local/bin/polyomino-sweeper
+bindsym $mod+Mod1+l exec $term --class=polyomino-puzzle-lightsout -o initial_window_width=80c -o initial_window_height=36c -o font_size=12 -e ~/.local/bin/polyomino-lightsout
+bindsym $mod+Mod1+p exec $term --class=polyomino-puzzle-nonogram -o initial_window_width=80c -o initial_window_height=36c -o font_size=12 -e ~/.local/bin/polyomino-nonogram
 
 # Screenshots
 bindsym Print exec ~/.local/bin/polyomino screenshot full
