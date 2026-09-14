@@ -163,7 +163,7 @@ ensure_sudo() {
   fi
 }
 
-# Palette for Tetris and Rubik's Cube animations
+# Palette for Puzzle and Arcade animations
 C_WHITE=$'\033[38;2;245;245;245m'
 C_RED=$'\033[38;2;239;68;68m'
 C_ORANGE=$'\033[38;2;249;115;22m'
@@ -175,8 +175,11 @@ C_CYAN=$'\033[38;2;6;182;212m'
 
 # Animated spinner & background task runner
 # Randomly selects between:
-#   - 1B: Tetris Falling Down (Gravity, Hard Drop & Line Clear)
-#   - 2B: Rubik's Cube 3x3 Colored Face Grid (Layer Turns & Solved State)
+#   - 0: Tetris Falling Down (Gravity, Hard Drop & Line Clear)
+#   - 1: Rubik's Cube 3x3 Colored Face Grid (Layer Turns & Solved State)
+#   - 2: Sudoku (3x3 Mini-grid Solving & Elimination)
+#   - 3: 2048 (Tile Merging & Number Cascade)
+#   - 4: Crossword (Word Grid & Clue Solving)
 # Usage: run_tetris_step "Step Description" <command or function> [args...]
 run_tetris_step() {
   local title="$1"
@@ -187,34 +190,40 @@ run_tetris_step() {
   local log_file="/tmp/polyomino-bootstrap-${log_slug}.log"
   rm -f "$log_file"
 
-  # Randomly pick animation mode (0 = Tetris Falling Down, 1 = Rubik's Cube 3x3)
-  local anim_mode=$(( RANDOM % 2 ))
+  # Randomly pick animation mode (0..4)
+  local anim_mode=$(( RANDOM % 5 ))
 
   # Non-interactive fallback
   if _tetris_noninteractive; then
-    if [ "$anim_mode" -eq 0 ]; then
-      echo -e "  ${T_CYAN}[ ▶ HARD DROP ]${T_RESET} ${T_BOLD}${title}${T_RESET}..."
-    else
-      echo -e "  ${T_YELLOW}[ 🧊 CUBE SOLVE ]${T_RESET} ${T_BOLD}${title}${T_RESET}..."
-    fi
+    case "$anim_mode" in
+      0) echo -e "  ${T_CYAN}[ ▶ HARD DROP ]${T_RESET} ${T_BOLD}${title}${T_RESET}..." ;;
+      1) echo -e "  ${T_YELLOW}[ 🧊 CUBE SOLVE ]${T_RESET} ${T_BOLD}${title}${T_RESET}..." ;;
+      2) echo -e "  ${T_CYAN}[ 🔢 SOLVING SUDOKU ]${T_RESET} ${T_BOLD}${title}${T_RESET}..." ;;
+      3) echo -e "  ${T_ORANGE}[ 🎯 SLIDING 2048 ]${T_RESET} ${T_BOLD}${title}${T_RESET}..." ;;
+      4) echo -e "  ${T_PURPLE}[ ✏️ SOLVING CROSSWORD ]${T_RESET} ${T_BOLD}${title}${T_RESET}..." ;;
+    esac
     local start_time
     start_time=$(date +%s)
     if "$@" > "$log_file" 2>&1; then
       local elapsed=$(( $(date +%s) - start_time ))
-      if [ "$anim_mode" -eq 0 ]; then
-        echo -e "  ${T_GREEN}[ ✔ LINE CLEAR ]${T_RESET} ${title} ${T_GRAY}(${elapsed}s)${T_RESET}"
-      else
-        echo -e "  ${T_GREEN}[ 🧊 SOLVED ]${T_RESET} ${title} ${T_GRAY}(${elapsed}s)${T_RESET}"
-      fi
+      case "$anim_mode" in
+        0) echo -e "  ${T_GREEN}[ ✔ LINE CLEAR ]${T_RESET} ${title} ${T_GRAY}(${elapsed}s)${T_RESET}" ;;
+        1) echo -e "  ${T_GREEN}[ 🧊 SOLVED ]${T_RESET} ${title} ${T_GRAY}(${elapsed}s)${T_RESET}" ;;
+        2) echo -e "  ${T_GREEN}[ 🔢 SUDOKU SOLVED ]${T_RESET} ${title} ${T_GRAY}(${elapsed}s)${T_RESET}" ;;
+        3) echo -e "  ${T_GREEN}[ 🏆 2048 REACHED ]${T_RESET} ${title} ${T_GRAY}(${elapsed}s)${T_RESET}" ;;
+        4) echo -e "  ${T_GREEN}[ ✏️ CROSSWORD COMPLETED ]${T_RESET} ${title} ${T_GRAY}(${elapsed}s)${T_RESET}" ;;
+      esac
       return 0
     else
       local exit_code=$?
       local elapsed=$(( $(date +%s) - start_time ))
-      if [ "$anim_mode" -eq 0 ]; then
-        echo -e "  ${T_RED}[ ✘ TOP OUT ]${T_RESET} ${title} ${T_RED}FAILED${T_RESET} ${T_GRAY}(${elapsed}s)${T_RESET}" >&2
-      else
-        echo -e "  ${T_RED}[ ✘ DNF / SCRAMBLED ]${T_RESET} ${title} ${T_RED}FAILED${T_RESET} ${T_GRAY}(${elapsed}s)${T_RESET}" >&2
-      fi
+      case "$anim_mode" in
+        0) echo -e "  ${T_RED}[ ✘ TOP OUT ]${T_RESET} ${title} ${T_RED}FAILED${T_RESET} ${T_GRAY}(${elapsed}s)${T_RESET}" >&2 ;;
+        1) echo -e "  ${T_RED}[ ✘ DNF / SCRAMBLED ]${T_RESET} ${title} ${T_RED}FAILED${T_RESET} ${T_GRAY}(${elapsed}s)${T_RESET}" >&2 ;;
+        2) echo -e "  ${T_RED}[ ✘ INVALID BOARD ]${T_RESET} ${title} ${T_RED}FAILED${T_RESET} ${T_GRAY}(${elapsed}s)${T_RESET}" >&2 ;;
+        3) echo -e "  ${T_RED}[ ✘ NO MOVES LEFT ]${T_RESET} ${title} ${T_RED}FAILED${T_RESET} ${T_GRAY}(${elapsed}s)${T_RESET}" >&2 ;;
+        4) echo -e "  ${T_RED}[ ✘ WRONG GUESS ]${T_RESET} ${title} ${T_RED}FAILED${T_RESET} ${T_GRAY}(${elapsed}s)${T_RESET}" >&2 ;;
+      esac
       echo -e "  ${T_YELLOW}── Last lines of log (${log_file}) ──${T_RESET}" >&2
       tail -n 15 "$log_file" | sed 's/^/    /' >&2 || true
       echo -e "  ${T_YELLOW}──────────────────────────────────────────${T_RESET}" >&2
@@ -222,7 +231,7 @@ run_tetris_step() {
     fi
   fi
 
-  # ── Animation Definition 1B: Tetris Falling Down ──
+  # ── 0: Tetris Falling Down ──
   local -a tetris_frames=(
     "${C_CYAN}[ ■■■■ · · · · ]${T_RESET}|(Sky Spawn)"
     "${C_CYAN}[ · ■■■■ · · · ]${T_RESET}|(Gravity 1G)"
@@ -242,7 +251,7 @@ run_tetris_step() {
     "${C_GREEN}[ ✨ LINE CLEAR ✨ ]${T_RESET}|(Line Clear)"
   )
 
-  # ── Animation Definition 2B: Rubik's Cube 3x3 Colored Face Grid ──
+  # ── 1: Rubik's Cube 3x3 Colored Face Grid ──
   local -a cube_frames=(
     "${C_ORANGE}■${C_WHITE}■${C_BLUE}■${T_RESET}/${C_GREEN}■${C_YELLOW}■${C_RED}■${T_RESET}/${C_WHITE}■${C_GREEN}■${C_BLUE}■${T_RESET}|R  (Right Turn)"
     "${C_BLUE}■${C_WHITE}■${C_ORANGE}■${T_RESET}/${C_RED}■${C_YELLOW}■${C_GREEN}■${T_RESET}/${C_GREEN}■${C_WHITE}■${C_BLUE}■${T_RESET}|U  (Top Turn)"
@@ -253,6 +262,38 @@ run_tetris_step() {
     "${C_WHITE}■${C_WHITE}■${C_WHITE}■${T_RESET}/${C_RED}■${C_RED}■${C_RED}■${T_RESET}/${C_BLUE}■${C_BLUE}■${C_BLUE}■${T_RESET}|F2 (Align Cross)"
     "${C_YELLOW}■${C_YELLOW}■${C_YELLOW}■${T_RESET}/${C_ORANGE}■${C_ORANGE}■${C_ORANGE}■${T_RESET}/${C_GREEN}■${C_GREEN}■${C_GREEN}■${T_RESET}|PLL (Permute)"
     "${C_GREEN}■${C_GREEN}■${C_GREEN}■${T_RESET}/${C_GREEN}■${C_GREEN}■${C_GREEN}■${T_RESET}/${C_GREEN}■${C_GREEN}■${C_GREEN}■${T_RESET}|(SOLVED!)"
+  )
+
+  # ── 2: Sudoku 3x3 Solving & Candidates ──
+  local -a sudoku_frames=(
+    "${C_CYAN}5${T_RESET} · ${C_BLUE}2${T_RESET} / · ${C_PURPLE}8${T_RESET} · / ${C_GREEN}1${T_RESET} · ${C_RED}9${T_RESET}|(Candidate 4)"
+    "${C_CYAN}5${T_RESET} ${C_YELLOW}4${T_RESET} ${C_BLUE}2${T_RESET} / · ${C_PURPLE}8${T_RESET} · / ${C_GREEN}1${T_RESET} · ${C_RED}9${T_RESET}|(Naked Single)"
+    "${C_CYAN}5${T_RESET} ${C_YELLOW}4${T_RESET} ${C_BLUE}2${T_RESET} / ${C_ORANGE}7${T_RESET} ${C_PURPLE}8${T_RESET} · / ${C_GREEN}1${T_RESET} · ${C_RED}9${T_RESET}|(Hidden Pair)"
+    "${C_CYAN}5${T_RESET} ${C_YELLOW}4${T_RESET} ${C_BLUE}2${T_RESET} / ${C_ORANGE}7${T_RESET} ${C_PURPLE}8${T_RESET} ${C_CYAN}3${T_RESET} / ${C_GREEN}1${T_RESET} · ${C_RED}9${T_RESET}|(Box Eliminate)"
+    "${C_CYAN}5${T_RESET} ${C_YELLOW}4${T_RESET} ${C_BLUE}2${T_RESET} / ${C_ORANGE}7${T_RESET} ${C_PURPLE}8${T_RESET} ${C_CYAN}3${T_RESET} / ${C_GREEN}1${T_RESET} ${C_PURPLE}6${T_RESET} ${C_RED}9${T_RESET}|(GRID FULL!)"
+    "${C_GREEN}[ ✨ SUDOKU SOLVED ✨ ]${T_RESET}|(Valid Solution)"
+  )
+
+  # ── 3: 2048 Tile Merging ──
+  local -a game2048_frames=(
+    "${C_CYAN}  2   2  ·   · ${T_RESET}|(Swipe Left)"
+    "${C_YELLOW}  4   4  ·   · ${T_RESET}|(Merge 4+4)"
+    "${C_ORANGE}  8   8  ·   · ${T_RESET}|(Merge 8+8)"
+    "${C_RED} 16  16  ·   · ${T_RESET}|(Cascade 32)"
+    "${C_PURPLE} 64  64  ·   · ${T_RESET}|(Cascade 128)"
+    "${C_BLUE}256 256  ·   · ${T_RESET}|(Cascade 512)"
+    "${C_YELLOW}1024 1024 ·   · ${T_RESET}|(COMBO x4)"
+    "${C_GREEN}[ ✨ 2048 TILE ✨ ]${T_RESET}|(2048 WON!)"
+  )
+
+  # ── 4: Crossword Clue Matching ──
+  local -a crossword_frames=(
+    "${C_CYAN}P _ _ _ Y ■ D _ T${T_RESET}|(1-Across: Shell)"
+    "${C_YELLOW}P O L Y ■ D _ T${T_RESET}|(1-Down: Dotfile)"
+    "${C_ORANGE}P O L Y ■ D O T${T_RESET}|(2-Down: Config)"
+    "${C_PURPLE}P O L Y O M I N O${T_RESET}|(Word Complete)"
+    "${C_BLUE}■ D O T F I L E S ■${T_RESET}|(Cross Intersect)"
+    "${C_GREEN}[ ✨ ALL CLUES MATCH ✨ ]${T_RESET}|(Grid Solved)"
   )
 
   local start_time
@@ -276,27 +317,58 @@ run_tetris_step() {
     local timer
     printf -v timer "%02d:%02d" "$mins" "$secs"
 
-    if [ "$anim_mode" -eq 0 ]; then
-      # 1B: Tetris Falling Down
-      local total_f=${#tetris_frames[@]}
-      local idx=$(( frame % total_f ))
-      local raw="${tetris_frames[$idx]}"
-      local art="${raw%%|*}"
-      local label="${raw##*|}"
-
-      printf "\r  ${T_PURPLE}│${T_RESET} ${T_GRAY}[%s]${T_RESET} %b %-14s ${T_PURPLE}│${T_RESET} %-40s" \
-        "$timer" "$art" "${T_GRAY}${label}${T_RESET}" "${title}..."
-    else
-      # 2B: Rubik's Cube 3x3 Face
-      local total_f=${#cube_frames[@]}
-      local idx=$(( frame % total_f ))
-      local raw="${cube_frames[$idx]}"
-      local art="${raw%%|*}"
-      local label="${raw##*|}"
-
-      printf "\r  ${T_PURPLE}│${T_RESET} ${T_GRAY}[%s]${T_RESET} [ %b ] %-16s ${T_PURPLE}│${T_RESET} %-40s" \
-        "$timer" "$art" "${T_YELLOW}${label}${T_RESET}" "${title}..."
-    fi
+    case "$anim_mode" in
+      0)
+        # Tetris Falling Down
+        local total_f=${#tetris_frames[@]}
+        local idx=$(( frame % total_f ))
+        local raw="${tetris_frames[$idx]}"
+        local art="${raw%%|*}"
+        local label="${raw##*|}"
+        printf "\r  ${T_PURPLE}│${T_RESET} ${T_GRAY}[%s]${T_RESET} %b %-14s ${T_PURPLE}│${T_RESET} %-40s" \
+          "$timer" "$art" "${T_GRAY}${label}${T_RESET}" "${title}..."
+        ;;
+      1)
+        # Rubik's Cube 3x3 Face
+        local total_f=${#cube_frames[@]}
+        local idx=$(( frame % total_f ))
+        local raw="${cube_frames[$idx]}"
+        local art="${raw%%|*}"
+        local label="${raw##*|}"
+        printf "\r  ${T_PURPLE}│${T_RESET} ${T_GRAY}[%s]${T_RESET} [ %b ] %-16s ${T_PURPLE}│${T_RESET} %-40s" \
+          "$timer" "$art" "${T_YELLOW}${label}${T_RESET}" "${title}..."
+        ;;
+      2)
+        # Sudoku
+        local total_f=${#sudoku_frames[@]}
+        local idx=$(( frame % total_f ))
+        local raw="${sudoku_frames[$idx]}"
+        local art="${raw%%|*}"
+        local label="${raw##*|}"
+        printf "\r  ${T_PURPLE}│${T_RESET} ${T_GRAY}[%s]${T_RESET} [ %b ] %-16s ${T_PURPLE}│${T_RESET} %-40s" \
+          "$timer" "$art" "${T_CYAN}${label}${T_RESET}" "${title}..."
+        ;;
+      3)
+        # 2048
+        local total_f=${#game2048_frames[@]}
+        local idx=$(( frame % total_f ))
+        local raw="${game2048_frames[$idx]}"
+        local art="${raw%%|*}"
+        local label="${raw##*|}"
+        printf "\r  ${T_PURPLE}│${T_RESET} ${T_GRAY}[%s]${T_RESET} [ %b ] %-16s ${T_PURPLE}│${T_RESET} %-40s" \
+          "$timer" "$art" "${T_ORANGE}${label}${T_RESET}" "${title}..."
+        ;;
+      4)
+        # Crossword
+        local total_f=${#crossword_frames[@]}
+        local idx=$(( frame % total_f ))
+        local raw="${crossword_frames[$idx]}"
+        local art="${raw%%|*}"
+        local label="${raw##*|}"
+        printf "\r  ${T_PURPLE}│${T_RESET} ${T_GRAY}[%s]${T_RESET} [ %b ] %-16s ${T_PURPLE}│${T_RESET} %-40s" \
+          "$timer" "$art" "${T_PURPLE}${label}${T_RESET}" "${title}..."
+        ;;
+    esac
 
     frame=$(( frame + 1 ))
     sleep 0.14
@@ -313,18 +385,22 @@ run_tetris_step() {
   printf "\r\033[2K"
 
   if [ $exit_code -eq 0 ]; then
-    if [ "$anim_mode" -eq 0 ]; then
-      echo -e "  ${T_GREEN}[ ✔ LINE CLEAR ]${T_RESET} ${T_BOLD}${title}${T_RESET} ${T_GRAY}(${total_elapsed}s)${T_RESET}"
-    else
-      echo -e "  ${T_GREEN}[ 🧊 SOLVED ]${T_RESET} ${T_BOLD}${title}${T_RESET} ${T_GRAY}(${total_elapsed}s)${T_RESET}"
-    fi
+    case "$anim_mode" in
+      0) echo -e "  ${T_GREEN}[ ✔ LINE CLEAR ]${T_RESET} ${T_BOLD}${title}${T_RESET} ${T_GRAY}(${total_elapsed}s)${T_RESET}" ;;
+      1) echo -e "  ${T_GREEN}[ 🧊 SOLVED ]${T_RESET} ${T_BOLD}${title}${T_RESET} ${T_GRAY}(${total_elapsed}s)${T_RESET}" ;;
+      2) echo -e "  ${T_GREEN}[ 🔢 SUDOKU SOLVED ]${T_RESET} ${T_BOLD}${title}${T_RESET} ${T_GRAY}(${total_elapsed}s)${T_RESET}" ;;
+      3) echo -e "  ${T_GREEN}[ 🏆 2048 REACHED ]${T_RESET} ${T_BOLD}${title}${T_RESET} ${T_GRAY}(${total_elapsed}s)${T_RESET}" ;;
+      4) echo -e "  ${T_GREEN}[ ✏️ CROSSWORD COMPLETED ]${T_RESET} ${T_BOLD}${title}${T_RESET} ${T_GRAY}(${total_elapsed}s)${T_RESET}" ;;
+    esac
     return 0
   else
-    if [ "$anim_mode" -eq 0 ]; then
-      echo -e "  ${T_RED}[ ✘ TOP OUT ]${T_RESET} ${T_BOLD}${title}${T_RESET} ${T_RED}FAILED${T_RESET} ${T_GRAY}(${total_elapsed}s)${T_RESET}" >&2
-    else
-      echo -e "  ${T_RED}[ ✘ DNF / SCRAMBLED ]${T_RESET} ${T_BOLD}${title}${T_RESET} ${T_RED}FAILED${T_RESET} ${T_GRAY}(${total_elapsed}s)${T_RESET}" >&2
-    fi
+    case "$anim_mode" in
+      0) echo -e "  ${T_RED}[ ✘ TOP OUT ]${T_RESET} ${T_BOLD}${title}${T_RESET} ${T_RED}FAILED${T_RESET} ${T_GRAY}(${total_elapsed}s)${T_RESET}" >&2 ;;
+      1) echo -e "  ${T_RED}[ ✘ DNF / SCRAMBLED ]${T_RESET} ${T_BOLD}${title}${T_RESET} ${T_RED}FAILED${T_RESET} ${T_GRAY}(${total_elapsed}s)${T_RESET}" >&2 ;;
+      2) echo -e "  ${T_RED}[ ✘ INVALID BOARD ]${T_RESET} ${T_BOLD}${title}${T_RESET} ${T_RED}FAILED${T_RESET} ${T_GRAY}(${total_elapsed}s)${T_RESET}" >&2 ;;
+      3) echo -e "  ${T_RED}[ ✘ NO MOVES LEFT ]${T_RESET} ${T_BOLD}${title}${T_RESET} ${T_RED}FAILED${T_RESET} ${T_GRAY}(${total_elapsed}s)${T_RESET}" >&2 ;;
+      4) echo -e "  ${T_RED}[ ✘ WRONG GUESS ]${T_RESET} ${T_BOLD}${title}${T_RESET} ${T_RED}FAILED${T_RESET} ${T_GRAY}(${total_elapsed}s)${T_RESET}" >&2 ;;
+    esac
     echo -e "  ${T_YELLOW}── Last 20 lines of log (${log_file}) ──${T_RESET}" >&2
     tail -n 20 "$log_file" | sed 's/^/    /' >&2 || true
     echo -e "  ${T_YELLOW}──────────────────────────────────────────${T_RESET}" >&2
