@@ -144,10 +144,116 @@ _tetromino_glyph() {
   esac
 }
 
+# Ensure cursor is restored on exit/interrupt
+trap 'echo -en "\033[?25h"' EXIT INT TERM
+
 # Non-blocking check: true if we should skip the interactive prompt entirely
 # (CI, forced non-interactive, or no controlling terminal at all).
 _tetris_noninteractive() {
   [ "${CI:-}" = "1" ] || [ "${NON_INTERACTIVE:-false}" = true ] || { [ ! -t 0 ] && [ ! -e /dev/tty ]; }
+}
+
+# Ensure sudo credentials are cached prior to running background steps
+ensure_sudo() {
+  if [ "$EUID" -ne 0 ] && command -v sudo &>/dev/null; then
+    if ! sudo -n true 2>/dev/null; then
+      echo -e "  ${T_YELLOW}[INFO]${T_RESET} Sudo privileges required. Please authenticate:"
+      sudo -v || true
+    fi
+  fi
+}
+
+# Tetris-themed animated spinner & background task runner
+# Usage: run_tetris_step "Step Description" <command or function> [args...]
+run_tetris_step() {
+  local title="$1"
+  shift
+
+  local log_slug
+  log_slug="$(echo "$title" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9]+/-/g' | sed -E 's/^-|-$//g')"
+  local log_file="/tmp/polyomino-bootstrap-${log_slug}.log"
+  rm -f "$log_file"
+
+  # Non-interactive fallback
+  if _tetris_noninteractive; then
+    echo -e "  ${T_CYAN}[ ▶ HARD DROP ]${T_RESET} ${T_BOLD}${title}${T_RESET}..."
+    local start_time
+    start_time=$(date +%s)
+    if "$@" > "$log_file" 2>&1; then
+      local elapsed=$(( $(date +%s) - start_time ))
+      echo -e "  ${T_GREEN}[ ✔ LINE CLEAR ]${T_RESET} ${title} ${T_GRAY}(${elapsed}s)${T_RESET}"
+      return 0
+    else
+      local exit_code=$?
+      local elapsed=$(( $(date +%s) - start_time ))
+      echo -e "  ${T_RED}[ ✘ TOP OUT ]${T_RESET} ${title} ${T_RED}FAILED${T_RESET} ${T_GRAY}(${elapsed}s)${T_RESET}" >&2
+      echo -e "  ${T_YELLOW}── Last lines of log (${log_file}) ──${T_RESET}" >&2
+      tail -n 15 "$log_file" | sed 's/^/    /' >&2 || true
+      echo -e "  ${T_YELLOW}──────────────────────────────────────────${T_RESET}" >&2
+      return $exit_code
+    fi
+  fi
+
+  # Interactive animated runner
+  local -a p_names=("I-Piece" "O-Piece" "T-Piece" "S-Piece" "Z-Piece" "J-Piece" "L-Piece")
+  local -a p_colors=("$T_CYAN" "$T_YELLOW" "$T_PURPLE" "$T_GREEN" "$T_RED" "$T_BLUE" "$T_ORANGE")
+  local -a p_glyphs=("■■■■   " "■■/■■  " " ■ /■■■" " ■■/■■ " "■■ / ■■" "■  /■■■" "  ■/■■■")
+
+  local start_time
+  start_time=$(date +%s)
+
+  # Start step in background and capture all stdout/stderr
+  "$@" > "$log_file" 2>&1 &
+  local pid=$!
+
+  # Hide cursor
+  echo -en "\033[?25l"
+
+  local frame=0
+  local num_pieces=${#p_names[@]}
+
+  while kill -0 "$pid" 2>/dev/null; do
+    local idx=$(( frame % num_pieces ))
+    local cur_color="${p_colors[$idx]}"
+    local cur_glyph="${p_glyphs[$idx]}"
+    local cur_name="${p_names[$idx]}"
+
+    local cur_time
+    cur_time=$(date +%s)
+    local elapsed=$(( cur_time - start_time ))
+    local mins=$(( elapsed / 60 ))
+    local secs=$(( elapsed % 60 ))
+    local timer
+    printf -v timer "%02d:%02d" "$mins" "$secs"
+
+    # Single-line retro HUD update
+    printf "\r  ${T_PURPLE}│${T_RESET} ${T_GRAY}[%s]${T_RESET} %b[ %-7s %-7s ]%b %-45s" \
+      "$timer" "$cur_color" "$cur_glyph" "$cur_name" "$T_RESET" "${title}..."
+
+    frame=$(( frame + 1 ))
+    sleep 0.12
+  done
+
+  wait "$pid"
+  local exit_code=$?
+  local total_elapsed=$(( $(date +%s) - start_time ))
+
+  # Show cursor
+  echo -en "\033[?25h"
+
+  # Clear line
+  printf "\r\033[2K"
+
+  if [ $exit_code -eq 0 ]; then
+    echo -e "  ${T_GREEN}[ ✔ LINE CLEAR ]${T_RESET} ${T_BOLD}${title}${T_RESET} ${T_GRAY}(${total_elapsed}s)${T_RESET}"
+    return 0
+  else
+    echo -e "  ${T_RED}[ ✘ TOP OUT ]${T_RESET} ${T_BOLD}${title}${T_RESET} ${T_RED}FAILED${T_RESET} ${T_GRAY}(${total_elapsed}s)${T_RESET}" >&2
+    echo -e "  ${T_YELLOW}── Last 20 lines of log (${log_file}) ──${T_RESET}" >&2
+    tail -n 20 "$log_file" | sed 's/^/    /' >&2 || true
+    echo -e "  ${T_YELLOW}──────────────────────────────────────────${T_RESET}" >&2
+    return $exit_code
+  fi
 }
 
 # prompt_tetris_yn <piece> <color> <label> <default: true|false>
@@ -465,12 +571,11 @@ install_system_deps() {
   local pkg_mgr="$1"
 
   if [ "$pkg_mgr" = "unknown" ]; then
-    echo -e "  \033[33m[NOTE]\033[0m Package manager not detected. Skipping system package installation."
+    echo -e "  ${T_YELLOW}[NOTE]${T_RESET} Package manager not detected. Skipping system package installation."
     return
   fi
 
-  echo -e "  \033[1;36m[polyomino]\033[0m Installing system dependencies for $pkg_mgr..."
-  echo -e "  \033[33m[INFO]\033[0m You may be prompted for your sudo password..."
+  ensure_sudo
 
   # Optional packages to include
   local opt_pkgs=""
@@ -500,7 +605,6 @@ install_system_deps() {
 
   case "$pkg_mgr" in
     pacman)
-      # Core system + desktop + dev tools + lockscreen & Wayland stack
       SWAY_PKG=""
       if ! pacman -Qq swayfx &>/dev/null && ! pacman -Qq sway &>/dev/null; then
         if ! command -v yay &>/dev/null; then
@@ -514,18 +618,24 @@ install_system_deps() {
       [ "$ENABLE_DEVOPS" = true ] && opt_pkgs="$opt_pkgs docker"
       [ "$ENABLE_DESKTOP_APPS" = true ] && opt_pkgs="$opt_pkgs telegram-desktop"
 
-      sudo pacman -S --needed --noconfirm \
-        base-devel git curl wget \
-        zsh fontconfig \
-        $SWAY_PKG waybar kitty wofi swaylock gtklock swayidle grim slurp \
-        brightnessctl libpulse playerctl wireplumber swaync mako mpv \
-        python-gobject python-cairo gtk3 gtk-layer-shell gtk-session-lock pam \
-        ttf-jetbrains-mono-nerd \
-        $opt_pkgs
-      echo -e "  \033[32m[OK]\033[0m System packages installed"
+      _pacman_install() {
+        sudo pacman -S --needed --noconfirm \
+          base-devel git curl wget \
+          zsh fontconfig \
+          $SWAY_PKG waybar kitty wofi swaylock gtklock swayidle grim slurp \
+          brightnessctl libpulse playerctl wireplumber swaync mako mpv \
+          python-gobject python-cairo gtk3 gtk-layer-shell gtk-session-lock pam \
+          ttf-jetbrains-mono-nerd \
+          $opt_pkgs
+      }
+      run_tetris_step "Installing system packages & Wayland stack (pacman)" _pacman_install
       ;;
     apt-get)
-      sudo apt-get update
+      _apt_update() {
+        sudo DEBIAN_FRONTEND=noninteractive apt-get update -y
+      }
+      run_tetris_step "Updating Apt package repositories" _apt_update
+
       DOCKER_PKG=""
       if [ "$ENABLE_DEVOPS" = true ] && ! command -v docker &> /dev/null; then
         DOCKER_PKG="docker.io"
@@ -535,16 +645,18 @@ install_system_deps() {
       [ "$ENABLE_BROWSER" = true ] && opt_pkgs="$opt_pkgs $browser_pkgs_apt"
       [ "$ENABLE_TUI_TOOLS" = true ] && opt_pkgs="$opt_pkgs fastfetch zoxide"
 
-      sudo apt-get install -y \
-        build-essential git curl wget \
-        zsh fontconfig \
-        sway waybar kitty wofi swaylock swayidle grim slurp \
-        brightnessctl playerctl wireplumber pulseaudio-utils sway-notification-center mako-notifier mpv \
-        python3-gi python3-cairo gir1.2-gtk-3.0 gir1.2-gtklayershell-0.1 libpam0g-dev \
-        fonts-jetbrains-mono \
-        $DOCKER_PKG \
-        $opt_pkgs
-      echo -e "  \033[32m[OK]\033[0m System packages installed"
+      _apt_install() {
+        sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+          build-essential git curl wget \
+          zsh fontconfig \
+          sway waybar kitty wofi swaylock swayidle grim slurp \
+          brightnessctl playerctl wireplumber pulseaudio-utils sway-notification-center mako-notifier mpv \
+          python3-gi python3-cairo gir1.2-gtk-3.0 gir1.2-gtklayershell-0.1 libpam0g-dev \
+          fonts-jetbrains-mono \
+          $DOCKER_PKG \
+          $opt_pkgs
+      }
+      run_tetris_step "Installing system packages & Wayland stack (apt-get)" _apt_install
       ;;
     dnf)
       [ "$ENABLE_TETRAVIM" = true ] && opt_pkgs="$opt_pkgs neovim"
@@ -553,44 +665,48 @@ install_system_deps() {
       [ "$ENABLE_DEVOPS" = true ] && opt_pkgs="$opt_pkgs docker"
       [ "$ENABLE_DESKTOP_APPS" = true ] && opt_pkgs="$opt_pkgs telegram-desktop"
 
-      sudo dnf install -y \
-        gcc gcc-c++ git curl wget \
-        zsh fontconfig \
-        sway waybar kitty wofi swaylock swayidle grim slurp \
-        brightnessctl playerctl wireplumber pulseaudio-libs sway-notification-center mako mpv \
-        python3-gobject python3-cairo gtk3 gtk-layer-shell pam-devel \
-        $opt_pkgs
-      echo -e "  \033[32m[OK]\033[0m System packages installed"
+      _dnf_install() {
+        sudo dnf install -y \
+          gcc gcc-c++ git curl wget \
+          zsh fontconfig \
+          sway waybar kitty wofi swaylock swayidle grim slurp \
+          brightnessctl playerctl wireplumber pulseaudio-libs sway-notification-center mako mpv \
+          python3-gobject python3-cairo gtk3 gtk-layer-shell pam-devel \
+          $opt_pkgs
+      }
+      run_tetris_step "Installing system packages & Wayland stack (dnf)" _dnf_install
       ;;
     *)
-      echo -e "  \033[33m[NOTE]\033[0m Package manager '$pkg_mgr' not automatically managed. Skipping installation."
+      echo -e "  ${T_YELLOW}[NOTE]${T_RESET} Package manager '$pkg_mgr' not automatically managed. Skipping installation."
       ;;
   esac
 
   # Google Chrome Stable installation
   if [ "${ENABLE_CHROME:-false}" = true ]; then
     if ! command -v google-chrome &>/dev/null && ! command -v google-chrome-stable &>/dev/null; then
-      echo -e "  \033[1;36m[polyomino]\033[0m Installing Google Chrome Stable..."
-      case "$pkg_mgr" in
-        apt-get)
-          local chrome_deb="/tmp/google-chrome-stable_current_amd64.deb"
-          curl -fsSL "https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb" -o "$chrome_deb" 2>/dev/null || true
-          if [ -f "$chrome_deb" ]; then
-            sudo apt-get install -y "$chrome_deb" 2>/dev/null || sudo apt-get install -f -y 2>/dev/null || true
-            rm -f "$chrome_deb"
-          fi
-          ;;
-        pacman)
-          if command -v yay &>/dev/null; then
-            yay -S --needed --noconfirm --answerclean None --answerdiff None google-chrome 2>/dev/null || true
-          fi
-          ;;
-        dnf)
-          sudo dnf install -y fedora-workstation-repositories 2>/dev/null || true
-          sudo dnf config-manager --set-enabled google-chrome 2>/dev/null || true
-          sudo dnf install -y google-chrome-stable 2>/dev/null || true
-          ;;
-      esac
+      _install_chrome() {
+        case "$pkg_mgr" in
+          apt-get)
+            local chrome_deb="/tmp/google-chrome-stable_current_amd64.deb"
+            curl -fsSL "https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb" -o "$chrome_deb"
+            if [ -f "$chrome_deb" ]; then
+              sudo DEBIAN_FRONTEND=noninteractive apt-get install -y "$chrome_deb" || sudo DEBIAN_FRONTEND=noninteractive apt-get install -f -y
+              rm -f "$chrome_deb"
+            fi
+            ;;
+          pacman)
+            if command -v yay &>/dev/null; then
+              yay -S --needed --noconfirm --answerclean None --answerdiff None google-chrome
+            fi
+            ;;
+          dnf)
+            sudo dnf install -y fedora-workstation-repositories || true
+            sudo dnf config-manager --set-enabled google-chrome || true
+            sudo dnf install -y google-chrome-stable
+            ;;
+        esac
+      }
+      run_tetris_step "Installing Google Chrome Stable" _install_chrome
     fi
   fi
 }
@@ -601,28 +717,28 @@ install_java() {
   fi
 
   if command -v java &> /dev/null; then
-    echo -e "  \033[32m[OK]\033[0m Java already installed:"
-    java -version 2>&1 | head -1
+    echo -e "  ${T_GREEN}[OK]${T_RESET} Java already installed: $(java -version 2>&1 | head -1)"
     return
   fi
 
-  echo -e "  \033[1;36m[polyomino]\033[0m Installing Java (GraalVM 21)..."
-
-  # Try to install via SDKMan
-  if [ ! -d "$HOME/.sdkman" ]; then
-    echo -e "  \033[36m[INFO]\033[0m Installing SDKMan..."
-    curl -s "https://get.sdkman.io" | bash
-  fi
-
-  if [ -s "$HOME/.sdkman/bin/sdkman-init.sh" ]; then
-    set +u
-    source "$HOME/.sdkman/bin/sdkman-init.sh"
-    sdk install java 21.0.1-graal --default 2>/dev/null || true
-    if ! command -v sbt &> /dev/null; then
-      sdk install sbt --default 2>/dev/null || true
+  _java_step() {
+    # Try to install via SDKMan
+    if [ ! -d "$HOME/.sdkman" ]; then
+      curl -s "https://get.sdkman.io" | bash
     fi
-    set -u
-  fi
+
+    if [ -s "$HOME/.sdkman/bin/sdkman-init.sh" ]; then
+      set +u
+      source "$HOME/.sdkman/bin/sdkman-init.sh"
+      sdk install java 21.0.1-graal --default || true
+      if ! command -v sbt &> /dev/null; then
+        sdk install sbt --default || true
+      fi
+      set -u
+    fi
+  }
+
+  run_tetris_step "Installing Java (GraalVM 21) & SDKMan" _java_step
 
   if [ -d "$HOME/.sdkman/candidates/java/current/bin" ]; then
     export PATH="$HOME/.sdkman/candidates/java/current/bin:$PATH"
@@ -632,92 +748,100 @@ install_java() {
   fi
 
   if command -v java &> /dev/null; then
-    echo -e "  \033[32m[OK]\033[0m Java installed via SDKMan"
+    echo -e "  ${T_GREEN}[OK]${T_RESET} Java installed via SDKMan"
     java -version 2>&1 | head -1
   else
-    echo -e "  \033[31m[ERROR]\033[0m Java installation failed"
+    echo -e "  ${T_RED}[ERROR]${T_RESET} Java installation failed"
     exit 1
   fi
 }
 
 install_polyomino_binary() {
-  echo -e "  \033[1;36m[polyomino]\033[0m Installing & deploying polyomino native binary..."
   mkdir -p "$BIN_DIR"
 
   # 1. Pull latest dotfiles changes if this is a git repo
   if [ -d "$SCRIPT_DIR/.git" ]; then
-    echo -e "  \033[36m[INFO]\033[0m Pulling latest dotfiles updates in $SCRIPT_DIR..."
-    git -C "$SCRIPT_DIR" pull --ff-only 2>/dev/null || true
+    _git_pull() {
+      git -C "$SCRIPT_DIR" pull --ff-only || true
+    }
+    run_tetris_step "Updating local dotfiles repository" _git_pull
   fi
 
   # 2. Compile standalone GraalVM native binary if sbt is available
   if command -v sbt &>/dev/null && [ -f "$SCRIPT_DIR/build.sbt" ]; then
-    echo -e "  \033[36m[INFO]\033[0m Compiling Polyomino native binary (sbt nativeImage)..."
-    (cd "$SCRIPT_DIR" && sbt nativeImage) || true
+    _sbt_compile() {
+      (cd "$SCRIPT_DIR" && sbt nativeImage)
+    }
+    run_tetris_step "Compiling Polyomino native binary (sbt nativeImage)" _sbt_compile
   fi
 
   # 3. Copy compiled binary to $BIN_DIR/polyomino or download release fallback
   if [ -f "$SCRIPT_DIR/target/native-image/polyomino" ]; then
     cp --remove-destination "$SCRIPT_DIR/target/native-image/polyomino" "$BIN_DIR/polyomino"
     chmod +x "$BIN_DIR/polyomino"
-    echo -e "  \033[32m[OK]\033[0m Installed native binary to $BIN_DIR/polyomino"
+    echo -e "  ${T_GREEN}[OK]${T_RESET} Installed native binary to $BIN_DIR/polyomino"
   elif [ ! -f "$BIN_DIR/polyomino" ]; then
-    echo -e "  \033[36m[INFO]\033[0m Fetching latest native binary release from GitHub..."
-    if curl -fL "https://github.com/petrolal/polyomino.dotfiles/releases/latest/download/polyomino-x86_64-linux" -o "$BIN_DIR/polyomino" 2>/dev/null; then
+    _download_bin() {
+      curl -fL "https://github.com/petrolal/polyomino.dotfiles/releases/latest/download/polyomino-x86_64-linux" -o "$BIN_DIR/polyomino"
       chmod +x "$BIN_DIR/polyomino"
-      echo -e "  \033[32m[OK]\033[0m Downloaded polyomino native binary to $BIN_DIR/polyomino"
-    else
-      echo -e "  \033[33m[NOTE]\033[0m Could not download binary directly (run 'sbt nativeImage' to compile locally)"
-    fi
+    }
+    run_tetris_step "Fetching Polyomino native binary release" _download_bin
   fi
 
   # 4. Deploy dotfiles, symlinks, themes, and apply configurations to system
   if [ -x "$BIN_DIR/polyomino" ]; then
-    echo -e "  \033[36m[INFO]\033[0m Deploying dotfiles configurations and symlinks..."
-    "$BIN_DIR/polyomino" deploy 2>/dev/null || true
-    "$BIN_DIR/polyomino" fastfetch-logo 2>/dev/null || true
+    _deploy_step() {
+      "$BIN_DIR/polyomino" deploy || true
+      "$BIN_DIR/polyomino" fastfetch-logo || true
+    }
+    run_tetris_step "Deploying dotfiles configurations and symlinks" _deploy_step
   fi
 }
 
 install_tools() {
   local pkg_mgr="$1"
-  echo -e "  \033[1;36m[polyomino]\033[0m Installing terminal & TUI tools (spotify_player, bluetui)..."
+  ensure_sudo
 
   # Ensure cargo/rust and required build dependencies are available
   if ! command -v cargo &> /dev/null; then
-    echo -e "  \033[36m[INFO]\033[0m Installing Rust & Cargo build toolchain..."
-    case "$pkg_mgr" in
-      pacman)
-        sudo pacman -S --needed --noconfirm rust cargo alsa-lib libpulse dbus openssl pkgconf fastfetch
-        ;;
-      apt-get)
-        sudo apt-get install -y cargo rustc pkg-config libasound2-dev libpulse-dev libdbus-1-dev libssl-dev fastfetch
-        ;;
-      dnf)
-        sudo dnf install -y cargo rust alsa-lib-devel pulseaudio-libs-devel dbus-devel openssl-devel pkgconf-pkg-config fastfetch
-        ;;
-      *)
-        if command -v curl &> /dev/null; then
-          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-          export PATH="$HOME/.cargo/bin:$PATH"
-        fi
-        ;;
-    esac
+    _rust_step() {
+      case "$pkg_mgr" in
+        pacman)
+          sudo pacman -S --needed --noconfirm rust cargo alsa-lib libpulse dbus openssl pkgconf fastfetch
+          ;;
+        apt-get)
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y cargo rustc pkg-config libasound2-dev libpulse-dev libdbus-1-dev libssl-dev fastfetch
+          ;;
+        dnf)
+          sudo dnf install -y cargo rust alsa-lib-devel pulseaudio-libs-devel dbus-devel openssl-devel pkgconf-pkg-config fastfetch
+          ;;
+        *)
+          if command -v curl &> /dev/null; then
+            curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+            export PATH="$HOME/.cargo/bin:$PATH"
+          fi
+          ;;
+      esac
+    }
+    run_tetris_step "Installing Rust & Cargo build toolchain" _rust_step
   else
     # Install build headers if cargo is already installed
-    case "$pkg_mgr" in
-      pacman)
-        sudo pacman -S --needed --noconfirm alsa-lib libpulse dbus openssl pkgconf 2>/dev/null || true
-        ;;
-      apt-get)
-        sudo apt-get install -y pkg-config libasound2-dev libpulse-dev libdbus-1-dev libssl-dev 2>/dev/null || true
-        ;;
-      dnf)
-        sudo dnf install -y alsa-lib-devel pulseaudio-libs-devel dbus-devel openssl-devel pkgconf-pkg-config 2>/dev/null || true
-        ;;
-      *)
-        ;;
-    esac
+    _headers_step() {
+      case "$pkg_mgr" in
+        pacman)
+          sudo pacman -S --needed --noconfirm alsa-lib libpulse dbus openssl pkgconf || true
+          ;;
+        apt-get)
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y pkg-config libasound2-dev libpulse-dev libdbus-1-dev libssl-dev || true
+          ;;
+        dnf)
+          sudo dnf install -y alsa-lib-devel pulseaudio-libs-devel dbus-devel openssl-devel pkgconf-pkg-config || true
+          ;;
+        *)
+          ;;
+      esac
+    }
+    run_tetris_step "Verifying C/Audio build headers" _headers_step
   fi
 
   if [ -d "$HOME/.cargo/bin" ]; then
@@ -726,85 +850,88 @@ install_tools() {
 
   # 1. spotify_player TUI (cargo)
   if command -v spotify_player &> /dev/null; then
-    echo -e "  \033[32m[OK]\033[0m spotify_player already installed"
+    echo -e "  ${T_GREEN}[OK]${T_RESET} spotify_player already installed"
   elif command -v cargo &> /dev/null; then
-    echo -e "  \033[36m[INFO]\033[0m Installing spotify_player via cargo..."
-    cargo install spotify_player --locked --features daemon,pulseaudio-backend,rodio-backend 2>/dev/null || true
+    _spotify_step() {
+      cargo install spotify_player --locked --features daemon,pulseaudio-backend,rodio-backend
+    }
+    run_tetris_step "Compiling spotify_player TUI (cargo)" _spotify_step
   fi
 
   # 2. bluetui Bluetooth TUI (cargo)
   if command -v bluetui &> /dev/null; then
-    echo -e "  \033[32m[OK]\033[0m bluetui already installed"
+    echo -e "  ${T_GREEN}[OK]${T_RESET} bluetui already installed"
   elif command -v cargo &> /dev/null; then
-    echo -e "  \033[36m[INFO]\033[0m Installing bluetui via cargo..."
-    cargo install bluetui --locked 2>/dev/null || true
+    _bluetui_step() {
+      cargo install bluetui --locked
+    }
+    run_tetris_step "Compiling bluetui Bluetooth TUI (cargo)" _bluetui_step
   fi
 
   # 3. aerc Email Client TUI (package manager)
   if command -v aerc &> /dev/null; then
-    echo -e "  \033[32m[OK]\033[0m aerc email client already installed"
+    echo -e "  ${T_GREEN}[OK]${T_RESET} aerc email client already installed"
   else
-    echo -e "  \033[36m[INFO]\033[0m Installing aerc email client..."
-    case "$pkg_mgr" in
-      pacman)
-        sudo pacman -S --needed --noconfirm aerc 2>/dev/null || true
-        ;;
-      apt-get)
-        sudo apt-get install -y aerc 2>/dev/null || true
-        ;;
-      dnf)
-        sudo dnf install -y aerc 2>/dev/null || true
-        ;;
-      *)
-        ;;
-    esac
+    _aerc_step() {
+      case "$pkg_mgr" in
+        pacman)
+          sudo pacman -S --needed --noconfirm aerc || true
+          ;;
+        apt-get)
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y aerc || true
+          ;;
+        dnf)
+          sudo dnf install -y aerc || true
+          ;;
+        *)
+          ;;
+      esac
+    }
+    run_tetris_step "Installing aerc email client" _aerc_step
   fi
 
   # 4. zoxide directory jumper (system / cargo / standalone fallback)
   if command -v zoxide &> /dev/null; then
-    echo -e "  \033[32m[OK]\033[0m zoxide already installed"
-  elif command -v cargo &> /dev/null; then
-    echo -e "  \033[36m[INFO]\033[0m Installing zoxide via cargo..."
-    cargo install zoxide --locked 2>/dev/null || true
-  elif command -v curl &> /dev/null; then
-    echo -e "  \033[36m[INFO]\033[0m Installing zoxide via standalone script..."
-    curl -sSfL https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh | sh 2>/dev/null || true
+    echo -e "  ${T_GREEN}[OK]${T_RESET} zoxide already installed"
+  else
+    _zoxide_step() {
+      if command -v cargo &> /dev/null; then
+        cargo install zoxide --locked || true
+      elif command -v curl &> /dev/null; then
+        curl -sSfL https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh | sh || true
+      fi
+    }
+    run_tetris_step "Installing zoxide smart directory jumper" _zoxide_step
   fi
 }
 
 setup_zsh_and_ohmyzsh() {
-  echo -e "  \033[1;36m[polyomino]\033[0m Setting up Zsh, Oh-My-Zsh, and plugins..."
+  _zsh_step() {
+    # 1. Install or update Oh-My-Zsh
+    if [ ! -d "$HOME/.oh-my-zsh" ]; then
+      git clone --depth=1 https://github.com/ohmyzsh/ohmyzsh.git "$HOME/.oh-my-zsh"
+    elif [ -d "$HOME/.oh-my-zsh/.git" ]; then
+      git -C "$HOME/.oh-my-zsh" pull --ff-only || true
+    fi
 
-  # 1. Install or update Oh-My-Zsh
-  if [ ! -d "$HOME/.oh-my-zsh" ]; then
-    echo -e "  \033[36m[INFO]\033[0m Cloning Oh-My-Zsh..."
-    git clone --depth=1 https://github.com/ohmyzsh/ohmyzsh.git "$HOME/.oh-my-zsh" 2>/dev/null || true
-  elif [ -d "$HOME/.oh-my-zsh/.git" ]; then
-    echo -e "  \033[36m[INFO]\033[0m Updating Oh-My-Zsh..."
-    git -C "$HOME/.oh-my-zsh" pull --ff-only 2>/dev/null || true
-  fi
+    # 2. Custom Plugins (clone or update)
+    local custom_plugins="$HOME/.oh-my-zsh/custom/plugins"
+    mkdir -p "$custom_plugins"
+    if [ ! -d "$custom_plugins/zsh-autosuggestions" ]; then
+      git clone --depth=1 https://github.com/zsh-users/zsh-autosuggestions "$custom_plugins/zsh-autosuggestions"
+    elif [ -d "$custom_plugins/zsh-autosuggestions/.git" ]; then
+      git -C "$custom_plugins/zsh-autosuggestions" pull --ff-only || true
+    fi
 
-  # 2. Custom Plugins (clone or update)
-  local custom_plugins="$HOME/.oh-my-zsh/custom/plugins"
-  mkdir -p "$custom_plugins"
-  if [ ! -d "$custom_plugins/zsh-autosuggestions" ]; then
-    git clone --depth=1 https://github.com/zsh-users/zsh-autosuggestions "$custom_plugins/zsh-autosuggestions" 2>/dev/null || true
-  elif [ -d "$custom_plugins/zsh-autosuggestions/.git" ]; then
-    git -C "$custom_plugins/zsh-autosuggestions" pull --ff-only 2>/dev/null || true
-  fi
+    if [ ! -d "$custom_plugins/zsh-syntax-highlighting" ]; then
+      git clone --depth=1 https://github.com/zsh-users/zsh-syntax-highlighting.git "$custom_plugins/zsh-syntax-highlighting"
+    elif [ -d "$custom_plugins/zsh-syntax-highlighting/.git" ]; then
+      git -C "$custom_plugins/zsh-syntax-highlighting" pull --ff-only || true
+    fi
 
-  if [ ! -d "$custom_plugins/zsh-syntax-highlighting" ]; then
-    git clone --depth=1 https://github.com/zsh-users/zsh-syntax-highlighting.git "$custom_plugins/zsh-syntax-highlighting" 2>/dev/null || true
-  elif [ -d "$custom_plugins/zsh-syntax-highlighting/.git" ]; then
-    git -C "$custom_plugins/zsh-syntax-highlighting" pull --ff-only 2>/dev/null || true
-  fi
-
-  # 3. Set default shell to zsh
-  local zsh_path
-  zsh_path="$(command -v zsh 2>/dev/null || echo "/usr/bin/zsh")"
-  # 4. Ensure ~/.bashrc seamless interactive auto-switch to Zsh
-  if [ -f "$HOME/.bashrc" ] && ! grep -q "Polyomino Zsh auto-switch" "$HOME/.bashrc"; then
-    cat << 'EOF' >> "$HOME/.bashrc"
+    # 3. Ensure ~/.bashrc seamless interactive auto-switch to Zsh
+    if [ -f "$HOME/.bashrc" ] && ! grep -q "Polyomino Zsh auto-switch" "$HOME/.bashrc"; then
+      cat << 'EOF' >> "$HOME/.bashrc"
 
 # Polyomino Zsh auto-switch
 if [ -t 1 ] && [ -n "$PS1" ] && [ -z "$POLYOMINO_SHELL_SWITCHED" ] && command -v zsh >/dev/null 2>&1; then
@@ -813,106 +940,97 @@ if [ -t 1 ] && [ -n "$PS1" ] && [ -z "$POLYOMINO_SHELL_SWITCHED" ] && command -v
   exec zsh
 fi
 EOF
-  fi
-  echo -e "  \033[32m[OK]\033[0m Zsh & Oh-My-Zsh environment ready"
+    fi
+  }
+
+  run_tetris_step "Configuring Zsh shell, Oh-My-Zsh & plugins" _zsh_step
 }
 
 setup_workspace_and_tetravim() {
-  echo -e "  \033[1;36m[polyomino]\033[0m Setting up ~/Projects workspace & Tetravim Neovim distribution..."
+  _tetravim_step() {
+    # 1. Ensure ~/Projects workspace exists
+    mkdir -p "$HOME/Projects"
 
-  # 1. Ensure ~/Projects workspace exists
-  mkdir -p "$HOME/Projects"
-  echo -e "  \033[32m[OK]\033[0m Workspace directory ready at $HOME/Projects"
+    # 2. Clone or update Tetravim (git@github.com:petrolal/tetravim.nvim.git) with HTTPS fallback
+    local tetravim_dir="$HOME/tetravim.nvim"
+    local nvim_config_dir="$HOME/.config/nvim"
 
-  # 2. Clone or update Tetravim (git@github.com:petrolal/tetravim.nvim.git) with HTTPS fallback
-  local tetravim_dir="$HOME/tetravim.nvim"
-  local nvim_config_dir="$HOME/.config/nvim"
-
-  if [ ! -d "$tetravim_dir/.git" ]; then
-    echo -e "  \033[36m[INFO]\033[0m Cloning Tetravim Neovim distribution..."
-    if ! git clone git@github.com:petrolal/tetravim.nvim.git "$tetravim_dir" 2>/dev/null; then
-      echo -e "  \033[33m[WARN]\033[0m SSH clone failed (SSH keys not registered). Falling back to HTTPS..."
-      git clone https://github.com/petrolal/tetravim.nvim.git "$tetravim_dir" 2>/dev/null || {
-        echo -e "  \033[31m[ERROR]\033[0m Could not clone Tetravim repo"
-      }
+    if [ ! -d "$tetravim_dir/.git" ]; then
+      if ! git clone git@github.com:petrolal/tetravim.nvim.git "$tetravim_dir" 2>/dev/null; then
+        git clone https://github.com/petrolal/tetravim.nvim.git "$tetravim_dir"
+      fi
+    else
+      git -C "$tetravim_dir" pull --ff-only || true
     fi
-  else
-    echo -e "  \033[36m[INFO]\033[0m Pulling latest updates for Tetravim..."
-    git -C "$tetravim_dir" pull --ff-only 2>/dev/null || true
-    echo -e "  \033[32m[OK]\033[0m Tetravim up to date at $tetravim_dir"
-  fi
 
-  # 3. Symlink ~/.config/nvim -> ~/tetravim.nvim
-  if [ -d "$tetravim_dir" ]; then
-    mkdir -p "$HOME/.config"
-    if [ -e "$nvim_config_dir" ] && [ ! -L "$nvim_config_dir" ]; then
-      local backup_dir="$HOME/.polyomino_backup/nvim_$(date +%s)"
-      mkdir -p "$backup_dir"
-      mv "$nvim_config_dir" "$backup_dir/"
-      echo -e "  \033[33m[INFO]\033[0m Existing nvim config backed up to $backup_dir"
+    # 3. Symlink ~/.config/nvim -> ~/tetravim.nvim
+    if [ -d "$tetravim_dir" ]; then
+      mkdir -p "$HOME/.config"
+      if [ -e "$nvim_config_dir" ] && [ ! -L "$nvim_config_dir" ]; then
+        local backup_dir="$HOME/.polyomino_backup/nvim_$(date +%s)"
+        mkdir -p "$backup_dir"
+        mv "$nvim_config_dir" "$backup_dir/"
+      fi
+      ln -sfn "$tetravim_dir" "$nvim_config_dir"
     fi
-    ln -sfn "$tetravim_dir" "$nvim_config_dir"
-    echo -e "  \033[32m[OK]\033[0m Linked $nvim_config_dir -> $tetravim_dir"
-  fi
+  }
+
+  run_tetris_step "Setting up ~/Projects & Tetravim Neovim distribution" _tetravim_step
 }
 
 install_swayfx() {
   local pkg_mgr="$1"
   if command -v sway &> /dev/null && sway --version 2>&1 | grep -iq "swayfx"; then
-    echo -e "  \033[32m[OK]\033[0m SwayFX is already installed"
+    echo -e "  ${T_GREEN}[OK]${T_RESET} SwayFX compositor is already installed"
     return
   fi
 
-  echo -e "  \033[1;36m[polyomino]\033[0m Checking/Installing SwayFX ($pkg_mgr)..."
-  case "$pkg_mgr" in
-    pacman)
-      if command -v yay &> /dev/null; then
-        echo -e "  \033[36m[INFO]\033[0m Installing SwayFX via yay..."
-        if pacman -Qq sway &>/dev/null; then
-          echo -e "  \033[36m[INFO]\033[0m Replacing standard Sway with SwayFX..."
-          sudo pacman -Rdd --noconfirm sway 2>/dev/null || true
-        fi
-        yay -S --needed --noconfirm --answerclean None --answerdiff None swayfx 2>/dev/null || true
-      elif ! command -v sway &> /dev/null; then
-        echo -e "  \033[36m[INFO]\033[0m yay not found; installing standard Sway via pacman..."
-        sudo pacman -S --needed --noconfirm sway 2>/dev/null || true
-      fi
-      ;;
-    dnf)
-      echo -e "  \033[36m[INFO]\033[0m Enabling SwayFX COPR repository..."
-      sudo dnf copr enable -y swayfx/swayfx 2>/dev/null || true
-      sudo dnf install -y swayfx 2>/dev/null || true
-      ;;
-    apt-get)
-      echo -e "  \033[36m[INFO]\033[0m Compiling and installing SwayFX from source for Ubuntu..."
-      sudo apt-get install -y meson ninja-build libwlroots-dev wayland-protocols libwayland-dev \
-        libpango1.0-dev libcairo2-dev libgdk-pixbuf-2.0-dev libjson-c-dev libpcre2-dev libevdev-dev \
-        libinput-dev libxkbcommon-dev scdoc cmake git sway 2>/dev/null || true
+  ensure_sudo
 
-      local build_dir="$HOME/.cache/polyomino/swayfx"
-      mkdir -p "$HOME/.cache/polyomino"
-      if [ ! -d "$build_dir/.git" ]; then
-        rm -rf "$build_dir"
-        git clone --depth 1 --branch 0.4 https://github.com/WillPower3309/swayfx.git "$build_dir" 2>/dev/null || true
-      fi
-      mkdir -p "$build_dir/subprojects"
-      if [ ! -d "$build_dir/subprojects/scenefx/.git" ]; then
-        rm -rf "$build_dir/subprojects/scenefx"
-        git clone --depth 1 --branch 0.1 https://github.com/wlrfx/scenefx.git "$build_dir/subprojects/scenefx" 2>/dev/null || true
-      fi
-      if [ -f "$build_dir/meson.build" ]; then
-        sed -i "s/subproject(\t'wlroots'/# subproject('wlroots'/g" "$build_dir/meson.build" 2>/dev/null || true
-        sed -i "s/subproject(  'wlroots'/# subproject('wlroots'/g" "$build_dir/meson.build" 2>/dev/null || true
-        mkdir -p "$HOME/.local/bin"
-        if [ ! -f "$build_dir/build/build.ninja" ]; then
-          meson setup "$build_dir/build" "$build_dir" --prefix="$HOME/.local" -Dman-pages=disabled -Dtray=disabled "-Dc_link_args=-Wl,-rpath,\$ORIGIN/../lib/x86_64-linux-gnu:\$ORIGIN/../lib" 2>/dev/null || true
+  _swayfx_step() {
+    case "$pkg_mgr" in
+      pacman)
+        if command -v yay &> /dev/null; then
+          if pacman -Qq sway &>/dev/null; then
+            sudo pacman -Rdd --noconfirm sway || true
+          fi
+          yay -S --needed --noconfirm --answerclean None --answerdiff None swayfx
+        elif ! command -v sway &> /dev/null; then
+          sudo pacman -S --needed --noconfirm sway
         fi
-        ninja -C "$build_dir/build" 2>/dev/null || true
-        ninja -C "$build_dir/build" install 2>/dev/null || true
-        if [ -f "$HOME/.local/bin/sway" ]; then
-          echo -e "  \033[32m[OK]\033[0m SwayFX compiled and installed to $HOME/.local/bin/sway"
-          mkdir -p "$HOME/.local/share/wayland-sessions"
-          cat << EOF > "$HOME/.local/share/wayland-sessions/swayfx.desktop"
+        ;;
+      dnf)
+        sudo dnf copr enable -y swayfx/swayfx || true
+        sudo dnf install -y swayfx
+        ;;
+      apt-get)
+        sudo DEBIAN_FRONTEND=noninteractive apt-get install -y meson ninja-build libwlroots-dev wayland-protocols libwayland-dev \
+          libpango1.0-dev libcairo2-dev libgdk-pixbuf-2.0-dev libjson-c-dev libpcre2-dev libevdev-dev \
+          libinput-dev libxkbcommon-dev scdoc cmake git sway || true
+
+        local build_dir="$HOME/.cache/polyomino/swayfx"
+        mkdir -p "$HOME/.cache/polyomino"
+        if [ ! -d "$build_dir/.git" ]; then
+          rm -rf "$build_dir"
+          git clone --depth 1 --branch 0.4 https://github.com/WillPower3309/swayfx.git "$build_dir"
+        fi
+        mkdir -p "$build_dir/subprojects"
+        if [ ! -d "$build_dir/subprojects/scenefx/.git" ]; then
+          rm -rf "$build_dir/subprojects/scenefx"
+          git clone --depth 1 --branch 0.1 https://github.com/wlrfx/scenefx.git "$build_dir/subprojects/scenefx"
+        fi
+        if [ -f "$build_dir/meson.build" ]; then
+          sed -i "s/subproject(\t'wlroots'/# subproject('wlroots'/g" "$build_dir/meson.build" || true
+          sed -i "s/subproject(  'wlroots'/# subproject('wlroots'/g" "$build_dir/meson.build" || true
+          mkdir -p "$HOME/.local/bin"
+          if [ ! -f "$build_dir/build/build.ninja" ]; then
+            meson setup "$build_dir/build" "$build_dir" --prefix="$HOME/.local" -Dman-pages=disabled -Dtray=disabled "-Dc_link_args=-Wl,-rpath,\$ORIGIN/../lib/x86_64-linux-gnu:\$ORIGIN/../lib"
+          fi
+          ninja -C "$build_dir/build"
+          ninja -C "$build_dir/build" install
+          if [ -f "$HOME/.local/bin/sway" ]; then
+            mkdir -p "$HOME/.local/share/wayland-sessions"
+            cat << EOF > "$HOME/.local/share/wayland-sessions/swayfx.desktop"
 [Desktop Entry]
 Name=SwayFX
 Comment=An i3-compatible Wayland compositor with FX
@@ -920,46 +1038,50 @@ Exec=$HOME/.local/bin/sway
 Type=Application
 DesktopNames=sway
 EOF
-          cp -f "$HOME/.local/share/wayland-sessions/swayfx.desktop" "$HOME/.local/share/wayland-sessions/sway.desktop"
-          sudo cp -f "$HOME/.local/share/wayland-sessions/swayfx.desktop" /usr/share/wayland-sessions/ 2>/dev/null || true
-          sudo cp -f "$HOME/.local/share/wayland-sessions/sway.desktop" /usr/share/wayland-sessions/ 2>/dev/null || true
-          sudo ln -sf "$HOME/.local/bin/sway" /usr/local/bin/sway 2>/dev/null || true
-          [ -f "$HOME/.local/bin/swaymsg" ] && sudo ln -sf "$HOME/.local/bin/swaymsg" /usr/local/bin/swaymsg 2>/dev/null || true
-          [ -f "$HOME/.local/bin/swaybar" ] && sudo ln -sf "$HOME/.local/bin/swaybar" /usr/local/bin/swaybar 2>/dev/null || true
-          [ -f "$HOME/.local/bin/swaynag" ] && sudo ln -sf "$HOME/.local/bin/swaynag" /usr/local/bin/swaynag 2>/dev/null || true
+            cp -f "$HOME/.local/share/wayland-sessions/swayfx.desktop" "$HOME/.local/share/wayland-sessions/sway.desktop"
+            sudo cp -f "$HOME/.local/share/wayland-sessions/swayfx.desktop" /usr/share/wayland-sessions/ 2>/dev/null || true
+            sudo cp -f "$HOME/.local/share/wayland-sessions/sway.desktop" /usr/share/wayland-sessions/ 2>/dev/null || true
+            sudo ln -sf "$HOME/.local/bin/sway" /usr/local/bin/sway 2>/dev/null || true
+            [ -f "$HOME/.local/bin/swaymsg" ] && sudo ln -sf "$HOME/.local/bin/swaymsg" /usr/local/bin/swaymsg 2>/dev/null || true
+            [ -f "$HOME/.local/bin/swaybar" ] && sudo ln -sf "$HOME/.local/bin/swaybar" /usr/local/bin/swaybar 2>/dev/null || true
+            [ -f "$HOME/.local/bin/swaynag" ] && sudo ln -sf "$HOME/.local/bin/swaynag" /usr/local/bin/swaynag 2>/dev/null || true
+          fi
         fi
-      fi
-      ;;
-  esac
+        ;;
+    esac
+  }
+
+  run_tetris_step "Building & installing SwayFX compositor" _swayfx_step
 }
 
 install_gaming() {
   local pkg_mgr="$1"
-  echo -e "  \033[1;36m[polyomino]\033[0m Installing gaming performance tools & dependencies ($pkg_mgr)..."
-  case "$pkg_mgr" in
-    pacman)
-      sudo pacman -S --needed --noconfirm \
-        gamemode gamescope mangohud vulkan-icd-loader vulkan-tools nvidia-prime 2>/dev/null || true
-      if pacman -Si lib32-gamemode &>/dev/null; then
-        sudo pacman -S --needed --noconfirm lib32-gamemode lib32-mangohud lib32-vulkan-icd-loader 2>/dev/null || true
-      fi
-      if command -v yay &>/dev/null; then
-        yay -S --needed --noconfirm --answerclean None --answerdiff None steam 2>/dev/null || true
-      fi
-      echo -e "  \033[32m[OK]\033[0m Gaming dependencies installed (gamemode, gamescope, mangohud, vulkan, nvidia-prime)"
-      ;;
-    dnf)
-      sudo dnf install -y gamemode gamescope mangohud vulkan-tools steam 2>/dev/null || true
-      echo -e "  \033[32m[OK]\033[0m Gaming dependencies installed"
-      ;;
-    apt-get)
-      sudo apt-get install -y gamemode gamescope mangohud vulkan-tools 2>/dev/null || true
-      echo -e "  \033[32m[OK]\033[0m Gaming dependencies installed"
-      ;;
-    *)
-      echo -e "  \033[33m[NOTE]\033[0m Gaming installation skipped for $pkg_mgr"
-      ;;
-  esac
+  ensure_sudo
+
+  _gaming_step() {
+    case "$pkg_mgr" in
+      pacman)
+        sudo pacman -S --needed --noconfirm \
+          gamemode gamescope mangohud vulkan-icd-loader vulkan-tools nvidia-prime
+        if pacman -Si lib32-gamemode &>/dev/null; then
+          sudo pacman -S --needed --noconfirm lib32-gamemode lib32-mangohud lib32-vulkan-icd-loader || true
+        fi
+        if command -v yay &>/dev/null; then
+          yay -S --needed --noconfirm --answerclean None --answerdiff None steam || true
+        fi
+        ;;
+      dnf)
+        sudo dnf install -y gamemode gamescope mangohud vulkan-tools steam
+        ;;
+      apt-get)
+        sudo DEBIAN_FRONTEND=noninteractive apt-get install -y gamemode gamescope mangohud vulkan-tools
+        ;;
+      *)
+        ;;
+    esac
+  }
+
+  run_tetris_step "Installing Gaming Stack & Emulators (GameMode, Gamescope, MangoHud)" _gaming_step
 }
 
 enable_path() {
