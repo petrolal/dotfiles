@@ -14,7 +14,7 @@
     "margin-right": 0,
     "modules-left": ["custom/polyomino", "sway/workspaces", "custom/media"],
     "modules-center": ["sway/window"],
-    "modules-right": ["pulseaudio", "bluetooth", "network", "cpu", "memory", "battery", "custom/notification", "clock"],
+    "modules-right": ["pulseaudio", "bluetooth", "network", "cpu", "memory", "battery", "tray", "custom/notification", "clock"],
     "clock": {
       "interval": 1,
       "align": 0,
@@ -44,7 +44,7 @@
     "margin-right": 0,
     "modules-left": ["custom/polyomino", "sway/workspaces", "custom/media"],
     "modules-center": ["sway/window"],
-    "modules-right": ["pulseaudio", "bluetooth", "network", "cpu", "memory", "battery", "custom/notification", "clock"],
+    "modules-right": ["pulseaudio", "bluetooth", "network", "cpu", "memory", "battery", "tray", "custom/notification", "clock"],
     "clock": {
       "interval": 1,
       "align": 0,

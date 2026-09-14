@@ -267,6 +267,8 @@ INSTALL_SECTIONS = [
     ("🌐", "Web Browser", "Chromium or Firefox.", "install-browser", "DESKTOP"),
     ("🔔", "Notifications (SwayNC)", "SwayNC notification daemon & control center.", "install-swaync", "DESKTOP"),
     ("🕹️", "Gaming Stack", "Feral GameMode, Gamescope, MangoHud, Vulkan drivers, Steam.", "install-gaming", "GAMING"),
+    ("🧱", "TETR.IO", "Competitive modern Tetris stacker desktop client.", "install-tetrio", "GAMING"),
+    ("💬", "Discord", "All-in-one voice and text chat for gamers & communities.", "install-discord", "COMMS"),
     ("☁️", "DevOps Tooling", "docker, terraform, ansible, aws/gcp/oci, kubectl, etc.", "install-devops", "DEVOPS"),
     ("🐚", "Zsh + Plugins", "zsh, oh-my-zsh, plugins, and set as default shell.", "install-zsh", "SHELL"),
     ("🟩", "Node.js (NVM)", "Node.js & npm via NVM.", "install-node", "LANG"),
@@ -1347,8 +1349,17 @@ class WelcomeWindow(Gtk.Window):
                 m_id = re.search(r'"appid"\s+"([^"]+)"', content)
                 if m_name and m_id and m_id.group(1) not in seen:
                     seen.add(m_id.group(1))
-                    games.append({"name": m_name.group(1), "kind": "Steam",
-                                  "launch": ["steam", f"steam://rungameid/{m_id.group(1)}"]})
+        # Check for TETR.IO desktop
+        tetrio_bin = (
+            shutil.which("tetrio")
+            or shutil.which("tetrio-desktop")
+            or shutil.which("TETR.IO")
+            or (str(Path.home() / ".local" / "bin" / "tetrio") if (Path.home() / ".local" / "bin" / "tetrio").exists() else None)
+            or (str(Path.home() / ".local" / "bin" / "TETR.IO") if (Path.home() / ".local" / "bin" / "TETR.IO").exists() else None)
+        )
+        if tetrio_bin and "tetrio" not in seen:
+            seen.add("tetrio")
+            games.append({"name": "TETR.IO", "kind": "Native", "launch": [tetrio_bin]})
 
         games_file = CONFIG_DIR / "games.json"
         if games_file.exists():

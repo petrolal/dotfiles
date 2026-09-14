@@ -98,7 +98,7 @@ class InstallSuite extends FunSuite:
     val tasks = Seq(
       "install-deps", "install-brew", "install-gh",
       "install-fonts", "install-apps", "install-sway", "install-swayfx", "install-swaync",
-      "install-browser", "install-devops", "install-telegram", "install-zsh",
+      "install-browser", "install-devops", "install-telegram", "install-discord", "install-tetrio", "install-zsh",
       "install-sdkman", "install-node", "install-npm", "install-npx", "install-nvm", "install-tools",
       "install-spotify", "install-spotify-player", "install-yazi", "install-fastfetch", "full-install"
     )
@@ -148,6 +148,18 @@ class InstallSuite extends FunSuite:
   test("ToolInstallers.runTool install-node succeeds when node and npm are satisfied"):
     withIsolatedContext { ctx =>
       val res = ToolInstallers.runTool("install-node", ctx, Nil)
+      assert(res.isRight)
+    }
+
+  test("ToolInstallers.runTool install-discord succeeds in test mode"):
+    withIsolatedContext { ctx =>
+      val res = ToolInstallers.runTool("install-discord", ctx, Nil)
+      assert(res.isRight)
+    }
+
+  test("ToolInstallers.runTool install-tetrio succeeds in test mode"):
+    withIsolatedContext { ctx =>
+      val res = ToolInstallers.runTool("install-tetrio", ctx, Nil)
       assert(res.isRight)
     }
 

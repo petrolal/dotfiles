@@ -147,6 +147,9 @@ object Main:
       |  install-node     install Node.js & npm via NVM (Node Version Manager)
       |  install-nvm      alias for install-node
       |  install-tools    install TUI tools (spotify_player, bluetui, aerc)
+      |  install-telegram install Telegram Desktop client
+      |  install-discord  install Discord desktop client
+      |  install-tetrio   install TETR.IO desktop client
       |  install-fastfetch install Fastfetch system information tool
       |  full-install     install all system packages, desktop apps, fonts, and tooling
       |  theme-picker     wofi GUI front-end for the theme command

@@ -31,10 +31,10 @@ object GameModeEngine:
         else
           Left(CommandError(s"Unknown gamemode subcommand: ${args.mkString(" ")}", 1))
 
-  // Same window classes routed to the MEDIA workspace in config/sway/config's
-  // "# 4: MEDIA" section — keep the two lists in sync.
+  // Same window classes routed to the GAMES workspace in config/sway/config's
+  // "# 8: GAMES" section — keep the two lists in sync.
   private val gameAppPattern =
-    "(?i)^(steam|heroic|lutris|gamescope|mesen|bsnes|sameboy|mgba-qt|mgba|mame|flycast|blastem|duckstation|simple64|retroarch|dolphin-emu|citra-qt|yuzu|ryujinx|cemu|ppsspp|pcsx2-qt|pcsx2|rpcs3)$".r
+    "(?i)^(steam_app_.*|heroic|lutris|gamescope|tetrio|tetr.io|mesen|bsnes|sameboy|mgba-qt|mgba|mame|flycast|blastem|duckstation|simple64|retroarch|dolphin-emu|citra-qt|yuzu|ryujinx|cemu|ppsspp|pcsx2-qt|pcsx2|rpcs3)$".r
 
   private def runningGameWindows(): List[String] =
     try
@@ -66,7 +66,7 @@ object GameModeEngine:
     else
       val running = if ctx.isTest then Nil else runningGameWindows()
       if running.nonEmpty then
-        val tooltip = s"Running: ${running.mkString(", ")}\nWorkspace 4 (MEDIA) · click to enable performance optimizations"
+        val tooltip = s"Running: ${running.mkString(", ")}\nWorkspace 8 (GAMES) · click to enable performance optimizations"
         println(ujson.write(ujson.Obj(
           "text" -> "󰊴 GAME",
           "alt" -> "running",

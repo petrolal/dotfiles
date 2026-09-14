@@ -30,6 +30,8 @@ object ToolInstallers:
       case "install-sdkman" => installSdkman(ctx)
       case "install-tools" => installTools(ctx)
       case "install-telegram" => installTelegram(ctx)
+      case "install-discord" => installDiscord(ctx)
+      case "install-tetrio" | "install-tetr-io" | "install-tetrio-desktop" => installTetrio(ctx)
       case "install-node" | "install-npm" | "install-npx" | "install-nvm" => installNode(ctx)
       case "install-yazi" => installYazi(ctx)
       case "install-fastfetch" => installFastfetch(ctx)
@@ -782,6 +784,200 @@ object ToolInstallers:
       case _ =>
         Right(println("  \u001b[33m[NOTE]\u001b[0m Manual package installation recommended for current OS."))
 
+  private def installDiscord(ctx: Context): Either[PolyominoError, Unit] =
+    val pm = detectPackageManager()
+    val localBin = ctx.home / ".local" / "bin"
+    val isDiscordInstalled = isAvailable("discord") || isAvailable("Discord") || isAvailable("vesktop") ||
+      os.exists(localBin / "discord") || os.exists(localBin / "Discord")
+
+    if isDiscordInstalled then
+      println("  \u001b[32m[OK]\u001b[0m Discord is already installed.")
+      return Right(())
+
+    if ctx.isTest then
+      println("  \u001b[32m[OK]\u001b[0m Test environment detected; Discord installation simulated.")
+      return Right(())
+
+    println(s"\u001b[1;36m[polyomino install-discord]\u001b[0m Installing Discord (PM: $pm)...")
+    pm match
+      case PackageManager.Pacman =>
+        if isAvailable("yay") then
+          val yayRes = os.proc("yay", "-S", "--needed", "--noconfirm", "--answerclean", "None", "--answerdiff", "None", "discord")
+            .call(stdin = os.Inherit, stdout = os.Inherit, stderr = os.Inherit, check = false)
+          if yayRes.exitCode == 0 then
+            println("  \u001b[32m[OK]\u001b[0m Discord installed successfully via yay.")
+            Right(())
+          else
+            runPkgInstall("sudo", Seq("pacman", "-S", "--needed", "--noconfirm", "discord"))
+        else
+          runPkgInstall("sudo", Seq("pacman", "-S", "--needed", "--noconfirm", "discord"))
+
+      case PackageManager.Dnf =>
+        val dnfRes = runPkgInstall("sudo", Seq("dnf", "install", "-y", "discord"))
+        if isAvailable("discord") then dnfRes
+        else installDiscordStandalone(ctx)
+
+      case PackageManager.Apt =>
+        println("  \u001b[36m[INFO]\u001b[0m Downloading official Discord .deb package for Ubuntu/Debian...")
+        try
+          val debUrl = "https://discord.com/api/download?platform=linux&format=deb"
+          val tmpDeb = os.temp(prefix = "discord-", suffix = ".deb")
+          val dlRes = os.proc("curl", "-fsSL", debUrl, "-o", tmpDeb.toString).call(check = false)
+          if dlRes.exitCode == 0 then
+            val aptRes = os.proc("sudo", "apt-get", "install", "-y", tmpDeb.toString)
+              .call(stdin = os.Inherit, stdout = os.Inherit, stderr = os.Inherit, check = false)
+            if aptRes.exitCode == 0 then
+              println("  \u001b[32m[OK]\u001b[0m Discord installed successfully via apt/dpkg.")
+              Right(())
+            else
+              os.proc("sudo", "apt-get", "install", "-f", "-y").call(check = false)
+              Right(())
+          else
+            installDiscordStandalone(ctx)
+        catch
+          case e: Exception =>
+            println(s"  \u001b[33m[NOTE]\u001b[0m Discord deb installation skipped (${e.getMessage}); attempting standalone fallback...")
+            installDiscordStandalone(ctx)
+
+      case PackageManager.Brew =>
+        runPkgInstall("brew", Seq("install", "--cask", "discord"))
+
+      case _ =>
+        installDiscordStandalone(ctx)
+
+  private def installDiscordStandalone(ctx: Context): Either[PolyominoError, Unit] =
+    val localBin = ctx.home / ".local" / "bin"
+    val localShare = ctx.home / ".local" / "share"
+    os.makeDir.all(localBin)
+    os.makeDir.all(localShare)
+    println("  \u001b[36m[INFO]\u001b[0m Installing Discord via official standalone tarball...")
+    try
+      val tarUrl = "https://discord.com/api/download?platform=linux&format=tar.gz"
+      val dlRes = os.proc("bash", "-c", s"curl -fsSL '$tarUrl' | tar -xz -C '${localShare}' && ln -sf '${localShare}/Discord/Discord' '${localBin}/discord'").call(check = false)
+      if dlRes.exitCode == 0 then
+        println("  \u001b[32m[OK]\u001b[0m Discord installed to ~/.local/share/Discord and symlinked to ~/.local/bin/discord.")
+        val appsDir = ctx.home / ".local" / "share" / "applications"
+        os.makeDir.all(appsDir)
+        val desktopFile = appsDir / "discord.desktop"
+        val desktopContent =
+          s"""[Desktop Entry]
+             |Name=Discord
+             |Comment=All-in-one voice and text chat for gamers that's free, secure, and works on both your desktop and phone.
+             |GenericName=Internet Messenger
+             |Exec=${localBin}/discord
+             |Icon=discord
+             |Type=Application
+             |Categories=Network;InstantMessaging;
+             |Path=${localShare}/Discord
+             |""".stripMargin
+        os.write.over(desktopFile, desktopContent)
+        Right(())
+      else
+        println(s"  \u001b[33m[NOTE]\u001b[0m Discord tarball download returned code ${dlRes.exitCode}")
+        Right(())
+    catch
+      case e: Exception =>
+        println(s"  \u001b[33m[NOTE]\u001b[0m Discord standalone install skipped: ${e.getMessage}")
+        Right(())
+
+  private def installTetrio(ctx: Context): Either[PolyominoError, Unit] =
+    val pm = detectPackageManager()
+    val localBin = ctx.home / ".local" / "bin"
+    val isTetrioInstalled = isAvailable("tetrio") || isAvailable("tetrio-desktop") || isAvailable("TETR.IO") ||
+      os.exists(localBin / "tetrio") || os.exists(localBin / "TETR.IO")
+
+    if isTetrioInstalled then
+      println("  \u001b[32m[OK]\u001b[0m TETR.IO is already installed.")
+      return Right(())
+
+    if ctx.isTest then
+      println("  \u001b[32m[OK]\u001b[0m Test environment detected; TETR.IO installation simulated.")
+      return Right(())
+
+    println(s"\u001b[1;36m[polyomino install-tetrio]\u001b[0m Installing TETR.IO desktop client (PM: $pm)...")
+    pm match
+      case PackageManager.Pacman if isAvailable("yay") =>
+        val yayRes = os.proc("yay", "-S", "--needed", "--noconfirm", "--answerclean", "None", "--answerdiff", "None", "tetrio-desktop")
+          .call(stdin = os.Inherit, stdout = os.Inherit, stderr = os.Inherit, check = false)
+        if yayRes.exitCode == 0 then
+          println("  \u001b[32m[OK]\u001b[0m TETR.IO installed successfully via yay (AUR).")
+          Right(())
+        else
+          installTetrioAppImage(ctx)
+
+      case PackageManager.Apt =>
+        println("  \u001b[36m[INFO]\u001b[0m Downloading official TETR.IO .deb package for Ubuntu/Debian...")
+        try
+          val debUrl = "https://tetr.io/about/desktop/builds/TETR.IO%20Setup.deb"
+          val tmpDeb = os.temp(prefix = "tetrio-", suffix = ".deb")
+          val dlRes = os.proc("curl", "-fsSL", debUrl, "-o", tmpDeb.toString).call(check = false)
+          if dlRes.exitCode == 0 then
+            val aptRes = os.proc("sudo", "apt-get", "install", "-y", tmpDeb.toString)
+              .call(stdin = os.Inherit, stdout = os.Inherit, stderr = os.Inherit, check = false)
+            if aptRes.exitCode == 0 then
+              println("  \u001b[32m[OK]\u001b[0m TETR.IO installed successfully via apt/dpkg.")
+              Right(())
+            else
+              os.proc("sudo", "apt-get", "install", "-f", "-y").call(check = false)
+              Right(())
+          else
+            installTetrioAppImage(ctx)
+        catch
+          case e: Exception =>
+            println(s"  \u001b[33m[NOTE]\u001b[0m TETR.IO deb install skipped (${e.getMessage}); falling back to AppImage...")
+            installTetrioAppImage(ctx)
+
+      case PackageManager.Brew =>
+        val brewRes = runPkgInstall("brew", Seq("install", "--cask", "tetrio"))
+        if isAvailable("tetrio") then brewRes else installTetrioAppImage(ctx)
+
+      case _ =>
+        installTetrioAppImage(ctx)
+
+  private def installTetrioAppImage(ctx: Context): Either[PolyominoError, Unit] =
+    val localBin = ctx.home / ".local" / "bin"
+    val localShare = ctx.home / ".local" / "share" / "tetrio"
+    val appsDir = ctx.home / ".local" / "share" / "applications"
+    os.makeDir.all(localBin)
+    os.makeDir.all(localShare)
+    os.makeDir.all(appsDir)
+
+    println("  \u001b[36m[INFO]\u001b[0m Downloading TETR.IO AppImage...")
+    val appImagePath = localShare / "tetrio.AppImage"
+    val appImageUrl = "https://tetr.io/about/desktop/builds/TETR.IO%20Setup.AppImage"
+    try
+      val dlRes = os.proc("curl", "-fsSL", appImageUrl, "-o", appImagePath.toString).call(check = false)
+      if dlRes.exitCode == 0 then
+        os.proc("chmod", "+x", appImagePath.toString).call(check = false)
+        val symlink1 = localBin / "tetrio"
+        val symlink2 = localBin / "TETR.IO"
+        os.proc("ln", "-sf", appImagePath.toString, symlink1.toString).call(check = false)
+        os.proc("ln", "-sf", appImagePath.toString, symlink2.toString).call(check = false)
+
+        val desktopFile = appsDir / "tetrio.desktop"
+        val desktopContent =
+          s"""[Desktop Entry]
+             |Name=TETR.IO
+             |Comment=A modern yet familiar online stacker
+             |GenericName=Block Stacking Game
+             |Exec=${symlink1} %U
+             |Icon=tetrio
+             |Terminal=false
+             |Type=Application
+             |Categories=Game;ArcadeGame;
+             |StartupWMClass=tetrio
+             |""".stripMargin
+        os.write.over(desktopFile, desktopContent)
+        println("  \u001b[32m[OK]\u001b[0m TETR.IO AppImage installed to ~/.local/bin/tetrio and desktop entry created.")
+        Right(())
+      else
+        println(s"  \u001b[33m[NOTE]\u001b[0m TETR.IO AppImage download returned code ${dlRes.exitCode}")
+        Right(())
+    catch
+      case e: Exception =>
+        println(s"  \u001b[33m[NOTE]\u001b[0m TETR.IO AppImage download skipped: ${e.getMessage}")
+        Right(())
+
   private def installNode(ctx: Context): Either[PolyominoError, Unit] =
     println("\u001b[1;36m[polyomino install-node]\u001b[0m Installing Node.js & npm via NVM...")
 
@@ -1161,6 +1357,8 @@ object ToolInstallers:
     val withTui = shouldInstall("tui", "Install TUI productivity tools (spotify_player, bluetui, impala, aerc, yazi, zoxide, fastfetch)?", default = true, ctx, args)
     val withDevops = shouldInstall("devops", "Install DevOps & Cloud tools (Docker, Terraform, Ansible, kubectl, Helm, cloud CLIs)?", default = false, ctx, args)
     val withTelegram = shouldInstall("telegram", "Install Telegram Desktop?", default = false, ctx, args)
+    val withDiscord = shouldInstall("discord", "Install Discord?", default = false, ctx, args)
+    val withTetrio = shouldInstall("tetrio", "Install TETR.IO desktop client?", default = false, ctx, args)
     val withNode = shouldInstall("node", "Install Node.js & npm (via NVM)?", default = false, ctx, args)
     val withSdkman = shouldInstall("sdkman", "Install SDKMAN! & Kotlin compiler?", default = false, ctx, args)
     val withBrew = shouldInstall("brew", "Install Homebrew package manager & GitHub CLI (gh)?", default = false, ctx, args)
@@ -1175,6 +1373,8 @@ object ToolInstallers:
       _ <- installZsh(ctx)
       _ <- if withBrowser then installBrowser(ctx) else Right(())
       _ <- if withTelegram then installTelegram(ctx) else Right(())
+      _ <- if withDiscord then installDiscord(ctx) else Right(())
+      _ <- if withTetrio then installTetrio(ctx) else Right(())
       _ <- if withDevops then installDevops(ctx) else Right(())
       _ <- if withBrew then for { _ <- installHomebrew(ctx); _ <- installGh(ctx) } yield () else Right(())
       _ <- if withSdkman then installSdkman(ctx) else Right(())
