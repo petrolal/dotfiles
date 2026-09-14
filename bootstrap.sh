@@ -655,6 +655,37 @@ install_tools() {
   fi
 }
 
+setup_zsh_and_ohmyzsh() {
+  echo -e "  \033[1;36m[polyomino]\033[0m Setting up Zsh, Oh-My-Zsh, and plugins..."
+
+  # 1. Install Oh-My-Zsh if missing
+  if [ ! -d "$HOME/.oh-my-zsh" ]; then
+    echo -e "  \033[36m[INFO]\033[0m Cloning Oh-My-Zsh..."
+    git clone --depth=1 https://github.com/ohmyzsh/ohmyzsh.git "$HOME/.oh-my-zsh" 2>/dev/null || true
+  fi
+
+  # 2. Custom Plugins
+  local custom_plugins="$HOME/.oh-my-zsh/custom/plugins"
+  mkdir -p "$custom_plugins"
+  if [ ! -d "$custom_plugins/zsh-autosuggestions" ]; then
+    git clone --depth=1 https://github.com/zsh-users/zsh-autosuggestions "$custom_plugins/zsh-autosuggestions" 2>/dev/null || true
+  fi
+  if [ ! -d "$custom_plugins/zsh-syntax-highlighting" ]; then
+    git clone --depth=1 https://github.com/zsh-users/zsh-syntax-highlighting.git "$custom_plugins/zsh-syntax-highlighting" 2>/dev/null || true
+  fi
+
+  # 3. Set default shell to zsh
+  local zsh_path
+  zsh_path="$(command -v zsh 2>/dev/null || echo "/usr/bin/zsh")"
+  if [ -x "$zsh_path" ] && [ "${SHELL:-}" != "$zsh_path" ]; then
+    echo -e "  \033[36m[INFO]\033[0m Setting default shell to $zsh_path..."
+    if command -v chsh &>/dev/null; then
+      chsh -s "$zsh_path" 2>/dev/null || sudo chsh -s "$zsh_path" "$USER" 2>/dev/null || true
+    fi
+  fi
+  echo -e "  \033[32m[OK]\033[0m Zsh & Oh-My-Zsh environment ready"
+}
+
 setup_workspace_and_tetravim() {
   echo -e "  \033[1;36m[polyomino]\033[0m Setting up ~/Projects workspace & Tetravim Neovim distribution..."
 
@@ -828,6 +859,10 @@ prompt_optional_dependencies
 
 # Install system dependencies (mandatory base + selected optional)
 install_system_deps "$PKG_MGR"
+echo ""
+
+# Setup Zsh, Oh-My-Zsh and plugins
+setup_zsh_and_ohmyzsh
 echo ""
 
 # Install TUI tools (spotify_player, bluetui, aerc, zoxide) if enabled

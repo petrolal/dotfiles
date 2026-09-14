@@ -221,12 +221,57 @@ object ToolInstallers:
   private def installZsh(ctx: Context): Either[PolyominoError, Unit] =
     val pm = detectPackageManager()
     println(s"\u001b[1;36m[polyomino install-zsh]\u001b[0m Installing Zsh shell environment (PM: $pm)...")
-    pm match
+    val pkgRes = pm match
       case PackageManager.Pacman => runPkgInstall("sudo", Seq("pacman", "-S", "--needed", "--noconfirm", "zsh", "curl", "git"))
       case PackageManager.Dnf => runPkgInstall("sudo", Seq("dnf", "install", "-y", "zsh", "curl", "git"))
       case PackageManager.Apt => runPkgInstall("sudo", Seq("apt-get", "install", "-y", "zsh", "curl", "git"))
       case PackageManager.Brew => runPkgInstall("brew", Seq("install", "zsh", "curl", "git"))
-      case _ => Right(println("  \u001b[32m[OK]\u001b[0m Zsh environment provisioned."))
+      case _ => Right(println("  \u001b[32m[OK]\u001b[0m Zsh package provisioned."))
+
+    if ctx.isTest then return pkgRes
+
+    // 1. Bootstrap Oh-My-Zsh if missing
+    val omzDir = ctx.home / ".oh-my-zsh"
+    if !os.exists(omzDir) then
+      try
+        println("  \u001b[36m[INFO]\u001b[0m Installing Oh-My-Zsh...")
+        os.proc("git", "clone", "--depth=1", "https://github.com/ohmyzsh/ohmyzsh.git", omzDir.toString).call(check = false)
+        println("  \u001b[32m[OK]\u001b[0m Oh-My-Zsh installed.")
+      catch
+        case e: Exception => println(s"  \u001b[33m[NOTE]\u001b[0m Oh-My-Zsh clone skipped: ${e.getMessage}")
+
+    // 2. Install plugins
+    val customPluginsDir = omzDir / "custom" / "plugins"
+    os.makeDir.all(customPluginsDir)
+    val autoSuggest = customPluginsDir / "zsh-autosuggestions"
+    if !os.exists(autoSuggest) then
+      try
+        os.proc("git", "clone", "--depth=1", "https://github.com/zsh-users/zsh-autosuggestions", autoSuggest.toString).call(check = false)
+      catch case _: Exception => ()
+
+    val syntaxHighlight = customPluginsDir / "zsh-syntax-highlighting"
+    if !os.exists(syntaxHighlight) then
+      try
+        os.proc("git", "clone", "--depth=1", "https://github.com/zsh-users/zsh-syntax-highlighting.git", syntaxHighlight.toString).call(check = false)
+      catch case _: Exception => ()
+
+    // 3. Set default shell to Zsh
+    val zshBin =
+      if os.exists(os.root / "usr" / "bin" / "zsh") then "/usr/bin/zsh"
+      else if os.exists(os.root / "bin" / "zsh") then "/bin/zsh"
+      else if isAvailable("zsh") then os.proc("which", "zsh").call(check = false).out.text().trim
+      else ""
+
+    if zshBin.nonEmpty then
+      try
+        val currentShell = sys.env.getOrElse("SHELL", "")
+        if !currentShell.endsWith("zsh") then
+          println(s"  \u001b[36m[INFO]\u001b[0m Setting default shell to $zshBin (chsh)...")
+          os.proc("chsh", "-s", zshBin).call(check = false)
+      catch
+        case e: Exception => println(s"  \u001b[33m[NOTE]\u001b[0m Shell change via chsh skipped: ${e.getMessage}")
+
+    pkgRes
 
   /** Install a SDKMAN! candidate and mark it the default so its
     * `current/bin` symlink is populated. SDKMAN!'s init script (sourced
