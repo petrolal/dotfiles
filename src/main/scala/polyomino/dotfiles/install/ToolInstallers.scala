@@ -255,7 +255,7 @@ object ToolInstallers:
         os.proc("git", "clone", "--depth=1", "https://github.com/zsh-users/zsh-syntax-highlighting.git", syntaxHighlight.toString).call(check = false)
       catch case _: Exception => ()
 
-    // 3. Set default shell to Zsh
+    // 3. Set default shell to Zsh (non-blocking, trying sudo usermod / sudo chsh first, then safe user chsh)
     val zshBin =
       if os.exists(os.root / "usr" / "bin" / "zsh") then "/usr/bin/zsh"
       else if os.exists(os.root / "bin" / "zsh") then "/bin/zsh"
@@ -263,13 +263,35 @@ object ToolInstallers:
       else ""
 
     if zshBin.nonEmpty then
-      try
-        val currentShell = sys.env.getOrElse("SHELL", "")
-        if !currentShell.endsWith("zsh") then
-          println(s"  \u001b[36m[INFO]\u001b[0m Setting default shell to $zshBin (chsh)...")
-          os.proc("chsh", "-s", zshBin).call(check = false)
-      catch
-        case e: Exception => println(s"  \u001b[33m[NOTE]\u001b[0m Shell change via chsh skipped: ${e.getMessage}")
+      val currentUser = sys.env.getOrElse("USER", sys.env.getOrElse("LOGNAME", ""))
+      val currentShell = sys.env.getOrElse("SHELL", "")
+      if !currentShell.endsWith("zsh") then
+        println(s"  \u001b[36m[INFO]\u001b[0m Setting default shell to $zshBin...")
+        var shellSet = false
+        // Try passwordless sudo usermod / sudo chsh first
+        if currentUser.nonEmpty then
+          try
+            val res = os.proc("sudo", "usermod", "-s", zshBin, currentUser).call(check = false, stdin = os.Pipe)
+            if res.exitCode == 0 then shellSet = true
+          catch case _: Exception => ()
+          if !shellSet then
+            try
+              val res = os.proc("sudo", "chsh", "-s", zshBin, currentUser).call(check = false, stdin = os.Pipe)
+              if res.exitCode == 0 then shellSet = true
+            catch case _: Exception => ()
+
+        // If not root/sudo, attempt user chsh with piped stdin so it won't hang on PAM
+        if !shellSet then
+          try
+            val res = os.proc("chsh", "-s", zshBin).call(check = false, stdin = os.Pipe)
+            if res.exitCode == 0 then shellSet = true
+          catch case _: Exception => ()
+
+        if shellSet then
+          println(s"  \u001b[32m[OK]\u001b[0m Default shell set to $zshBin.")
+        else
+          println(s"  \u001b[33m[NOTE]\u001b[0m Direct shell change skipped (interactive password required); auto-switch hook in ~/.bashrc active.")
+
 
     pkgRes
 
