@@ -689,17 +689,22 @@ object ToolInstallers:
       case _: Exception => ()
 
     try
-      os.proc("sudo", "cp", (waylandSessionsDir / "sway.desktop").toString, "/usr/share/wayland-sessions/sway.desktop").call(check = false)
-      os.proc("sudo", "cp", (waylandSessionsDir / "swayfx.desktop").toString, "/usr/share/wayland-sessions/swayfx.desktop").call(check = false)
+      os.proc("sudo", "cp", (waylandSessionsDir / "sway.desktop").toString, "/usr/share/wayland-sessions/sway.desktop").call(stdin = os.Inherit, stdout = os.Inherit, stderr = os.Inherit, check = false)
+      os.proc("sudo", "cp", (waylandSessionsDir / "swayfx.desktop").toString, "/usr/share/wayland-sessions/swayfx.desktop").call(stdin = os.Inherit, stdout = os.Inherit, stderr = os.Inherit, check = false)
+      println("  \u001b[32m[OK]\u001b[0m SwayFX Wayland session registered in /usr/share/wayland-sessions/")
     catch
       case _: Exception => ()
 
     if os.exists(ctx.home / ".local" / "bin" / "sway") then
       try
-        os.proc("sudo", "ln", "-sf", s"${ctx.home}/.local/bin/sway", "/usr/local/bin/sway").call(check = false)
-        os.proc("sudo", "ln", "-sf", s"${ctx.home}/.local/bin/swaymsg", "/usr/local/bin/swaymsg").call(check = false)
-        os.proc("sudo", "ln", "-sf", s"${ctx.home}/.local/bin/swaybar", "/usr/local/bin/swaybar").call(check = false)
-        os.proc("sudo", "ln", "-sf", s"${ctx.home}/.local/bin/swaynag", "/usr/local/bin/swaynag").call(check = false)
+        os.proc("sudo", "ln", "-sf", s"${ctx.home}/.local/bin/sway", "/usr/local/bin/sway").call(stdin = os.Inherit, stdout = os.Inherit, stderr = os.Inherit, check = false)
+        if os.exists(ctx.home / ".local" / "bin" / "swaymsg") then
+          os.proc("sudo", "ln", "-sf", s"${ctx.home}/.local/bin/swaymsg", "/usr/local/bin/swaymsg").call(stdin = os.Inherit, stdout = os.Inherit, stderr = os.Inherit, check = false)
+        if os.exists(ctx.home / ".local" / "bin" / "swaybar") then
+          os.proc("sudo", "ln", "-sf", s"${ctx.home}/.local/bin/swaybar", "/usr/local/bin/swaybar").call(stdin = os.Inherit, stdout = os.Inherit, stderr = os.Inherit, check = false)
+        if os.exists(ctx.home / ".local" / "bin" / "swaynag") then
+          os.proc("sudo", "ln", "-sf", s"${ctx.home}/.local/bin/swaynag", "/usr/local/bin/swaynag").call(stdin = os.Inherit, stdout = os.Inherit, stderr = os.Inherit, check = false)
+        println(s"  \u001b[32m[OK]\u001b[0m Linked SwayFX binaries to /usr/local/bin")
       catch
         case _: Exception => ()
 
