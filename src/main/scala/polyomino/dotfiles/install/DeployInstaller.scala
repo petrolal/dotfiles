@@ -106,6 +106,24 @@ object DeployInstaller:
       catch
         case e: Exception => println(s"  \u001b[33m[NOTE]\u001b[0m Tetravim symlink skipped: ${e.getMessage}")
 
+    // Ensure Oh-My-Zsh directories and plugins exist
+    val omzDir = ctx.home / ".oh-my-zsh"
+    val omzThemesDir = omzDir / "custom" / "themes"
+    val omzPluginsDir = omzDir / "custom" / "plugins"
+    os.makeDir.all(omzThemesDir)
+    os.makeDir.all(omzPluginsDir)
+
+    if !ctx.isTest then
+      if !os.exists(omzDir / "oh-my-zsh.sh") then
+        try
+          println("  \u001b[36m[INFO]\u001b[0m Bootstrapping Oh-My-Zsh...")
+          os.proc("git", "clone", "--depth=1", "https://github.com/ohmyzsh/ohmyzsh.git", omzDir.toString).call(check = false)
+        catch case _: Exception => ()
+      if !os.exists(omzPluginsDir / "zsh-autosuggestions") then
+        try os.proc("git", "clone", "--depth=1", "https://github.com/zsh-users/zsh-autosuggestions", (omzPluginsDir / "zsh-autosuggestions").toString).call(check = false) catch case _: Exception => ()
+      if !os.exists(omzPluginsDir / "zsh-syntax-highlighting") then
+        try os.proc("git", "clone", "--depth=1", "https://github.com/zsh-users/zsh-syntax-highlighting.git", (omzPluginsDir / "zsh-syntax-highlighting").toString).call(check = false) catch case _: Exception => ()
+
     val configMappings = Seq(
       (ctx.home / ".zshrc", ctx.dotfilesDir / "zsh" / ".zshrc"),
       (ctx.home / ".oh-my-zsh" / "custom" / "themes" / "polyomino.zsh-theme", ctx.dotfilesDir / "zsh" / "themes" / "polyomino.zsh-theme"),
