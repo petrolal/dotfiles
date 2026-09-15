@@ -275,7 +275,7 @@ run_tetris_step() {
     "${C_CYAN}■■■■${T_RESET}    |        |▓▓▓  ▓▓▓|Piece:   ${C_CYAN}I-Piece${T_RESET}|Action:  Sky Spawn|Matrix:  Level 1"
     "        |${C_CYAN}■■■■${T_RESET}    |▓▓▓  ▓▓▓|Piece:   ${C_CYAN}I-Piece${T_RESET}|Action:  Gravity 1G|Matrix:  Level 2"
     "        |        |▓▓▓${C_CYAN}■■■■${T_RESET}▓|Piece:   ${C_CYAN}I-Piece${T_RESET}|Action:  Hard Drop|Matrix:  Line Full!"
-    "        |${C_GREEN}✨CLEAR✨${T_RESET}|${C_GREEN}✨LINE ✨${T_RESET}|Piece:   ${C_GREEN}LINE CLEAR${T_RESET}|Action:  +1200 Pts|Matrix:  Cleared"
+    "        |${C_GREEN}■■CLEAR■${T_RESET}|${C_GREEN}■■LINE ■${T_RESET}|Piece:   ${C_GREEN}LINE CLEAR${T_RESET}|Action:  +1200 Pts|Matrix:  Cleared"
     "${C_YELLOW}  ■■${T_RESET}    |${C_YELLOW}  ■■${T_RESET}    |▓▓    ▓▓|Piece:   ${C_YELLOW}O-Piece${T_RESET}|Action:  Drop 1/2|Matrix:  Level 1"
     "        |${C_YELLOW}  ■■${T_RESET}    |▓▓${C_YELLOW}■■${T_RESET}  ▓▓|Piece:   ${C_YELLOW}O-Piece${T_RESET}|Action:  Hard Drop|Matrix:  Locked"
     "${C_PURPLE}   ■${T_RESET}    |${C_PURPLE}  ■■■${T_RESET}   |▓▓    ▓▓|Piece:   ${C_PURPLE}T-Piece${T_RESET}|Action:  T-Spin Spin|Matrix:  Setup"
@@ -284,12 +284,12 @@ run_tetris_step() {
 
   # ── 1: Rubik's Cube 3x3 Face Grid (Concept B) ──
   local -a cube_cards=(
-    "${C_ORANGE}▣${T_RESET} ${C_WHITE}▣${T_RESET} ${C_BLUE}▣${T_RESET}  |${C_GREEN}▣${T_RESET} ${C_YELLOW}▣${T_RESET} ${C_RED}▣${T_RESET}  |${C_WHITE}▣${T_RESET} ${C_GREEN}▣${T_RESET} ${C_BLUE}▣${T_RESET}  |Move:    ${T_YELLOW}R (Right Turn)${T_RESET}|Phase:   First 2 Layers|State:   Scrambled 3x3"
-    "${C_BLUE}▣${T_RESET} ${C_WHITE}▣${T_RESET} ${C_ORANGE}▣${T_RESET}  |${C_RED}▣${T_RESET} ${C_YELLOW}▣${T_RESET} ${C_GREEN}▣${T_RESET}  |${C_GREEN}▣${T_RESET} ${C_WHITE}▣${T_RESET} ${C_BLUE}▣${T_RESET}  |Move:    ${T_YELLOW}U (Top Layer)${T_RESET}|Phase:   Orient Cross|State:   Solving F2L"
-    "${C_WHITE}▣${T_RESET} ${C_RED}▣${T_RESET} ${C_GREEN}▣${T_RESET}  |${C_YELLOW}▣${T_RESET} ${C_ORANGE}▣${T_RESET} ${C_BLUE}▣${T_RESET}  |${C_RED}▣${T_RESET} ${C_BLUE}▣${T_RESET} ${C_YELLOW}▣${T_RESET}  |Move:    ${T_YELLOW}F' (Front CCW)${T_RESET}|Phase:   OLL Algorithms|State:   Corner Align"
-    "${C_GREEN}▣${T_RESET} ${C_GREEN}▣${T_RESET} ${C_ORANGE}▣${T_RESET}  |${C_WHITE}▣${T_RESET} ${C_YELLOW}▣${T_RESET} ${C_YELLOW}▣${T_RESET}  |${C_BLUE}▣${T_RESET} ${C_RED}▣${T_RESET} ${C_RED}▣${T_RESET}  |Move:    ${T_YELLOW}L (Left Turn)${T_RESET}|Phase:   PLL Permute|State:   Edge Cycles"
-    "${C_YELLOW}▣${T_RESET} ${C_BLUE}▣${T_RESET} ${C_ORANGE}▣${T_RESET}  |${C_GREEN}▣${T_RESET} ${C_WHITE}▣${T_RESET} ${C_RED}▣${T_RESET}  |${C_YELLOW}▣${T_RESET} ${C_BLUE}▣${T_RESET} ${C_ORANGE}▣${T_RESET}  |Move:    ${T_YELLOW}D' (Bottom CCW)${T_RESET}|Phase:   Final Rotations|State:   Last Layer"
-    "${C_GREEN}▣${T_RESET} ${C_GREEN}▣${T_RESET} ${C_GREEN}▣${T_RESET}  |${C_GREEN}▣${T_RESET} ${C_GREEN}▣${T_RESET} ${C_GREEN}▣${T_RESET}  |${C_GREEN}▣${T_RESET} ${C_GREEN}▣${T_RESET} ${C_GREEN}▣${T_RESET}  |Move:    ${C_GREEN}SOLVED!${T_RESET}|Phase:   ${C_GREEN}Complete 3x3${T_RESET}|State:   All Match!"
+    " ${C_ORANGE}▣${T_RESET} ${C_WHITE}▣${T_RESET} ${C_BLUE}▣${T_RESET}  | ${C_GREEN}▣${T_RESET} ${C_YELLOW}▣${T_RESET} ${C_RED}▣${T_RESET}  | ${C_WHITE}▣${T_RESET} ${C_GREEN}▣${T_RESET} ${C_BLUE}▣${T_RESET}  |Move:    ${T_YELLOW}R (Right Turn)${T_RESET}|Phase:   First 2 Layers|State:   Scrambled 3x3"
+    " ${C_BLUE}▣${T_RESET} ${C_WHITE}▣${T_RESET} ${C_ORANGE}▣${T_RESET}  | ${C_RED}▣${T_RESET} ${C_YELLOW}▣${T_RESET} ${C_GREEN}▣${T_RESET}  | ${C_GREEN}▣${T_RESET} ${C_WHITE}▣${T_RESET} ${C_BLUE}▣${T_RESET}  |Move:    ${T_YELLOW}U (Top Layer)${T_RESET}|Phase:   Orient Cross|State:   Solving F2L"
+    " ${C_WHITE}▣${T_RESET} ${C_RED}▣${T_RESET} ${C_GREEN}▣${T_RESET}  | ${C_YELLOW}▣${T_RESET} ${C_ORANGE}▣${T_RESET} ${C_BLUE}▣${T_RESET}  | ${C_RED}▣${T_RESET} ${C_BLUE}▣${T_RESET} ${C_YELLOW}▣${T_RESET}  |Move:    ${T_YELLOW}F' (Front CCW)${T_RESET}|Phase:   OLL Algorithms|State:   Corner Align"
+    " ${C_GREEN}▣${T_RESET} ${C_GREEN}▣${T_RESET} ${C_ORANGE}▣${T_RESET}  | ${C_WHITE}▣${T_RESET} ${C_YELLOW}▣${T_RESET} ${C_YELLOW}▣${T_RESET}  | ${C_BLUE}▣${T_RESET} ${C_RED}▣${T_RESET} ${C_RED}▣${T_RESET}  |Move:    ${T_YELLOW}L (Left Turn)${T_RESET}|Phase:   PLL Permute|State:   Edge Cycles"
+    " ${C_YELLOW}▣${T_RESET} ${C_BLUE}▣${T_RESET} ${C_ORANGE}▣${T_RESET}  | ${C_GREEN}▣${T_RESET} ${C_WHITE}▣${T_RESET} ${C_RED}▣${T_RESET}  | ${C_YELLOW}▣${T_RESET} ${C_BLUE}▣${T_RESET} ${C_ORANGE}▣${T_RESET}  |Move:    ${T_YELLOW}D' (Bottom CCW)${T_RESET}|Phase:   Final Rotations|State:   Last Layer"
+    " ${C_GREEN}▣${T_RESET} ${C_GREEN}▣${T_RESET} ${C_GREEN}▣${T_RESET}  | ${C_GREEN}▣${T_RESET} ${C_GREEN}▣${T_RESET} ${C_GREEN}▣${T_RESET}  | ${C_GREEN}▣${T_RESET} ${C_GREEN}▣${T_RESET} ${C_GREEN}▣${T_RESET}  |Move:    ${C_GREEN}SOLVED!${T_RESET}|Phase:   ${C_GREEN}Complete 3x3${T_RESET}|State:   All Match!"
   )
 
   # ── 2: Sudoku 3x3 Mini-Grid ──
@@ -302,10 +302,10 @@ run_tetris_step() {
 
   # ── 3: 2048 3x3 Number Board ──
   local -a game2048_cards=(
-    "${C_CYAN} 2 ${T_RESET} ${C_CYAN} 2 ${T_RESET} ${T_GRAY} · ${T_RESET}|${C_YELLOW} 4 ${T_RESET} ${C_YELLOW} 4 ${T_RESET} ${T_GRAY} · ${T_RESET}|${C_RED}16 ${T_RESET} ${C_PURPLE}64 ${T_RESET} ${T_GRAY} · ${T_RESET}|Move:    ${T_ORANGE}Swipe Left ←${T_RESET}|Combo:   Double Merge|Target:  2048 Master"
-    "${C_YELLOW} 4 ${T_RESET} ${T_GRAY} · ${T_RESET} ${T_GRAY} · ${T_RESET}|${C_ORANGE} 8 ${T_RESET} ${T_GRAY} · ${T_RESET} ${T_GRAY} · ${T_RESET}|${C_RED}16 ${T_RESET} ${C_PURPLE}64 ${T_RESET} ${T_GRAY} · ${T_RESET}|Move:    ${T_ORANGE}Swipe Down ↓${T_RESET}|Combo:   Cascade 8+16|Target:  2048 Master"
-    "${C_BLUE}128${T_RESET} ${C_PURPLE}256${T_RESET} ${T_GRAY} · ${T_RESET}|${C_YELLOW}512${T_RESET} ${C_YELLOW}512${T_RESET} ${T_GRAY} · ${T_RESET}|${C_GREEN}1024${T_RESET} ${C_GREEN}1024${T_RESET}${T_GRAY}·${T_RESET}|Move:    ${T_ORANGE}Merge 1024!${T_RESET}|Combo:   COMBO x4!|Target:  MAX TILE!"
-    "${C_BLUE}128${T_RESET} ${C_PURPLE}256${T_RESET} ${T_GRAY} · ${T_RESET}|${C_YELLOW}512${T_RESET} ${T_GRAY} · ${T_RESET} ${T_GRAY} · ${T_RESET}|${C_GREEN}✨ 2048 ✨${T_RESET} |Move:    ${C_GREEN}2048 WON!${T_RESET}|Combo:   Score: 28,400|Target:  Achieved!"
+    " ${C_CYAN}2${T_RESET}  ${C_CYAN}2${T_RESET}  ${T_GRAY}·${T_RESET}| ${C_YELLOW}4${T_RESET}  ${C_YELLOW}4${T_RESET}  ${T_GRAY}·${T_RESET}|${C_RED}16${T_RESET} ${C_PURPLE}64${T_RESET}  ${T_GRAY}·${T_RESET}|Move:    ${T_ORANGE}Swipe Left ←${T_RESET}|Combo:   Double Merge|Target:  2048 Master"
+    " ${C_YELLOW}4${T_RESET}  ${T_GRAY}·${T_RESET}  ${T_GRAY}·${T_RESET}| ${C_ORANGE}8${T_RESET}  ${T_GRAY}·${T_RESET}  ${T_GRAY}·${T_RESET}|${C_RED}16${T_RESET} ${C_PURPLE}64${T_RESET}  ${T_GRAY}·${T_RESET}|Move:    ${T_ORANGE}Swipe Down ↓${T_RESET}|Combo:   Cascade 8+16|Target:  2048 Master"
+    "${C_BLUE}128${T_RESET} ${C_PURPLE}256${T_RESET} |${C_YELLOW}512${T_RESET} ${C_YELLOW}512${T_RESET} |${C_GREEN}1024${T_RESET} ${T_GRAY}·${T_RESET} ${T_GRAY}·${T_RESET}|Move:    ${T_ORANGE}Merge 1024!${T_RESET}|Combo:   COMBO x4!|Target:  MAX TILE!"
+    "${C_BLUE}128${T_RESET} ${C_PURPLE}256${T_RESET} |${C_YELLOW}512${T_RESET} ${T_GRAY}·${T_RESET}  ${T_GRAY}·${T_RESET}|${C_GREEN}[ 2048 ]${T_RESET}|Move:    ${C_GREEN}2048 WON!${T_RESET}|Combo:   Score: 28,400|Target:  Achieved!"
   )
 
   # ── 4: Crossword 3x3 Word Box ──
@@ -349,7 +349,7 @@ run_tetris_step() {
     IFS='|' read -r r1 r2 r3 i1 i2 i3 <<< "$raw"
 
     local clean_title
-    clean_title="$(printf "%.65s" "$title")"
+    clean_title="$(printf "%.62s" "$title")"
 
     # Move cursor up 8 lines if not first frame
     if [ "$frame" -gt 0 ]; then
@@ -357,30 +357,30 @@ run_tetris_step() {
     fi
 
     # Render 8-line 2D squared retro card with aligned right borders
-    printf "  ${T_PURPLE}┌── POLYOMINO // STEP RUNNER ───────────────────────────────────────────┐${T_RESET}\n"
-    printf "  ${T_PURPLE}│${T_RESET}  ${T_BOLD}%-69.69s${T_RESET}${T_PURPLE}│${T_RESET}\n" "$clean_title..."
-    printf "  ${T_PURPLE}├─── Matrix View ──────────────┬─── Telemetry ──────────────────────────┤${T_RESET}\n"
-    printf "  ${T_PURPLE}│${T_RESET}  ${T_GRAY}[ %s ]${T_RESET}   ${T_PURPLE}┌──────────┐${T_RESET}  ${T_PURPLE}│${T_RESET}  " "$timer"
-    _tetris_pad_field "$i1" 40
-    printf " ${T_PURPLE}│${T_RESET}\n"
+    printf "  ${T_PURPLE}┌── POLYOMINO // STEP RUNNER ────────────────────────────────────────┐${T_RESET}\n"
+    printf "  ${T_PURPLE}│${T_RESET}  ${T_BOLD}%-66.66s${T_RESET}${T_PURPLE}│${T_RESET}\n" "$clean_title..."
+    printf "  ${T_PURPLE}├─── Matrix View ──────────────┬─── Telemetry ───────────────────────┤${T_RESET}\n"
+    printf "  ${T_PURPLE}│${T_RESET}  ${T_GRAY}[ %s ]${T_RESET}  ${T_PURPLE}┌──────────┐${T_RESET}  ${T_PURPLE}│${T_RESET}  " "$timer"
+    _tetris_pad_field "$i1" 38
+    printf "${T_PURPLE}│${T_RESET}\n"
 
     printf "  ${T_PURPLE}│${T_RESET}             ${T_PURPLE}│${T_RESET} "
     _tetris_pad_field "$r1" 8
     printf " ${T_PURPLE}│${T_RESET}  ${T_PURPLE}│${T_RESET}  "
-    _tetris_pad_field "$i2" 40
-    printf " ${T_PURPLE}│${T_RESET}\n"
+    _tetris_pad_field "$i2" 38
+    printf "${T_PURPLE}│${T_RESET}\n"
 
     printf "  ${T_PURPLE}│${T_RESET}             ${T_PURPLE}│${T_RESET} "
     _tetris_pad_field "$r2" 8
     printf " ${T_PURPLE}│${T_RESET}  ${T_PURPLE}│${T_RESET}  "
-    _tetris_pad_field "$i3" 40
-    printf " ${T_PURPLE}│${T_RESET}\n"
+    _tetris_pad_field "$i3" 38
+    printf "${T_PURPLE}│${T_RESET}\n"
 
     printf "  ${T_PURPLE}│${T_RESET}             ${T_PURPLE}│${T_RESET} "
     _tetris_pad_field "$r3" 8
     printf " ${T_PURPLE}│${T_RESET}  ${T_PURPLE}│${T_RESET}  "
-    _tetris_pad_field "" 40
-    printf " ${T_PURPLE}│${T_RESET}\n"
+    _tetris_pad_field "" 38
+    printf "${T_PURPLE}│${T_RESET}\n"
     printf "  ${T_PURPLE}└─────────────┴──────────┴──┴────────────────────────────────────────┘${T_RESET}\n"
 
     frame=$(( frame + 1 ))
