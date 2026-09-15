@@ -1,293 +1,143 @@
-# Documentation Index
+# polyomino.dotfiles — Architecture, Design & Operations Guide
 
-Complete guide to all polyomino.dotfiles documentation.
+Complete technical reference, architecture guide, design specification, and maintainer workflow for **polyomino.dotfiles**.
 
-## Getting Started
+---
 
-### For End Users
+## 1. System Architecture & Multi-Call Binary
 
-**Start here:** [INSTALLATION_FLOW.md](INSTALLATION_FLOW.md)
-- 3-stage installation overview
-- Quick start guide (3 commands)
-- Detailed walkthrough of each stage
-- Troubleshooting
+`polyomino.dotfiles` is a desktop environment tooling suite designed for Sway/Wayland Linux desktop environments. It manages dynamic window autotiling, desktop theme switching across application surfaces, system health validation, config snapshot maintenance, and automated machine provisioning.
 
-**Quick reference:** [README.md](../README.md)
-- Project overview
-- Commands and key bindings
-- What gets installed
-- Quick installation
+The suite follows a **Multi-Call Binary Architecture**: all subcommands compile into a single native binary (`polyomino`) via GraalVM Native Image. Subcommand invocations (e.g. `polyomino-theme`, `polyomino-autotiling`, `polyomino-whichkey`) are symlinks in `~/.local/bin` pointing to `polyomino`. The main binary inspects `argv[0]` or `argv[1]` to route execution to the target submodule.
 
-### For Development
+### Technical Stack & Dependencies
 
-**Building from source:** [README.md](../README.md#building-from-source)
-- Clone repository
-- Build with sbt
-- Install from source
+- **Language & Runtime**: Scala 3.5.2 compiled Ahead-of-Time via GraalVM Community Edition 21.0.2 (`sbt-native-image` 0.5.0).
+- **System I/O & Subprocesses**: `os-lib` (`com.lihaoyi %% os-lib % "0.11.9-M8"`) — direct POSIX syscalls with streamed process execution and zero intermediate buffering.
+- **JSON Serialization**: `uPickle` (`com.lihaoyi %% upickle % "4.4.3"`) — compile-time static derive macros, 100% GraalVM reflection-free.
+- **CLI Argument Parsing**: `mainargs` (`com.lihaoyi %% mainargs % "0.7.0"`).
+- **Testing Framework**: `munit` (`org.scalameta %% munit % "1.0.0"`).
+- **Target Environment**: Arch Linux / Fedora Linux on Wayland with Sway / SwayFX window manager.
 
-**Publishing to Maven Central:** [PUBLISHING.md](PUBLISHING.md)
-- Build GraalVM native binary
-- Configure GPG keys
-- Manual publishing commands
-- CI/CD integration
+### Architectural Invariants
 
-## Installation Guides
+1. **Single Multi-Call Executable**: One compiled ELF binary (~40–60 MB) with 15–50 ms startup latency and <60 MB RSS peak memory.
+2. **Zero-Reflection Design**: All I/O and JSON parsing use compile-time macro derivation to avoid GraalVM `reflect-config.json` requirements.
+3. **Functional Error Handling**: Errors propagate via `Either[PolyominoError, T]` across module boundaries, formatted with ANSI color output at top-level entrypoints.
+4. **Context Discovery**: Environment, XDG paths (`~/.config`), and Sway IPC sockets (`SWAYSOCK`) are discovered at startup in `Context` and threaded through command dispatchers.
 
-| Document | Purpose | Audience |
-|----------|---------|----------|
-| [INSTALLATION_FLOW.md](INSTALLATION_FLOW.md) | Complete 3-stage installation workflow | Everyone |
-| | - Quick start (3 commands) | |
-| | - Detailed Stage 1, 2, 3 breakdown | |
-| | - Troubleshooting guide | |
-| | - Advanced options & post-install management | |
+---
 
-## Publishing & Release Guides
+## 2. Desktop Surface Integrations
 
-| Document | Purpose | Use Case |
-|----------|---------|----------|
-| [PUBLISHING.md](PUBLISHING.md) | Complete publishing workflow | All release processes |
-| | - Quick start TL;DR | Maintainers (2 min/release) |
-| | - One-time setup guide | New maintainers (5-10 min) |
-| | - Semantic versioning | Version management |
-| | - Release checklist | Pre/post-release verification |
-| | - Troubleshooting | Problem resolution |
-| [SDKMAN_MAINTENANCE.md](SDKMAN_MAINTENANCE.md) | Manage SDKMan & JVM tools | Post-installation tool management |
+`polyomino.dotfiles` coordinates state and theme configuration across all desktop components:
 
-## File Structure
+| Component | Integration Method | Purpose |
+|-----------|-------------------|---------|
+| **Sway Window Manager** | IPC socket (`SWAYSOCK`) via `swaymsg` | Dynamic Fibonacci spiral window autotiling (`split v/h`), window focus, reload |
+| **Waybar** | Signal trigger (`pkill -SIGUSR1 waybar`) | Status bar live stylesheet reload (`theme.css`) |
+| **Kitty Terminal** | Signal (`kill -USR1`) | Live palette updates without restart |
+| **Wofi Launcher** | GUI popup menus | Theme picker (`Mod+Shift+T`), wallpaper picker (`Mod+Shift+P`), cheatsheet (`Mod+Shift+?`) |
+| **Neovim** | `$NVIM_LISTEN_ADDRESS` IPC | Live colorscheme synchronization |
+| **GTK / GNOME** | `gsettings` CLI | Dark/light color-scheme preference syncing |
+| **Swaylock** | Config template substitution | Lock screen styling per active theme |
+| **Swayidle** | Daemon subprocess | Auto-lock, DPMS monitor power-off, suspend on inactivity |
 
-```
-polyomino.dotfiles/
-├── bootstrap.sh                    # Stage 1: Bootstrap installer
-├── build.sbt                       # Scala build configuration
-├── src/
-│   ├── main/scala/polyomino/        # Scala CLI implementation
-│   │   ├── Main.scala             # Entry point, command dispatch
-│   │   └── dotfiles/              # Feature modules
-│   │       ├── install/           # Installation (Stage 3)
-│   │       ├── validate/          # Health checks
-│   │       ├── theme/             # Theme engine
-│   │       ├── sysutils/          # System utilities
-│   │       └── ...
-│   └── test/scala/polyomino/        # Unit tests
-│
-├── scripts/
-│   ├── maintain-sdkman.sh          # SDKMan tool management
-│   └── ...
-│
-├── README.md                       # Project overview
-├── LICENSE                         # Dual MIT & BSD 2-Clause license
-├── docs/
-│   ├── DOCUMENTATION.md            # Documentation index (this file)
-│   ├── INSTALLATION_FLOW.md        # Complete 3-stage installation
-│   ├── PUBLISHING.md               # Publishing workflow & checklist
-│   ├── SDKMAN_MAINTENANCE.md       # Tool management
-│   ├── project-context.md          # Project context
-│   └── migration-rust-to-scala.md  # Migration guide
-│
-└── Configuration/
-    ├── config/sway/               # Sway window manager config
-    ├── config/waybar/             # Status bar config
-    ├── config/kitty/              # Terminal config
-    ├── zsh/                       # ZSH shell config
-    └── .github/workflows/         # CI/CD pipelines
-```
+---
 
-## Understanding the 3-Stage Flow
+## 3. Theme Engine Specification
 
-See [INSTALLATION_FLOW.md](INSTALLATION_FLOW.md) for complete details including setup, troubleshooting, and advanced options.
+### Neutral Base Tokens (Constant Across Themes)
+- **Canvas / Monolith Base**: `#0F1117`
+- **Surface / Container**: `#191C24`
+- **Border / Divider**: `#2B303C`
+- **Foreground Text**: `#F8FAFC`
+- **Subdued / Muted Text**: `#64748B`
 
-### Stage 1: Bootstrap
-Installs minimal system setup:
-- System dependencies (Sway, Waybar, Kitty, etc.)
-- Java 21 GraalVM (for native image support)
-- Coursier (dependency manager)
-- SDKMan (tool manager)
+### Theme Variant Token Matrix
+| Variant | Primary Accent | Secondary Accent | Wallpaper Motif |
+|---------|----------------|------------------|-----------------|
+| **Matriz** (Default) | `#EBB434` (Gold) | `#00D2D3` (Teal) | Golden sunrise geometric landscape |
+| **Encruza** | `#EE5253` (Carmine Red) | `#3A3F4D` (Slate Graphite) | Deep red obsidian cliffs at dusk |
+| **Caravela** | `#0984E3` (Deep Ocean) | `#00CEC9` (Maré Teal) | Turquoise Atlantic horizon |
+| **Aruanda** | `#10AC84` (Mata Green) | `#F5CD79` (Warm Amber) | Lush forest canopy with sunbeams |
 
-**Script:** `bootstrap.sh`
-**Time:** 5-10 minutes
+Dynamic token updates write to `~/.config/polyomino/theme.css` and notify running Waybar, Kitty, and Sway instances without altering layout metrics or border radii.
 
-### Stage 2: Coursier
-Downloads the polyomino CLI binary:
-- Fetches JAR from Maven Central
-- Resolves dependencies
-- Creates launch script
+---
 
-**Command:** `cs bootstrap io.github.petrolal::polyomino:0.1.0 -o ~/.local/bin/polyomino`
-**Time:** 1-2 minutes
+## 4. Maintenance & Tooling Operations
 
-### Stage 3: Full Setup & Tooling Provisioning
-Scala-based CLI handles full setup:
-- Symlink deployment & manifest tracking
-- Homebrew, GitHub CLI (`gh`), and Coursier (`cs`) provisioning
-- Desktop apps, fonts, and TUI tooling installation
-- System health checks
+### SDKMAN! & JVM Toolchain Management
 
-**Command:** `polyomino install`
-**Time:** 5-15 minutes
-**Location:** `src/main/scala/polyomino/dotfiles/install/DeployInstaller.scala`
+The repository includes `scripts/maintain-sdkman.sh` for interactive and non-interactive maintenance of Java and build tools:
 
-## Key Components
-
-### Scala CLI (polyomino)
-
-**Main entry point:** `src/main/scala/polyomino/Main.scala`
-
-**Subcommands:**
-- `install` - Full setup (Stage 3)
-- `theme` - Desktop theme management
-- `healthcheck` - System verification
-- `lock` - Screen locker
-- `idle` - Auto-lock daemon
-- `screenshot` - Screen capture
-- `backup/restore` - Configuration snapshots
-- `install-*` - Tool-specific installers (`install-brew`, `install-gh`, `install-coursier`, `install-fonts`, etc.)
-
-### Bootstrap Script (bash)
-
-**File:** `bootstrap.sh`
-
-**Functions:**
-- `detect_pkg_mgr()` - Detect package manager
-- `install_system_deps()` - Install OS packages
-- `install_java()` - Install Java via SDKMan
-- `install_coursier()` - Install Coursier
-
-### SDKMan Tool Management
-
-**File:** `scripts/maintain-sdkman.sh`
-
-**Interactive setup:**
 ```bash
+# Interactive setup menu
 ./scripts/maintain-sdkman.sh install
+
+# Routine checks & upgrades
+./scripts/maintain-sdkman.sh check
+./scripts/maintain-sdkman.sh list
+./scripts/maintain-sdkman.sh update-all
+./scripts/maintain-sdkman.sh upgrade
 ```
 
-**Commands:**
-- `check` - Status verification
-- `upgrade` - Upgrade SDKMan
-- `list` - List installed tools
-- `available <tool>` - Show available versions
-- `update-*` - Update specific tools
-- `update-all` - Update everything
-
-## Publishing Workflow
-
-### Automatic (GitHub Actions)
-
-1. Push version tag: `git tag v0.1.0 && git push origin v0.1.0`
-2. GitHub Actions runs CI/CD pipeline
-3. Artifacts automatically published to Maven Central
-
-**Pipeline:** `.github/workflows/deploy.yml`
-
-### Manual Publishing
-
-See [MANUAL_PUBLISHING.md](MANUAL_PUBLISHING.md)
+### Snapshot & Recovery
 
 ```bash
-export 
-export 
-export PGP_PASSPHRASE="..."
-sbt nativeImage
+# Create timestamped tarball backup of dotfiles
+polyomino backup
+
+# Restore a previous snapshot
+polyomino restore <archive-path>
+
+# Run comprehensive diagnostic health check
+polyomino healthcheck
 ```
 
-## Development Workflow
+---
 
-### Building
+## 5. Building, Publishing & Releases
 
-```bash
-# Build Scala code
-sbt compile
-
-# Run tests
-sbt test
-
-# Build native image
-sbt nativeImage
-
-# Assemble fat JAR
-sbt assembly
-```
-
-### Testing
+### Local Compilation & Testing
 
 ```bash
 # Run unit tests
 sbt test
 
-# Run specific test
-sbt 'testOnly polyomino.InstallSuite'
-
-# Run with coverage
-sbt 'clean; coverage; test; coverageReport'
-```
-
-### Local Installation
-
-```bash
-# Build native image
+# Compile standalone GraalVM native binary
 sbt nativeImage
 
-# Install to ~/.local/bin
-mkdir -p ~/.local/bin
-cp target/native-image/polyomino ~/.local/bin/
-
-# Test
-polyomino --version
+# Install compiled binary locally
+cp target/native-image/polyomino ~/.local/bin/polyomino
+polyomino deploy
 ```
 
-## Configuration Files
+### Automated Release Pipeline (GitHub Actions)
 
-| File | Purpose |
-|------|---------|
-| `build.sbt` | Scala build configuration |
-| `project/plugins.sbt` | sbt plugins |
-| `.github/workflows/deploy.yml` | CI/CD pipeline |
-| `PKGBUILD` | Arch Linux package |
-| `.SRCINFO` | AUR metadata |
+When a git tag is pushed (e.g. `v0.1.0`), `.github/workflows/deploy.yml` automatically:
+1. Runs the test suite (`sbt test`).
+2. Compiles standalone native ELF binary `polyomino-x86_64-linux` via GraalVM Native Image.
+3. Generates release archives and `SHA256SUMS.txt`.
+4. Creates a GitHub Release with attached binaries.
 
-## Documentation Best Practices
+### Arch Linux AUR Package Publishing
 
-When updating documentation:
+```bash
+# 1. Update AUR metadata
+makepkg --printsrcinfo > .SRCINFO
 
-1. **Keep it current** - Update docs when code changes
-2. **Link across docs** - Use [MarkdownLinks](files.md) for navigation
-3. **Provide examples** - Show command usage with output
-4. **Test instructions** - Verify guides work end-to-end
-5. **Update index** - Add new docs to this file
-
-## See Also
-
-- [Project Context](project-context.md) - Detailed project background
-- [GitHub Repository](https://github.com/petrolal/polyomino.dotfiles)
-- [Maven Central](https://search.maven.org/search?q=io.github.petrolal:polyomino)
-- [AUR Package](https://aur.archlinux.org/packages/polyomino-dotfiles)
-
-## Quick Links by Task
-
-### "I want to install polyomino"
-→ [INSTALLATION_FLOW.md](INSTALLATION_FLOW.md) - Quick start (3 commands)
-
-### "I'm having installation issues"
-→ [INSTALLATION_FLOW.md](INSTALLATION_FLOW.md#troubleshooting) - Troubleshooting section
-
-### "I want to publish a release"
-→ [PUBLISHING.md](PUBLISHING.md) - Quick start (2 min) or complete setup guide
-
-### "I need to manage JVM tools"
-→ [SDKMAN_MAINTENANCE.md](SDKMAN_MAINTENANCE.md)
-
-### "I want to build from source"
-→ [README.md](../README.md#building-from-source)
-
-### "I'm developing polyomino"
-→ This file's "Development Workflow" section
-
-## License
-
-This project is dual-licensed under both the **MIT License** and the **BSD 2-Clause License** at your option. Mandatory attribution to **Lucas Petrola** is required for any redistributions. See [LICENSE](../LICENSE) for complete details.
+# 2. Push to AUR repository
+cp PKGBUILD .SRCINFO ~/polyomino-dotfiles-aur/
+cd ~/polyomino-dotfiles-aur
+git add PKGBUILD .SRCINFO
+git commit -m "chore: bump version to $NEW_VERSION"
+git push
+```
 
 ---
 
-**Last Updated:** 2026-09-14
-**Status:** Documentation complete for 3-stage installation flow
+## 6. License
 
+This project is dual-licensed under both the **MIT License** and the **BSD 2-Clause License** at your option. Mandatory attribution to **Lucas Petrola** is required for any redistributions. See [LICENSE](../LICENSE) for details.
