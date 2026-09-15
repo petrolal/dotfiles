@@ -201,5 +201,6 @@ cp target/native-image/polyomino ~/.local/bin/polyomino
 
 ## License
 
-This software is dual-licensed under both the **MIT License** and the **BSD 2-Clause License** at your option. Mandatory attribution to **Lucas Petrola** is required for any redistributions of the source code or binary forms. See the [LICENSE](LICENSE) file for complete details.
+This software is distributed solely under the **BSD 3-Clause License**. Mandatory attribution to **Lucas Petrola** is required for any redistributions of the source code or binary forms. See the [LICENSE](LICENSE) file for complete details.
+
 
