@@ -5,6 +5,7 @@ pkgbase = polyomino-dotfiles
 	url = https://github.com/petrolal/polyomino.dotfiles
 	arch = x86_64
 	license = MIT
+	license = BSD-2-Clause
 	makedepends = jdk-openjdk
 	makedepends = sbt
 	makedepends = gcc

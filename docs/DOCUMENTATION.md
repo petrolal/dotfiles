@@ -75,6 +75,7 @@ polyomino.dotfiles/
 │   └── ...
 │
 ├── README.md                       # Project overview
+├── LICENSE                         # Dual MIT & BSD 2-Clause license
 ├── docs/
 │   ├── DOCUMENTATION.md            # Documentation index (this file)
 │   ├── INSTALLATION_FLOW.md        # Complete 3-stage installation
@@ -281,7 +282,12 @@ When updating documentation:
 ### "I'm developing polyomino"
 → This file's "Development Workflow" section
 
+## License
+
+This project is dual-licensed under both the **MIT License** and the **BSD 2-Clause License** at your option. Mandatory attribution to **Lucas Petrola** is required for any redistributions. See [LICENSE](../LICENSE) for complete details.
+
 ---
 
-**Last Updated:** 2026-08-12
+**Last Updated:** 2026-09-14
 **Status:** Documentation complete for 3-stage installation flow
+

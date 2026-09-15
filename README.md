@@ -196,3 +196,10 @@ cp target/native-image/polyomino ~/.local/bin/polyomino
 | `Print`                 | Full screenshot           | Capture full screen                                        |
 | `Mod+Print`             | Region screenshot         | Interactive rectangle selection screenshot                 |
 | `Mod+Shift+Print`       | Window screenshot         | Capture active window                                      |
+
+---
+
+## License
+
+This software is dual-licensed under both the **MIT License** and the **BSD 2-Clause License** at your option. Mandatory attribution to **Lucas Petrola** is required for any redistributions of the source code or binary forms. See the [LICENSE](LICENSE) file for complete details.
+

@@ -15,7 +15,10 @@ version := {
   }
 }
 
-licenses := Seq("MIT" -> url("https://opensource.org/licenses/MIT"))
+licenses := Seq(
+  "MIT" -> url("https://opensource.org/licenses/MIT"),
+  "BSD-2-Clause" -> url("https://opensource.org/licenses/BSD-2-Clause")
+)
 homepage := Some(url("https://github.com/petrolal/polyomino.dotfiles"))
 scmInfo := Some(ScmInfo(url("https://github.com/petrolal/polyomino.dotfiles"), "scm:git@github.com:petrolal/polyomino.dotfiles.git"))
 developers := List(

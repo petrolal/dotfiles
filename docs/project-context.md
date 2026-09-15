@@ -373,10 +373,16 @@ All modules have corresponding unit test suites in `src/test/scala/polyomino/`:
 - **Sway Configuration**: https://man.archlinux.org/man/sway.5.en
 - **XDG Base Directory Specification**: https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html
 - **GitHub Repository**: https://github.com/petrolal/polyomino.dotfiles
-  - **GitHub Releases**: https://github.com/petrolal/polyomino.dotfiles/releases
+- **GitHub Releases**: https://github.com/petrolal/polyomino.dotfiles/releases
 
 ---
 
-**Last Updated**: 2026-08-13  
+## License
+
+Dual-licensed under the **MIT License** and **BSD 2-Clause License** with required attribution to **Lucas Petrola**. See `LICENSE` for details.
+
+---
+
+**Last Updated**: 2026-09-14  
 **Status**: Scala 3 + GraalVM native image implementation complete  
 **Previous Stack**: Rust 2021 (migrated to Scala 3 for GraalVM native image distribution)
