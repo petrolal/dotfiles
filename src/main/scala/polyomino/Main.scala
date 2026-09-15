@@ -111,7 +111,7 @@ object Main:
       case other => Left(UnknownCommandError(other))
 
   val UmbrellaHelp: String =
-    """polyomino — tooling for the polyomino.dotfiles Sway/Wayland desktop.
+    """polyomino — tooling for the polyomino-dotfiles Sway/Wayland desktop.
       |
       |Usage:
       |  polyomino <command> [args...]

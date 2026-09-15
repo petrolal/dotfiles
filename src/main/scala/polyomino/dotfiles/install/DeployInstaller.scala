@@ -5,7 +5,7 @@ import polyomino.dotfiles.error.{CommandError, PolyominoError}
 import upickle.default._
 
 object DeployInstaller:
-  val DotfilesRepoUrl: String = "https://github.com/petrolal/polyomino.dotfiles.git"
+  val DotfilesRepoUrl: String = "https://github.com/petrolal/dotfiles.git"
 
   // Guarantees `cs bootstrap io.github.petrolal::polyomino -o ~/.local/bin/polyomino`
   // followed by `polyomino install` works with no prior manual `git clone` step:
@@ -15,7 +15,7 @@ object DeployInstaller:
       Right(())
     else if os.exists(ctx.dotfilesDir) then
       Left(CommandError(
-        s"${ctx.dotfilesDir} exists but doesn't look like a polyomino.dotfiles checkout " +
+        s"${ctx.dotfilesDir} exists but doesn't look like a polyomino-dotfiles checkout " +
         s"(missing config/ or zsh/). Remove it or set POLYOMINO_DOTFILES_DIR to the correct path."
       ))
     else
@@ -45,7 +45,7 @@ object DeployInstaller:
     if args.contains("--uninstall") || args.contains("uninstall") then
       uninstall(ctx, args)
     else
-      println("\u001b[1;32m[polyomino install]\u001b[0m Deploying polyomino.dotfiles configurations & symlinks...")
+      println("\u001b[1;32m[polyomino install]\u001b[0m Deploying polyomino-dotfiles configurations & symlinks...")
 
       if args.exists(a => a == "--bootstrap" || a == "-b" || a == "--with-bootstrap" || a == "--deps") then
         val bootstrapScript = ctx.dotfilesDir / "bootstrap.sh"
@@ -279,7 +279,7 @@ object DeployInstaller:
           os.write.append(bashrcFile, snippet)
 
     println(s"  [32m[OK][0m Created $configSymlinkCount config symlinks and $binSymlinkCount CLI subcommand symlinks")
-    println("\n[1;32m[SUCCESS][0m polyomino.dotfiles deployment complete!")
+    println("\n[1;32m[SUCCESS][0m polyomino-dotfiles deployment complete!")
 
     // Apply active desktop theme to re-render all config files
     if !ctx.isTest then

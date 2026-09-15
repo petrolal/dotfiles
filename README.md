@@ -1,4 +1,4 @@
-# polyomino.dotfiles
+# polyomino-dotfiles
 
 Personal Sway/Wayland desktop configuration — native
 Sway keybindings, wofi launcher, waybar status bar, kitty terminal, and zsh
@@ -25,12 +25,12 @@ src/                              # Scala 3 core engine & subcommand modules
 This repo is the source of truth for configuration files — they are **symlinked** into your `$HOME`:
 
 ```
-~/.zshrc                          -> ~/polyomino.dotfiles/zsh/.zshrc
-~/.config/polyomino/zsh_config      -> ~/polyomino.dotfiles/zsh/zsh_config
-~/.config/sway                    -> ~/polyomino.dotfiles/config/sway
-~/.config/wofi                    -> ~/polyomino.dotfiles/config/wofi
-~/.config/waybar                  -> ~/polyomino.dotfiles/config/waybar
-~/.config/kitty                   -> ~/polyomino.dotfiles/config/kitty
+~/.zshrc                          -> ~/polyomino-dotfiles/zsh/.zshrc
+~/.config/polyomino/zsh_config      -> ~/polyomino-dotfiles/zsh/zsh_config
+~/.config/sway                    -> ~/polyomino-dotfiles/config/sway
+~/.config/wofi                    -> ~/polyomino-dotfiles/config/wofi
+~/.config/waybar                  -> ~/polyomino-dotfiles/config/waybar
+~/.config/kitty                   -> ~/polyomino-dotfiles/config/kitty
 ```
 
 `polyomino install` handles creating those links safely:
@@ -65,18 +65,18 @@ This file is automatically sourced by `zsh/zsh_config/40-environment.zsh` if it 
 Run the entire installation in a single shot via `curl` (zero prior setup needed):
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/petrolal/polyomino.dotfiles/master/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/petrolal/dotfiles/master/install.sh | bash
 ```
 
 **With optional Gaming Stack (GameMode, Gamescope, MangoHud, Steam):**
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/petrolal/polyomino.dotfiles/master/install.sh | bash -s -- --gaming
+curl -fsSL https://raw.githubusercontent.com/petrolal/dotfiles/master/install.sh | bash -s -- --gaming
 ```
 
 > **What the One-Shot Installer does end-to-end:**
 >
-> 1. **Clones / Updates Repository:** Fetches `polyomino.dotfiles` into `~/polyomino.dotfiles`.
+> 1. **Clones / Updates Repository:** Fetches `dotfiles` into `~/polyomino-dotfiles`.
 > 2. **Executes `bootstrap.sh`:**
 >    - Installs core desktop & system packages (`sway`/`swayfx`, `kitty`, `wofi`, `waybar`, `swaync`, `zoxide`, `fastfetch`, `zsh`, `neovim`).
 >    - Provisions **SDKMAN!**, **Java 21 (GraalVM)**, and **SBT**.
@@ -92,8 +92,8 @@ curl -fsSL https://raw.githubusercontent.com/petrolal/polyomino.dotfiles/master/
 If you have already cloned the repository or want to install from source:
 
 ```bash
-git clone https://github.com/petrolal/polyomino.dotfiles.git ~/polyomino.dotfiles
-cd ~/polyomino.dotfiles
+git clone https://github.com/petrolal/dotfiles.git ~/polyomino-dotfiles
+cd ~/polyomino-dotfiles
 
 # Run one-shot local installer
 ./install.sh
@@ -107,7 +107,7 @@ Download and install the standalone Linux x86_64 native binary directly without 
 
 ```bash
 mkdir -p ~/.local/bin
-curl -fsSL https://github.com/petrolal/polyomino.dotfiles/releases/latest/download/polyomino-x86_64-linux -o ~/.local/bin/polyomino
+curl -fsSL https://github.com/petrolal/dotfiles/releases/latest/download/polyomino-x86_64-linux -o ~/.local/bin/polyomino
 chmod +x ~/.local/bin/polyomino
 
 # Deploy dotfiles and symlinks
@@ -121,8 +121,8 @@ polyomino deploy
 On Arch Linux / Manjaro, build and install as a native Arch package:
 
 ```bash
-git clone https://github.com/petrolal/polyomino.dotfiles.git ~/polyomino.dotfiles
-cd ~/polyomino.dotfiles
+git clone https://github.com/petrolal/dotfiles.git ~/polyomino-dotfiles
+cd ~/polyomino-dotfiles
 makepkg -si
 ```
 
@@ -157,7 +157,7 @@ polyomino uninstall
 To develop, run tests, or compile from source:
 
 ```bash
-cd ~/polyomino.dotfiles
+cd ~/polyomino-dotfiles
 
 # Run test suite (101+ unit tests)
 sbt test

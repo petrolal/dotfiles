@@ -4,7 +4,7 @@ pkgver=0.1.0
 pkgrel=1
 pkgdesc="Sway dotfiles installer with Scala 3 + GraalVM native image"
 arch=('x86_64')
-url="https://github.com/petrolal/polyomino.dotfiles"
+url="https://github.com/petrolal/dotfiles"
 license=('GPL-3.0-or-later')
 depends=(
   'sway'
@@ -43,7 +43,7 @@ optdepends=(
   'alacritty: for terminal screenshot region selection'
   'termite: alternative terminal for screenshot'
 )
-source=("git+https://github.com/petrolal/polyomino.dotfiles.git")
+source=("git+https://github.com/petrolal/dotfiles.git")
 sha256sums=('SKIP')
 
 build() {

@@ -43,5 +43,5 @@ _polyomino_precmd() {
 add-zsh-hook precmd _polyomino_precmd
 
 # Prompt Anatomy:
-# [ ⮽ ] [ ~/polyomino.dotfiles ] [ master * ] ❯ 
+# [ ⮽ ] [ ~/polyomino-dotfiles ] [ master * ] ❯ 
 PROMPT='${C_BRACKET}[${C_RESET} ${C_GLYPH}⮽${C_RESET} ${C_BRACKET}]${C_RESET} ${C_BRACKET}[${C_RESET} ${C_PATH}%(4~|…/%3~|%~)${C_RESET} ${C_BRACKET}]${C_RESET} $(_polyomino_git_segment)%(?.%B%F{#8b5cf6}❯%f%b.%B%F{#ef4444}❯%f%b) '

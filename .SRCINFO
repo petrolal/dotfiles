@@ -2,7 +2,7 @@ pkgbase = polyomino-dotfiles
 	pkgdesc = Sway dotfiles installer with Scala 3 + GraalVM native image
 	pkgver = 0.1.0
 	pkgrel = 1
-	url = https://github.com/petrolal/polyomino.dotfiles
+	url = https://github.com/petrolal/dotfiles
 	arch = x86_64
 	license = GPL-3.0-or-later
 	makedepends = jdk-openjdk
@@ -36,7 +36,7 @@ pkgbase = polyomino-dotfiles
 	optdepends = ncspot: alternative lightweight ncurses Spotify TUI client
 	optdepends = alacritty: for terminal screenshot region selection
 	optdepends = termite: alternative terminal for screenshot
-	source = git+https://github.com/petrolal/polyomino.dotfiles.git
+	source = git+https://github.com/petrolal/dotfiles.git
 	sha256sums = SKIP
 
 pkgname = polyomino-dotfiles

@@ -77,7 +77,7 @@ object Maintenance:
     val filteredArgs = args.filterNot(a => a == "--dry-run" || a == "-n")
 
     println(s"\u001b[1;34m╔════════════════════════════════════════════════════════════════╗\u001b[0m")
-    println(s"\u001b[1;34m║  polyomino.dotfiles Release Helper                              ║\u001b[0m")
+    println(s"\u001b[1;34m║  polyomino-dotfiles Release Helper                              ║\u001b[0m")
     println(s"\u001b[1;34m╚════════════════════════════════════════════════════════════════╝\u001b[0m\n")
 
     polyomino.dotfiles.install.DeployInstaller.ensureDotfilesRepo(ctx) match
@@ -155,7 +155,7 @@ object Maintenance:
                 println("     \u001b[1;33mgit push origin master\u001b[0m")
                 println("     \u001b[1;33mgit push origin --tags\u001b[0m")
                 println("  3. Watch CI/CD pipeline:")
-                println("     https://github.com/petrolal/polyomino.dotfiles/actions\n")
+                println("     https://github.com/petrolal/dotfiles/actions\n")
                 Right(())
               catch
                 case e: Exception => Left(CommandError(s"Release preparation failed: ${e.getMessage}"))

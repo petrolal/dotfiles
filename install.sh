@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# polyomino.dotfiles One-Shot Web Installer
+# polyomino-dotfiles One-Shot Web Installer
 # Usage:
-#   curl -fsSL https://raw.githubusercontent.com/petrolal/polyomino.dotfiles/master/install.sh | bash
-#   curl -fsSL https://raw.githubusercontent.com/petrolal/polyomino.dotfiles/master/install.sh | bash -s -- --gaming
+#   curl -fsSL https://raw.githubusercontent.com/petrolal/dotfiles/master/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/petrolal/dotfiles/master/install.sh | bash -s -- --gaming
 set -euo pipefail
 
 
@@ -34,10 +34,10 @@ EOF
 echo -e "${CYAN}[polyomino installer]${RESET} Automated One-Shot Deployment & Installer"
 echo ""
 
-DOTFILES_DIR="${POLYOMINO_DOTFILES_DIR:-$HOME/polyomino.dotfiles}"
+DOTFILES_DIR="${POLYOMINO_DOTFILES_DIR:-$HOME/polyomino-dotfiles}"
 BIN_DIR="$HOME/.local/bin"
-REPO_URL="${POLYOMINO_REPO_URL:-https://github.com/petrolal/polyomino.dotfiles.git}"
-SSH_REPO_URL="git@github.com:petrolal/polyomino.dotfiles.git"
+REPO_URL="${POLYOMINO_REPO_URL:-https://github.com/petrolal/dotfiles.git}"
+SSH_REPO_URL="git@github.com:petrolal/dotfiles.git"
 BRANCH="${POLYOMINO_BRANCH:-master}"
 
 mkdir -p "$BIN_DIR"
@@ -60,8 +60,8 @@ if ! command -v git &> /dev/null; then
   fi
 fi
 
-# Step 2: Clone or Update the repository to ~/polyomino.dotfiles
-echo -e "  ${CYAN}[1/4] Cloning polyomino.dotfiles repository...${RESET}"
+# Step 2: Clone or Update the repository to ~/polyomino-dotfiles
+echo -e "  ${CYAN}[1/4] Cloning polyomino-dotfiles repository...${RESET}"
 if [ ! -d "$DOTFILES_DIR/.git" ]; then
   if [ -d "$DOTFILES_DIR" ]; then
     echo -e "  ${YELLOW}[WARN]${RESET} Directory $DOTFILES_DIR exists but is not a git repo. Backing up..."
@@ -134,7 +134,7 @@ echo -e "  ${CYAN}[4/4] Executing Polyomino Installer & Deployer...${RESET}"
 
 echo ""
 echo -e "${GREEN}${BOLD}════════════════════════════════════════════════════════════════${RESET}"
-echo -e "${GREEN}${BOLD}  polyomino.dotfiles installation completed successfully!       ${RESET}"
+echo -e "${GREEN}${BOLD}  polyomino-dotfiles installation completed successfully!       ${RESET}"
 echo -e "${GREEN}${BOLD}════════════════════════════════════════════════════════════════${RESET}"
 echo ""
 echo -e "  Next steps:"

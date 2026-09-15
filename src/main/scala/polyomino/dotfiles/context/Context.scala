@@ -19,7 +19,7 @@ object Context:
       val configDir = sys.env.get("XDG_CONFIG_HOME").filter(_.trim.nonEmpty).map(os.Path(_)).getOrElse(home / ".config")
       val shareDir = sys.env.get("XDG_DATA_HOME").filter(_.trim.nonEmpty).map(p => os.Path(p) / "polyomino").getOrElse(home / ".local" / "share" / "polyomino")
       val dotfilesDir = sys.env.get("POLYOMINO_DOTFILES_DIR").filter(_.trim.nonEmpty).map(os.Path(_)).getOrElse(
-        if os.exists(home / "polyomino.dotfiles") then home / "polyomino.dotfiles" else os.pwd
+        if os.exists(home / "polyomino-dotfiles") then home / "polyomino-dotfiles" else os.pwd
       )
       val swaySocket = sys.env.get("SWAYSOCK")
 

@@ -1,12 +1,12 @@
-# polyomino.dotfiles — Architecture, Design & Operations Guide
+# polyomino-dotfiles — Architecture, Design & Operations Guide
 
-Complete technical reference, architecture guide, design specification, and maintainer workflow for **polyomino.dotfiles**.
+Complete technical reference, architecture guide, design specification, and maintainer workflow for **polyomino-dotfiles**.
 
 ---
 
 ## 1. System Architecture & Multi-Call Binary
 
-`polyomino.dotfiles` is a desktop environment tooling suite designed for Sway/Wayland Linux desktop environments. It manages dynamic window autotiling, desktop theme switching across application surfaces, system health validation, config snapshot maintenance, and automated machine provisioning.
+`polyomino-dotfiles` is a desktop environment tooling suite designed for Sway/Wayland Linux desktop environments. It manages dynamic window autotiling, desktop theme switching across application surfaces, system health validation, config snapshot maintenance, and automated machine provisioning.
 
 The suite follows a **Multi-Call Binary Architecture**: all subcommands compile into a single native binary (`polyomino`) via GraalVM Native Image. Subcommand invocations (e.g. `polyomino-theme`, `polyomino-autotiling`, `polyomino-whichkey`) are symlinks in `~/.local/bin` pointing to `polyomino`. The main binary inspects `argv[0]` or `argv[1]` to route execution to the target submodule.
 
@@ -30,7 +30,7 @@ The suite follows a **Multi-Call Binary Architecture**: all subcommands compile 
 
 ## 2. Desktop Surface Integrations
 
-`polyomino.dotfiles` coordinates state and theme configuration across all desktop components:
+`polyomino-dotfiles` coordinates state and theme configuration across all desktop components:
 
 | Component | Integration Method | Purpose |
 |-----------|-------------------|---------|

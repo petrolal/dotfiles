@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# polyomino.dotfiles Bootstrap Installer
+# polyomino-dotfiles Bootstrap Installer
 # Minimal installer: Installs Java & Coursier only
 # Full setup is handled by: polyomino install
 set -euo pipefail
 
 
 
-echo -e "\033[1;36m[polyomino bootstrap]\033[0m Starting polyomino.dotfiles installer..."
+echo -e "\033[1;36m[polyomino bootstrap]\033[0m Starting polyomino-dotfiles installer..."
 echo ""
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -970,7 +970,7 @@ install_polyomino_binary() {
     echo -e "  ${T_GREEN}[OK]${T_RESET} Installed native binary to $BIN_DIR/polyomino"
   elif [ ! -f "$BIN_DIR/polyomino" ]; then
     _download_bin() {
-      curl -fL "https://github.com/petrolal/polyomino.dotfiles/releases/latest/download/polyomino-x86_64-linux" -o "$BIN_DIR/polyomino"
+      curl -fL "https://github.com/petrolal/dotfiles/releases/latest/download/polyomino-x86_64-linux" -o "$BIN_DIR/polyomino"
       chmod +x "$BIN_DIR/polyomino"
     }
     run_tetris_step "Fetching Polyomino native binary release" _download_bin
