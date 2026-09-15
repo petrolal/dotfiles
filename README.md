@@ -9,6 +9,7 @@ shell config. Built in Scala 3 + GraalVM Native Image to be published to Maven C
 ```
 bootstrap.sh                      # System dependency & package installer
 build.sbt                         # Scala 3 + GraalVM Native Image build specification
+CODE_OF_CONDUCT.md                # Contributor Covenant Code of Conduct
 zsh/.zshrc                        # Thin oh-my-zsh bootstrap + modular config loader
 zsh/zsh_config/                   # Modular zsh config (*.zsh)
 config/sway/config                # Sway window manager config
@@ -196,6 +197,12 @@ cp target/native-image/polyomino ~/.local/bin/polyomino
 | `Print`                 | Full screenshot           | Capture full screen                                        |
 | `Mod+Print`             | Region screenshot         | Interactive rectangle selection screenshot                 |
 | `Mod+Shift+Print`       | Window screenshot         | Capture active window                                      |
+
+---
+
+## Contributing
+
+Contributions are welcome! Please make sure to read and follow our [Code of Conduct](CODE_OF_CONDUCT.md) when participating in this community.
 
 ---
 

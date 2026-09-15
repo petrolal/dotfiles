@@ -42,6 +42,7 @@ The suite follows a **Multi-Call Binary Architecture**: all subcommands compile 
 | **GTK / GNOME** | `gsettings` CLI | Dark/light color-scheme preference syncing |
 | **Swaylock** | Config template substitution | Lock screen styling per active theme |
 | **Swayidle** | Daemon subprocess | Auto-lock, DPMS monitor power-off, suspend on inactivity |
+| **SwayNC** | Notification daemon (`swaync-client`) | Notification center panel & transient On-Screen Display (OSD) indicators |
 
 ---
 
@@ -138,6 +139,12 @@ git push
 
 ---
 
-## 6. License
+## 6. Community & Code of Conduct
+
+All contributors and participants are expected to uphold the [Contributor Covenant Code of Conduct](../CODE_OF_CONDUCT.md).
+
+---
+
+## 7. License
 
 This project is distributed under the [GNU General Public License v3.0 (GPL-3.0)](../LICENSE). See [LICENSE](../LICENSE) for details.

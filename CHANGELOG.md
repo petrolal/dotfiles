@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Contributor Covenant v2.0 Code of Conduct (`CODE_OF_CONDUCT.md`) and Contributing documentation in `README.md`
+- Transient OSD notification routing via `notification-visibility` in SwayNC configuration
 - Agent instructions (AGENTS.md) for consistent AI-assisted development
 - CI/CD pipeline with separate build, test, and publish stages
 - Test skipping for Sway/desktop-dependent tests in CI environments
@@ -17,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Removed AUR and GitHub Pages publishing from automated pipeline (can be re-added when configured)
 
 ### Fixed
+- Volume and brightness OSD notifications displaying in SwayNC notification center history (`polyomino-osd` transient hints)
 - GitHub Actions workflow to use maintained `sbt/setup-sbt@v1` action
 - GPG signing configuration for Maven Central publishing
 - Test infrastructure to handle CI environments without Sway/desktop tools

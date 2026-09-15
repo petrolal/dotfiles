@@ -39,6 +39,7 @@ def notify_osd(title, icon_glyph, pct, is_muted=False, subtitle=""):
         "-a", "polyomino-osd",
         "-h", "string:x-canonical-private-synchronous:polyomino-osd",
         "-h", "string:synchronous:polyomino-osd",
+        "-h", "boolean:transient:true",
         "-h", f"int:value:{0 if is_muted else pct}",
         "-h", "string:category:osd",
         "-u", "low",
