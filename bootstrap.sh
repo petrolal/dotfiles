@@ -272,47 +272,47 @@ run_tetris_step() {
 
   # ── 0: Tetris 2D Squared Well (r1|r2|r3|i1|i2|i3) ──
   local -a tetris_cards=(
-    "${C_CYAN}■■■■${T_RESET}    |        |▓▓▓  ▓▓▓|Piece:  ${C_CYAN}I-Piece${T_RESET}|Action: Sky Spawn|Matrix: Level 1"
-    "        |${C_CYAN}■■■■${T_RESET}    |▓▓▓  ▓▓▓|Piece:  ${C_CYAN}I-Piece${T_RESET}|Action: Gravity 1G|Matrix: Level 2"
-    "        |        |▓▓▓${C_CYAN}■■■■${T_RESET}▓|Piece:  ${C_CYAN}I-Piece${T_RESET}|Action: Hard Drop|Matrix: Line Full!"
-    "        |${C_GREEN}✨CLEAR✨${T_RESET}|${C_GREEN}✨LINE ✨${T_RESET}|Piece:  ${C_GREEN}LINE CLEAR${T_RESET}|Action: +1200 Pts|Matrix: Cleared"
-    "${C_YELLOW}  ■■${T_RESET}    |${C_YELLOW}  ■■${T_RESET}    |▓▓    ▓▓|Piece:  ${C_YELLOW}O-Piece${T_RESET}|Action: Drop 1/2|Matrix: Level 1"
-    "        |${C_YELLOW}  ■■${T_RESET}    |▓▓${C_YELLOW}■■${T_RESET}  ▓▓|Piece:  ${C_YELLOW}O-Piece${T_RESET}|Action: Hard Drop|Matrix: Locked"
-    "${C_PURPLE}   ■${T_RESET}    |${C_PURPLE}  ■■■${T_RESET}   |▓▓    ▓▓|Piece:  ${C_PURPLE}T-Piece${T_RESET}|Action: T-Spin Spin|Matrix: Setup"
-    "        |${C_PURPLE}   ■${T_RESET}    |▓▓${C_PURPLE}■■■${T_RESET} ▓▓|Piece:  ${C_GREEN}T-SPIN CLEAR${T_RESET}|Action: +800 Pts|Matrix: Cleared"
+    "${C_CYAN}■■■■${T_RESET}    |        |▓▓▓  ▓▓▓|Piece:   ${C_CYAN}I-Piece${T_RESET}|Action:  Sky Spawn|Matrix:  Level 1"
+    "        |${C_CYAN}■■■■${T_RESET}    |▓▓▓  ▓▓▓|Piece:   ${C_CYAN}I-Piece${T_RESET}|Action:  Gravity 1G|Matrix:  Level 2"
+    "        |        |▓▓▓${C_CYAN}■■■■${T_RESET}▓|Piece:   ${C_CYAN}I-Piece${T_RESET}|Action:  Hard Drop|Matrix:  Line Full!"
+    "        |${C_GREEN}✨CLEAR✨${T_RESET}|${C_GREEN}✨LINE ✨${T_RESET}|Piece:   ${C_GREEN}LINE CLEAR${T_RESET}|Action:  +1200 Pts|Matrix:  Cleared"
+    "${C_YELLOW}  ■■${T_RESET}    |${C_YELLOW}  ■■${T_RESET}    |▓▓    ▓▓|Piece:   ${C_YELLOW}O-Piece${T_RESET}|Action:  Drop 1/2|Matrix:  Level 1"
+    "        |${C_YELLOW}  ■■${T_RESET}    |▓▓${C_YELLOW}■■${T_RESET}  ▓▓|Piece:   ${C_YELLOW}O-Piece${T_RESET}|Action:  Hard Drop|Matrix:  Locked"
+    "${C_PURPLE}   ■${T_RESET}    |${C_PURPLE}  ■■■${T_RESET}   |▓▓    ▓▓|Piece:   ${C_PURPLE}T-Piece${T_RESET}|Action:  T-Spin Spin|Matrix:  Setup"
+    "        |${C_PURPLE}   ■${T_RESET}    |▓▓${C_PURPLE}■■■${T_RESET} ▓▓|Piece:   ${C_GREEN}T-SPIN CLEAR${T_RESET}|Action:  +800 Pts|Matrix:  Cleared"
   )
 
-  # ── 1: Rubik's Cube 3x3 Face Grid ──
+  # ── 1: Rubik's Cube 3x3 Face Grid (Concept B) ──
   local -a cube_cards=(
-    "${C_ORANGE}■${T_RESET} ${C_WHITE}■${T_RESET} ${C_BLUE}■${T_RESET}  |${C_GREEN}■${T_RESET} ${C_YELLOW}■${T_RESET} ${C_RED}■${T_RESET}  |${C_WHITE}■${T_RESET} ${C_GREEN}■${T_RESET} ${C_BLUE}■${T_RESET}  |Move:   ${T_YELLOW}R (Right Turn)${T_RESET}|Phase:  First 2 Layers|State:  Scrambled 3x3"
-    "${C_BLUE}■${T_RESET} ${C_WHITE}■${T_RESET} ${C_ORANGE}■${T_RESET}  |${C_RED}■${T_RESET} ${C_YELLOW}■${T_RESET} ${C_GREEN}■${T_RESET}  |${C_GREEN}■${T_RESET} ${C_WHITE}■${T_RESET} ${C_BLUE}■${T_RESET}  |Move:   ${T_YELLOW}U (Top Layer)${T_RESET}|Phase:  Orient Cross|State:  Solving F2L"
-    "${C_WHITE}■${T_RESET} ${C_RED}■${T_RESET} ${C_GREEN}■${T_RESET}  |${C_YELLOW}■${T_RESET} ${C_ORANGE}■${T_RESET} ${C_BLUE}■${T_RESET}  |${C_RED}■${T_RESET} ${C_BLUE}■${T_RESET} ${C_YELLOW}■${T_RESET}  |Move:   ${T_YELLOW}F' (Front CCW)${T_RESET}|Phase:  OLL Algorithms|State:  Corner Align"
-    "${C_GREEN}■${T_RESET} ${C_GREEN}■${T_RESET} ${C_ORANGE}■${T_RESET}  |${C_WHITE}■${T_RESET} ${C_YELLOW}■${T_RESET} ${C_YELLOW}■${T_RESET}  |${C_BLUE}■${T_RESET} ${C_RED}■${T_RESET} ${C_RED}■${T_RESET}  |Move:   ${T_YELLOW}L (Left Turn)${T_RESET}|Phase:  PLL Permute|State:  Edge Cycles"
-    "${C_YELLOW}■${T_RESET} ${C_BLUE}■${T_RESET} ${C_ORANGE}■${T_RESET}  |${C_GREEN}■${T_RESET} ${C_WHITE}■${T_RESET} ${C_RED}■${T_RESET}  |${C_YELLOW}■${T_RESET} ${C_BLUE}■${T_RESET} ${C_ORANGE}■${T_RESET}  |Move:   ${T_YELLOW}D' (Bottom CCW)${T_RESET}|Phase:  Final Rotations|State:  Last Layer"
-    "${C_GREEN}■${T_RESET} ${C_GREEN}■${T_RESET} ${C_GREEN}■${T_RESET}  |${C_GREEN}■${T_RESET} ${C_GREEN}■${T_RESET} ${C_GREEN}■${T_RESET}  |${C_GREEN}■${T_RESET} ${C_GREEN}■${T_RESET} ${C_GREEN}■${T_RESET}  |Move:   ${C_GREEN}SOLVED!${T_RESET}|Phase:  ${C_GREEN}Complete 3x3${T_RESET}|State:  All Match!"
+    "${C_ORANGE}▣${T_RESET} ${C_WHITE}▣${T_RESET} ${C_BLUE}▣${T_RESET}  |${C_GREEN}▣${T_RESET} ${C_YELLOW}▣${T_RESET} ${C_RED}▣${T_RESET}  |${C_WHITE}▣${T_RESET} ${C_GREEN}▣${T_RESET} ${C_BLUE}▣${T_RESET}  |Move:    ${T_YELLOW}R (Right Turn)${T_RESET}|Phase:   First 2 Layers|State:   Scrambled 3x3"
+    "${C_BLUE}▣${T_RESET} ${C_WHITE}▣${T_RESET} ${C_ORANGE}▣${T_RESET}  |${C_RED}▣${T_RESET} ${C_YELLOW}▣${T_RESET} ${C_GREEN}▣${T_RESET}  |${C_GREEN}▣${T_RESET} ${C_WHITE}▣${T_RESET} ${C_BLUE}▣${T_RESET}  |Move:    ${T_YELLOW}U (Top Layer)${T_RESET}|Phase:   Orient Cross|State:   Solving F2L"
+    "${C_WHITE}▣${T_RESET} ${C_RED}▣${T_RESET} ${C_GREEN}▣${T_RESET}  |${C_YELLOW}▣${T_RESET} ${C_ORANGE}▣${T_RESET} ${C_BLUE}▣${T_RESET}  |${C_RED}▣${T_RESET} ${C_BLUE}▣${T_RESET} ${C_YELLOW}▣${T_RESET}  |Move:    ${T_YELLOW}F' (Front CCW)${T_RESET}|Phase:   OLL Algorithms|State:   Corner Align"
+    "${C_GREEN}▣${T_RESET} ${C_GREEN}▣${T_RESET} ${C_ORANGE}▣${T_RESET}  |${C_WHITE}▣${T_RESET} ${C_YELLOW}▣${T_RESET} ${C_YELLOW}▣${T_RESET}  |${C_BLUE}▣${T_RESET} ${C_RED}▣${T_RESET} ${C_RED}▣${T_RESET}  |Move:    ${T_YELLOW}L (Left Turn)${T_RESET}|Phase:   PLL Permute|State:   Edge Cycles"
+    "${C_YELLOW}▣${T_RESET} ${C_BLUE}▣${T_RESET} ${C_ORANGE}▣${T_RESET}  |${C_GREEN}▣${T_RESET} ${C_WHITE}▣${T_RESET} ${C_RED}▣${T_RESET}  |${C_YELLOW}▣${T_RESET} ${C_BLUE}▣${T_RESET} ${C_ORANGE}▣${T_RESET}  |Move:    ${T_YELLOW}D' (Bottom CCW)${T_RESET}|Phase:   Final Rotations|State:   Last Layer"
+    "${C_GREEN}▣${T_RESET} ${C_GREEN}▣${T_RESET} ${C_GREEN}▣${T_RESET}  |${C_GREEN}▣${T_RESET} ${C_GREEN}▣${T_RESET} ${C_GREEN}▣${T_RESET}  |${C_GREEN}▣${T_RESET} ${C_GREEN}▣${T_RESET} ${C_GREEN}▣${T_RESET}  |Move:    ${C_GREEN}SOLVED!${T_RESET}|Phase:   ${C_GREEN}Complete 3x3${T_RESET}|State:   All Match!"
   )
 
   # ── 2: Sudoku 3x3 Mini-Grid ──
   local -a sudoku_cards=(
-    "${C_CYAN}5${T_RESET}  ${T_GRAY}·${T_RESET}  ${C_BLUE}2${T_RESET} |${T_GRAY}·${T_RESET}  ${C_PURPLE}8${T_RESET}  ${T_GRAY}·${T_RESET} |${C_GREEN}1${T_RESET}  ${T_GRAY}·${T_RESET}  ${C_RED}9${T_RESET} |Method: ${T_CYAN}Candidate Scan${T_RESET}|Box:    Grid Center #5|State:  Candidates..."
-    "${C_CYAN}5${T_RESET}  ${C_YELLOW}4${T_RESET}  ${C_BLUE}2${T_RESET} |${T_GRAY}·${T_RESET}  ${C_PURPLE}8${T_RESET}  ${T_GRAY}·${T_RESET} |${C_GREEN}1${T_RESET}  ${T_GRAY}·${T_RESET}  ${C_RED}9${T_RESET} |Method: ${T_CYAN}Naked Single${T_RESET}|Box:    Row 1 Column 2|State:  Placed 4"
-    "${C_CYAN}5${T_RESET}  ${C_YELLOW}4${T_RESET}  ${C_BLUE}2${T_RESET} |${C_ORANGE}7${T_RESET}  ${C_PURPLE}8${T_RESET}  ${C_CYAN}3${T_RESET} |${C_GREEN}1${T_RESET}  ${T_GRAY}·${T_RESET}  ${C_RED}9${T_RESET} |Method: ${T_CYAN}Box Eliminate${T_RESET}|Box:    Row 2 Complete|State:  Placed 7, 3"
-    "${C_CYAN}5${T_RESET}  ${C_YELLOW}4${T_RESET}  ${C_BLUE}2${T_RESET} |${C_ORANGE}7${T_RESET}  ${C_PURPLE}8${T_RESET}  ${C_CYAN}3${T_RESET} |${C_GREEN}1${T_RESET}  ${C_PURPLE}6${T_RESET}  ${C_RED}9${T_RESET} |Method: ${C_GREEN}GRID FULL!${T_RESET}|Box:    All 1..9 Valid|State:  Validated!"
+    "${C_CYAN}5${T_RESET}  ${T_GRAY}·${T_RESET}  ${C_BLUE}2${T_RESET} |${T_GRAY}·${T_RESET}  ${C_PURPLE}8${T_RESET}  ${T_GRAY}·${T_RESET} |${C_GREEN}1${T_RESET}  ${T_GRAY}·${T_RESET}  ${C_RED}9${T_RESET} |Method:  ${T_CYAN}Candidate Scan${T_RESET}|Box:     Grid Center #5|State:   Candidates..."
+    "${C_CYAN}5${T_RESET}  ${C_YELLOW}4${T_RESET}  ${C_BLUE}2${T_RESET} |${T_GRAY}·${T_RESET}  ${C_PURPLE}8${T_RESET}  ${T_GRAY}·${T_RESET} |${C_GREEN}1${T_RESET}  ${T_GRAY}·${T_RESET}  ${C_RED}9${T_RESET} |Method:  ${T_CYAN}Naked Single${T_RESET}|Box:     Row 1 Column 2|State:   Placed 4"
+    "${C_CYAN}5${T_RESET}  ${C_YELLOW}4${T_RESET}  ${C_BLUE}2${T_RESET} |${C_ORANGE}7${T_RESET}  ${C_PURPLE}8${T_RESET}  ${C_CYAN}3${T_RESET} |${C_GREEN}1${T_RESET}  ${T_GRAY}·${T_RESET}  ${C_RED}9${T_RESET} |Method:  ${T_CYAN}Box Eliminate${T_RESET}|Box:     Row 2 Complete|State:   Placed 7, 3"
+    "${C_CYAN}5${T_RESET}  ${C_YELLOW}4${T_RESET}  ${C_BLUE}2${T_RESET} |${C_ORANGE}7${T_RESET}  ${C_PURPLE}8${T_RESET}  ${C_CYAN}3${T_RESET} |${C_GREEN}1${T_RESET}  ${C_PURPLE}6${T_RESET}  ${C_RED}9${T_RESET} |Method:  ${C_GREEN}GRID FULL!${T_RESET}|Box:     All 1..9 Valid|State:   Validated!"
   )
 
   # ── 3: 2048 3x3 Number Board ──
   local -a game2048_cards=(
-    "${C_CYAN} 2 ${T_RESET} ${C_CYAN} 2 ${T_RESET} ${T_GRAY} · ${T_RESET}|${C_YELLOW} 4 ${T_RESET} ${C_YELLOW} 4 ${T_RESET} ${T_GRAY} · ${T_RESET}|${C_RED}16 ${T_RESET} ${C_PURPLE}64 ${T_RESET} ${T_GRAY} · ${T_RESET}|Move:   ${T_ORANGE}Swipe Left ←${T_RESET}|Combo:  Double Merge|Target: 2048 Master"
-    "${C_YELLOW} 4 ${T_RESET} ${T_GRAY} · ${T_RESET} ${T_GRAY} · ${T_RESET}|${C_ORANGE} 8 ${T_RESET} ${T_GRAY} · ${T_RESET} ${T_GRAY} · ${T_RESET}|${C_RED}16 ${T_RESET} ${C_PURPLE}64 ${T_RESET} ${T_GRAY} · ${T_RESET}|Move:   ${T_ORANGE}Swipe Down ↓${T_RESET}|Combo:  Cascade 8+16|Target: 2048 Master"
-    "${C_BLUE}128${T_RESET} ${C_PURPLE}256${T_RESET} ${T_GRAY} · ${T_RESET}|${C_YELLOW}512${T_RESET} ${C_YELLOW}512${T_RESET} ${T_GRAY} · ${T_RESET}|${C_GREEN}1024${T_RESET} ${C_GREEN}1024${T_RESET}${T_GRAY}·${T_RESET}|Move:   ${T_ORANGE}Merge 1024!${T_RESET}|Combo:  COMBO x4!|Target: MAX TILE!"
-    "${C_BLUE}128${T_RESET} ${C_PURPLE}256${T_RESET} ${T_GRAY} · ${T_RESET}|${C_YELLOW}512${T_RESET} ${T_GRAY} · ${T_RESET} ${T_GRAY} · ${T_RESET}|${C_GREEN}✨ 2048 ✨${T_RESET} |Move:   ${C_GREEN}2048 WON!${T_RESET}|Combo:  Score: 28,400|Target: Achieved!"
+    "${C_CYAN} 2 ${T_RESET} ${C_CYAN} 2 ${T_RESET} ${T_GRAY} · ${T_RESET}|${C_YELLOW} 4 ${T_RESET} ${C_YELLOW} 4 ${T_RESET} ${T_GRAY} · ${T_RESET}|${C_RED}16 ${T_RESET} ${C_PURPLE}64 ${T_RESET} ${T_GRAY} · ${T_RESET}|Move:    ${T_ORANGE}Swipe Left ←${T_RESET}|Combo:   Double Merge|Target:  2048 Master"
+    "${C_YELLOW} 4 ${T_RESET} ${T_GRAY} · ${T_RESET} ${T_GRAY} · ${T_RESET}|${C_ORANGE} 8 ${T_RESET} ${T_GRAY} · ${T_RESET} ${T_GRAY} · ${T_RESET}|${C_RED}16 ${T_RESET} ${C_PURPLE}64 ${T_RESET} ${T_GRAY} · ${T_RESET}|Move:    ${T_ORANGE}Swipe Down ↓${T_RESET}|Combo:   Cascade 8+16|Target:  2048 Master"
+    "${C_BLUE}128${T_RESET} ${C_PURPLE}256${T_RESET} ${T_GRAY} · ${T_RESET}|${C_YELLOW}512${T_RESET} ${C_YELLOW}512${T_RESET} ${T_GRAY} · ${T_RESET}|${C_GREEN}1024${T_RESET} ${C_GREEN}1024${T_RESET}${T_GRAY}·${T_RESET}|Move:    ${T_ORANGE}Merge 1024!${T_RESET}|Combo:   COMBO x4!|Target:  MAX TILE!"
+    "${C_BLUE}128${T_RESET} ${C_PURPLE}256${T_RESET} ${T_GRAY} · ${T_RESET}|${C_YELLOW}512${T_RESET} ${T_GRAY} · ${T_RESET} ${T_GRAY} · ${T_RESET}|${C_GREEN}✨ 2048 ✨${T_RESET} |Move:    ${C_GREEN}2048 WON!${T_RESET}|Combo:   Score: 28,400|Target:  Achieved!"
   )
 
   # ── 4: Crossword 3x3 Word Box ──
   local -a crossword_cards=(
-    "${C_CYAN}P${T_RESET} ${C_CYAN}O${T_RESET} ${C_CYAN}L${T_RESET} ${C_CYAN}Y${T_RESET} |${T_GRAY}■${T_RESET} ${T_GRAY}·${T_RESET} ${T_GRAY}·${T_RESET} ${T_GRAY}·${T_RESET} |${C_PURPLE}M${T_RESET} ${C_PURPLE}I${T_RESET} ${C_PURPLE}N${T_RESET} ${C_PURPLE}O${T_RESET} |Clue:   ${T_PURPLE}1-Across: Shell${T_RESET}|Word:   P O L Y|State:  Solving..."
-    "${C_CYAN}P${T_RESET} ${C_CYAN}O${T_RESET} ${C_CYAN}L${T_RESET} ${C_CYAN}Y${T_RESET} |${T_GRAY}■${T_RESET} ${C_YELLOW}D${T_RESET} ${C_YELLOW}O${T_RESET} ${C_YELLOW}T${T_RESET} |${C_PURPLE}M${T_RESET} ${C_PURPLE}I${T_RESET} ${C_PURPLE}N${T_RESET} ${C_PURPLE}O${T_RESET} |Clue:   ${T_PURPLE}1-Down: Dotfiles${T_RESET}|Word:   D O T|State:  Intersecting"
-    "${C_CYAN}P${T_RESET} ${C_CYAN}O${T_RESET} ${C_CYAN}L${T_RESET} ${C_CYAN}Y${T_RESET} |${C_GREEN}O${T_RESET} ${C_GREEN}M${T_RESET} ${C_GREEN}I${T_RESET} ${C_GREEN}N${T_RESET} |${C_GREEN}O${T_RESET} ${T_GRAY}■${T_RESET} ${C_YELLOW}F${T_RESET} ${C_YELLOW}X${T_RESET} |Clue:   ${C_GREEN}ALL MATCH!${T_RESET}|Word:   P O L Y O M I N O|State:  Grid Complete"
+    "${C_CYAN}P${T_RESET} ${C_CYAN}O${T_RESET} ${C_CYAN}L${T_RESET} ${C_CYAN}Y${T_RESET} |${T_GRAY}■${T_RESET} ${T_GRAY}·${T_RESET} ${T_GRAY}·${T_RESET} ${T_GRAY}·${T_RESET} |${C_PURPLE}M${T_RESET} ${C_PURPLE}I${T_RESET} ${C_PURPLE}N${T_RESET} ${C_PURPLE}O${T_RESET} |Clue:    ${T_PURPLE}1-Across: Shell${T_RESET}|Word:    P O L Y|State:   Solving..."
+    "${C_CYAN}P${T_RESET} ${C_CYAN}O${T_RESET} ${C_CYAN}L${T_RESET} ${C_CYAN}Y${T_RESET} |${T_GRAY}■${T_RESET} ${C_YELLOW}D${T_RESET} ${C_YELLOW}O${T_RESET} ${C_YELLOW}T${T_RESET} |${C_PURPLE}M${T_RESET} ${C_PURPLE}I${T_RESET} ${C_PURPLE}N${T_RESET} ${C_PURPLE}O${T_RESET} |Clue:    ${T_PURPLE}1-Down: Dotfiles${T_RESET}|Word:    D O T|State:   Intersecting"
+    "${C_CYAN}P${T_RESET} ${C_CYAN}O${T_RESET} ${C_CYAN}L${T_RESET} ${C_CYAN}Y${T_RESET} |${C_GREEN}O${T_RESET} ${C_GREEN}M${T_RESET} ${C_GREEN}I${T_RESET} ${C_GREEN}N${T_RESET} |${C_GREEN}O${T_RESET} ${T_GRAY}■${T_RESET} ${C_YELLOW}F${T_RESET} ${C_YELLOW}X${T_RESET} |Clue:    ${C_GREEN}ALL MATCH!${T_RESET}|Word:    P O L Y O M I N O|State:   Grid Complete"
   )
 
   local start_time
@@ -585,7 +585,7 @@ prompt_checkbox_menu() {
 
     draw_checkbox_menu() {
       echo -e "  ${T_PURPLE}┌── POLYOMINO // OPTIONAL COMPONENT CHECKBOXES ─────────────────────────────┐${T_RESET}" >&2
-      echo -e "  ${T_PURPLE}│${T_RESET}  ${T_GRAY}Nav: ↑/↓/j/k  •  Toggle: [1-8]  •  Confirm: Enter/Space/l  •  Cancel: Esc/q${T_RESET}  ${T_PURPLE}│${T_RESET}" >&2
+      echo -e "  ${T_PURPLE}│${T_RESET}  ${T_GRAY}Nav: ↑/↓/j/k  •  Toggle: Space/[1-8]  •  Confirm: Enter  •  Exit: Esc/q${T_RESET}     ${T_PURPLE}│${T_RESET}" >&2
       echo -e "  ${T_PURPLE}├───────────────────────────────────────────────────────────────────────────┤${T_RESET}" >&2
       local i
       for i in "${!labels[@]}"; do
@@ -606,14 +606,12 @@ prompt_checkbox_menu() {
         printf "  ${T_PURPLE}│${T_RESET} %b%b %b %b%-60.60s${T_RESET} ${T_PURPLE}│${T_RESET}\n" "$pointer" "$box" "$num_tag" "$item_color" "${labels[$i]}" >&2
       done
       echo -e "  ${T_PURPLE}├───────────────────────────────────────────────────────────────────────────┤${T_RESET}" >&2
-      echo -e "  ${T_PURPLE}│${T_RESET}  ${T_CYAN}[A]${T_RESET} All     ${T_YELLOW}[N]${T_RESET} None     ${T_GREEN}[Enter/Space/l]${T_RESET} Confirm     ${T_RED}[Esc/q]${T_RESET} Cancel   ${T_PURPLE}│${T_RESET}" >&2
+      echo -e "  ${T_PURPLE}│${T_RESET}  ${T_CYAN}[A]${T_RESET} Select All     ${T_YELLOW}[N]${T_RESET} Clear All     ${T_GREEN}[Enter]${T_RESET} Confirm     ${T_RED}[Esc/q]${T_RESET} Exit      ${T_PURPLE}│${T_RESET}" >&2
       echo -e "  ${T_PURPLE}└───────────────────────────────────────────────────────────────────────────┘${T_RESET}" >&2
     }
 
     local total_lines=$((num_items + 6))
     draw_checkbox_menu
-
-    local cancelled=0
 
     while true; do
       local key=""
@@ -641,9 +639,11 @@ prompt_checkbox_menu() {
         elif [ "$rest" = "[B" ]; then
           key="DOWN"
         elif [ -z "$rest" ]; then
-          # Standalone Escape key was pressed -> Cancel
-          cancelled=1
-          break
+          # Standalone Escape key was pressed -> Cancel and Exit
+          echo -en "\033[?25h" >&2
+          echo "" >&2
+          echo -e "  ${T_YELLOW}[INFO]${T_RESET} Installation cancelled by user (Escape). Exiting." >&2
+          exit 0
         fi
       fi
 
@@ -653,6 +653,9 @@ prompt_checkbox_menu() {
           ;;
         DOWN|j|J)
           cursor=$(( (cursor + 1) % num_items ))
+          ;;
+        " ")
+          states[$cursor]=$(( 1 - states[$cursor] ))
           ;;
         [1-8])
           local idx=$((key - 1))
@@ -665,10 +668,12 @@ prompt_checkbox_menu() {
           for i in "${!states[@]}"; do states[$i]=0; done
           ;;
         q|Q)
-          cancelled=1
-          break
+          echo -en "\033[?25h" >&2
+          echo "" >&2
+          echo -e "  ${T_YELLOW}[INFO]${T_RESET} Installation cancelled by user (q). Exiting." >&2
+          exit 0
           ;;
-        ""|$'\n'|$'\r'|" "|l|L)
+        ""|$'\n'|$'\r')
           break
           ;;
       esac
@@ -679,11 +684,6 @@ prompt_checkbox_menu() {
 
     echo -en "\033[?25h" >&2
     echo "" >&2
-
-    if [ "$cancelled" -eq 1 ]; then
-      echo -e "  ${T_YELLOW}[WARN]${T_RESET} Component selection cancelled (Esc/q). Proceeding with minimal default components." >&2
-      states=(0 0 0 0 0 0 0 0)
-    fi
   fi
 
   [ "${states[0]}" -eq 1 ] && ENABLE_CHROME=true || ENABLE_CHROME=false
