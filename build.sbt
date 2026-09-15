@@ -16,7 +16,7 @@ version := {
 }
 
 licenses := Seq(
-  "BSD-3-Clause" -> url("https://opensource.org/licenses/BSD-3-Clause")
+  "GPL-3.0" -> url("https://www.gnu.org/licenses/gpl-3.0.html")
 )
 homepage := Some(url("https://github.com/petrolal/polyomino.dotfiles"))
 scmInfo := Some(ScmInfo(url("https://github.com/petrolal/polyomino.dotfiles"), "scm:git@github.com:petrolal/polyomino.dotfiles.git"))

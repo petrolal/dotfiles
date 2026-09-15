@@ -5,7 +5,7 @@ pkgrel=1
 pkgdesc="Sway dotfiles installer with Scala 3 + GraalVM native image"
 arch=('x86_64')
 url="https://github.com/petrolal/polyomino.dotfiles"
-license=('BSD-3-Clause')
+license=('GPL-3.0-or-later')
 depends=(
   'sway'
   'waybar'

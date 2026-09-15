@@ -201,6 +201,4 @@ cp target/native-image/polyomino ~/.local/bin/polyomino
 
 ## License
 
-This software is distributed solely under the **BSD 3-Clause License**. Mandatory attribution to **Lucas Petrola** is required for any redistributions of the source code or binary forms. See the [LICENSE](LICENSE) file for complete details.
-
-
+This project is licensed under the GNU General Public License v3.0 (GPL-3.0). See the [LICENSE](LICENSE) file for complete details.

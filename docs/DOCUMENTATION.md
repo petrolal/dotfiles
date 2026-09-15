@@ -140,4 +140,4 @@ git push
 
 ## 6. License
 
-This project is distributed solely under the **BSD 3-Clause License**. Mandatory attribution to **Lucas Petrola** is required for any redistributions. See [LICENSE](../LICENSE) for details.
+This project is distributed under the [GNU General Public License v3.0 (GPL-3.0)](../LICENSE). See [LICENSE](../LICENSE) for details.
