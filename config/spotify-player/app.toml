@@ -1,4 +1,4 @@
-client_id = "48b030c44e044efba67f266a4cfb1c19"
+# client_id is omitted to use the bundled default Spotify client ID (avoids rate limit 429/403 errors from new Spotify developer apps)
 client_port = 8080
 login_redirect_uri = "http://127.0.0.1:8989/login"
 playback_format = """
