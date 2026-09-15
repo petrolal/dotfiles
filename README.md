@@ -1,4 +1,4 @@
-# polyomino-dotfiles
+# Polyomino OS - Dotfiles for Sway
 
 Personal Sway/Wayland desktop configuration — native
 Sway keybindings, wofi launcher, waybar status bar, kitty terminal, and zsh
@@ -175,28 +175,28 @@ cp target/native-image/polyomino ~/.local/bin/polyomino
 
 `$mod` = Mod4 (Super/Windows key). Full list available live via `polyomino-whichkey` (`Mod+Shift+?`).
 
-| Keys                    | Action                    | Description                                                |
-| ----------------------- | ------------------------- | ---------------------------------------------------------- |
-| `Mod+Return`            | Open standard terminal    | Plain Kitty terminal in active workspace                   |
-| `Mod+M`                 | **Polyomino Menu**        | Quick menu (power, themes, wallpapers, configs, health)    |
-| `Mod+P`                 | **Neovim Project Picker** | Search `~/Projects` and open in dedicated Workspace 2      |
-| `Mod+D`                 | App launcher              | Wofi application launcher                                  |
-| `Mod+Shift+Return` / `Mod+Shift+W` | Drag floating window | Draw interactive floating terminal with slurp |
-| `Mod+Shift+F`           | File manager TUI          | `yazi` file manager                                        |
-| `Mod+Shift+M`           | Spotify player TUI        | `spotify_player`                                           |
-| `Mod+Shift+U`           | Bluetooth manager TUI     | `bluetui`                                                  |
-| `Mod+Shift+A`           | Email client TUI          | `aerc`                                                     |
-| `Mod+Shift+T`           | Theme picker GUI          | `polyomino-theme-picker`                                   |
-| `Mod+Shift+P`           | Wallpaper picker GUI      | `polyomino-wallpaper`                                      |
-| `Mod+F6`                | Next wallpaper            | Cycle next wallpaper in active theme                       |
-| `Mod+F5`                | Cycle desktop flavor      | Cycle theme flavor (matriz / encruza / caravela / aruanda) |
-| `Mod+Shift+?` / `Mod+/` | Which-key cheatsheet      | `polyomino-whichkey` live Sway shortcuts                   |
-| `Mod+Shift+Q`           | Kill window               | Close focused window                                       |
-| `Mod+Shift+C`           | Reload Sway config        | Re-read Sway configuration (`swaymsg reload`)              |
-| `Mod+Escape`            | Lock screen               | 3D Rubik's Cube lockscreen (`polyomino lock`)              |
-| `Print`                 | Full screenshot           | Capture full screen                                        |
-| `Mod+Print`             | Region screenshot         | Interactive rectangle selection screenshot                 |
-| `Mod+Shift+Print`       | Window screenshot         | Capture active window                                      |
+| Keys                               | Action                    | Description                                                |
+| ---------------------------------- | ------------------------- | ---------------------------------------------------------- |
+| `Mod+Return`                       | Open standard terminal    | Plain Kitty terminal in active workspace                   |
+| `Mod+M`                            | **Polyomino Menu**        | Quick menu (power, themes, wallpapers, configs, health)    |
+| `Mod+P`                            | **Neovim Project Picker** | Search `~/Projects` and open in dedicated Workspace 2      |
+| `Mod+D`                            | App launcher              | Wofi application launcher                                  |
+| `Mod+Shift+Return` / `Mod+Shift+W` | Drag floating window      | Draw interactive floating terminal with slurp              |
+| `Mod+Shift+F`                      | File manager TUI          | `yazi` file manager                                        |
+| `Mod+Shift+M`                      | Spotify player TUI        | `spotify_player`                                           |
+| `Mod+Shift+U`                      | Bluetooth manager TUI     | `bluetui`                                                  |
+| `Mod+Shift+A`                      | Email client TUI          | `aerc`                                                     |
+| `Mod+Shift+T`                      | Theme picker GUI          | `polyomino-theme-picker`                                   |
+| `Mod+Shift+P`                      | Wallpaper picker GUI      | `polyomino-wallpaper`                                      |
+| `Mod+F6`                           | Next wallpaper            | Cycle next wallpaper in active theme                       |
+| `Mod+F5`                           | Cycle desktop flavor      | Cycle theme flavor (matriz / encruza / caravela / aruanda) |
+| `Mod+Shift+?` / `Mod+/`            | Which-key cheatsheet      | `polyomino-whichkey` live Sway shortcuts                   |
+| `Mod+Shift+Q`                      | Kill window               | Close focused window                                       |
+| `Mod+Shift+C`                      | Reload Sway config        | Re-read Sway configuration (`swaymsg reload`)              |
+| `Mod+Escape`                       | Lock screen               | 3D Rubik's Cube lockscreen (`polyomino lock`)              |
+| `Print`                            | Full screenshot           | Capture full screen                                        |
+| `Mod+Print`                        | Region screenshot         | Interactive rectangle selection screenshot                 |
+| `Mod+Shift+Print`                  | Window screenshot         | Capture active window                                      |
 
 ---
 
