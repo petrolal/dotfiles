@@ -243,6 +243,11 @@ assign [class="btop"] $ws1
 assign [app_id="htop"] $ws1
 assign [class="htop"] $ws1
 assign [app_id="kitty" title="(?i).*(btop|htop|system-monitor).*"] $ws1
+for_window [app_id="btop"] move to workspace $ws1, workspace $ws1
+for_window [class="btop"] move to workspace $ws1, workspace $ws1
+for_window [app_id="htop"] move to workspace $ws1, workspace $ws1
+for_window [class="htop"] move to workspace $ws1, workspace $ws1
+for_window [app_id="kitty" title="(?i).*(btop|htop|system-monitor).*"] move to workspace $ws1, workspace $ws1
 
 # 2: DEV (Tetravim, Neovim project sessions)
 assign [app_id="nvim-project"] $ws2
@@ -257,6 +262,10 @@ for_window [app_id="nvim-project"] move to workspace $ws2, workspace $ws2
 for_window [class="nvim-project"] move to workspace $ws2, workspace $ws2
 for_window [app_id="tetravim"] move to workspace $ws2, workspace $ws2
 for_window [class="tetravim"] move to workspace $ws2, workspace $ws2
+for_window [app_id="code"] move to workspace $ws2, workspace $ws2
+for_window [class="Code"] move to workspace $ws2, workspace $ws2
+for_window [class="jetbrains-idea"] move to workspace $ws2, workspace $ws2
+for_window [class="jetbrains-idea-ce"] move to workspace $ws2, workspace $ws2
 
 # 3: WEB (Browser, API clients)
 assign [app_id="firefox"] $ws3
@@ -275,6 +284,22 @@ assign [app_id="insomnia"] $ws3
 assign [class="Insomnia"] $ws3
 assign [app_id="bruno"] $ws3
 assign [class="Bruno"] $ws3
+for_window [app_id="firefox"] move to workspace $ws3, workspace $ws3
+for_window [class="firefox"] move to workspace $ws3, workspace $ws3
+for_window [app_id="google-chrome"] move to workspace $ws3, workspace $ws3
+for_window [class="google-chrome"] move to workspace $ws3, workspace $ws3
+for_window [app_id="google-chrome-stable"] move to workspace $ws3, workspace $ws3
+for_window [class="Google-chrome"] move to workspace $ws3, workspace $ws3
+for_window [app_id="microsoft-edge"] move to workspace $ws3, workspace $ws3
+for_window [class="Microsoft-edge"] move to workspace $ws3, workspace $ws3
+for_window [app_id="chromium"] move to workspace $ws3, workspace $ws3
+for_window [class="Chromium"] move to workspace $ws3, workspace $ws3
+for_window [app_id="postman"] move to workspace $ws3, workspace $ws3
+for_window [class="Postman"] move to workspace $ws3, workspace $ws3
+for_window [app_id="insomnia"] move to workspace $ws3, workspace $ws3
+for_window [class="Insomnia"] move to workspace $ws3, workspace $ws3
+for_window [app_id="bruno"] move to workspace $ws3, workspace $ws3
+for_window [class="Bruno"] move to workspace $ws3, workspace $ws3
 
 # 4: MEDIA (Media players, music, video, Steam client application)
 assign [app_id="spotify"] $ws4
@@ -310,10 +335,23 @@ assign [app_id="vesktop"] $ws5
 assign [class="vesktop"] $ws5
 assign [app_id="Slack"] $ws5
 assign [class="Slack"] $ws5
+for_window [app_id="kitty" title="aerc"] move to workspace $ws5, workspace $ws5
+for_window [app_id="thunderbird"] move to workspace $ws5, workspace $ws5
+for_window [class="Thunderbird"] move to workspace $ws5, workspace $ws5
+for_window [app_id="telegramdesktop"] move to workspace $ws5, workspace $ws5
+for_window [class="TelegramDesktop"] move to workspace $ws5, workspace $ws5
+for_window [app_id="(?i)discord.*"] move to workspace $ws5, workspace $ws5
+for_window [class="(?i)discord.*"] move to workspace $ws5, workspace $ws5
+for_window [app_id="vesktop"] move to workspace $ws5, workspace $ws5
+for_window [class="vesktop"] move to workspace $ws5, workspace $ws5
+for_window [app_id="Slack"] move to workspace $ws5, workspace $ws5
+for_window [class="Slack"] move to workspace $ws5, workspace $ws5
 
 # 6: NOTES
 assign [app_id="obsidian"] $ws6
 assign [class="obsidian"] $ws6
+for_window [app_id="obsidian"] move to workspace $ws6, workspace $ws6
+for_window [class="obsidian"] move to workspace $ws6, workspace $ws6
 
 # 7: INFRA
 assign [app_id="kitty" title="infra"] $ws7
@@ -321,6 +359,11 @@ assign [app_id="docker-desktop"] $ws7
 assign [class="Docker Desktop"] $ws7
 assign [app_id="lens"] $ws7
 assign [class="Lens"] $ws7
+for_window [app_id="kitty" title="infra"] move to workspace $ws7, workspace $ws7
+for_window [app_id="docker-desktop"] move to workspace $ws7, workspace $ws7
+for_window [class="Docker Desktop"] move to workspace $ws7, workspace $ws7
+for_window [app_id="lens"] move to workspace $ws7, workspace $ws7
+for_window [class="Lens"] move to workspace $ws7, workspace $ws7
 
 # 8: GAMES (Steam games, TETR.IO, Heroic, Lutris, Gamescope, Emulators, Wine/Proton)
 # Steam Games (running games launched via Steam)

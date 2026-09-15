@@ -158,7 +158,7 @@ def pam_authenticate_user(username: str, password: str, service: str = "swaylock
 # ---------------------------------------------------------------------------
 # Strict Polyomino Minimalist Tron Tokens & Shaders
 #
-# Colors follow the currently active polyomino.dotfiles sway theme
+# Colors follow the currently active polyomino-dotfiles sway theme
 # (~/.config/polyomino/theme/state -> themes/palettes/<FLAVOR>.conf), with
 # the values below kept as the built-in fallback if that theme data can't
 # be found (e.g. running the script outside the dotfiles checkout).

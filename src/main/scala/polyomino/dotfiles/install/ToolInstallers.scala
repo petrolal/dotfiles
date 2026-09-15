@@ -317,22 +317,38 @@ object ToolInstallers:
       if !currentShell.endsWith("zsh") then
         println(s"  \u001b[36m[INFO]\u001b[0m Setting default shell to $zshBin...")
         var shellSet = false
-        // Try passwordless sudo usermod / sudo chsh first
+        // 1. Try passwordless sudo usermod / sudo chsh first (quick, never prompts)
         if currentUser.nonEmpty then
           try
-            val res = os.proc("sudo", "usermod", "-s", zshBin, currentUser).call(check = false, stdin = os.Pipe)
+            val res = os.proc("sudo", "-n", "usermod", "-s", zshBin, currentUser).call(check = false, stdin = os.Pipe)
             if res.exitCode == 0 then shellSet = true
           catch case _: Exception => ()
           if !shellSet then
             try
-              val res = os.proc("sudo", "chsh", "-s", zshBin, currentUser).call(check = false, stdin = os.Pipe)
+              val res = os.proc("sudo", "-n", "chsh", "-s", zshBin, currentUser).call(check = false, stdin = os.Pipe)
               if res.exitCode == 0 then shellSet = true
             catch case _: Exception => ()
 
-        // If not root/sudo, attempt user chsh with piped stdin so it won't hang on PAM
+        // 2. Passwordless sudo failed; if attached to a real terminal, let sudo/chsh
+        // prompt for a password interactively instead of silently giving up.
+        val interactive = System.console() != null
+          && !sys.env.get("CI").contains("true")
+          && !sys.env.get("NON_INTERACTIVE").contains("true")
+        if !shellSet && interactive && currentUser.nonEmpty then
+          try
+            val res = os.proc("sudo", "chsh", "-s", zshBin, currentUser)
+              .call(check = false, stdin = os.Inherit, stdout = os.Inherit, stderr = os.Inherit)
+            if res.exitCode == 0 then shellSet = true
+          catch case _: Exception => ()
+
+        // 3. Not root/sudo-able: attempt the user's own chsh (may prompt for their password via PAM)
         if !shellSet then
           try
-            val res = os.proc("chsh", "-s", zshBin).call(check = false, stdin = os.Pipe)
+            val res =
+              if interactive then
+                os.proc("chsh", "-s", zshBin).call(check = false, stdin = os.Inherit, stdout = os.Inherit, stderr = os.Inherit)
+              else
+                os.proc("chsh", "-s", zshBin).call(check = false, stdin = os.Pipe)
             if res.exitCode == 0 then shellSet = true
           catch case _: Exception => ()
 
