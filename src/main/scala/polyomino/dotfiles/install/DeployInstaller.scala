@@ -260,8 +260,9 @@ object DeployInstaller:
     catch
       case e: Exception => println(s"  [33m[NOTE][0m Manifest write failed: ${e.getMessage}")
 
-    // 5. Ensure ~/.bashrc has seamless interactive auto-switch to Zsh
+    // 5. Ensure default shell is set to Zsh and ~/.bashrc has seamless interactive auto-switch to Zsh
     if !ctx.isTest then
+      ToolInstallers.ensureDefaultShell(ctx)
       val bashrcFile = ctx.home / ".bashrc"
       if os.exists(bashrcFile) then
         val content = os.read(bashrcFile)
@@ -270,13 +271,19 @@ object DeployInstaller:
           val snippet =
             s"""
                |$marker
-               |if [ -t 1 ] && [ -n "$$PS1" ] && [ -z "$$POLYOMINO_SHELL_SWITCHED" ] && command -v zsh >/dev/null 2>&1; then
+               |if [ -t 1 ] && [ -z "$$POLYOMINO_SHELL_SWITCHED" ] && command -v zsh >/dev/null 2>&1; then
                |  export POLYOMINO_SHELL_SWITCHED=1
                |  export SHELL="$$(command -v zsh)"
                |  exec zsh
                |fi
                |""".stripMargin
           os.write.append(bashrcFile, snippet)
+        else if content.contains("[ -n \"$PS1\" ]") then
+          val updatedContent = content.replace(
+            "if [ -t 1 ] && [ -n \"$PS1\" ] && [ -z \"$POLYOMINO_SHELL_SWITCHED\" ]",
+            "if [ -t 1 ] && [ -z \"$POLYOMINO_SHELL_SWITCHED\" ]"
+          )
+          os.write.over(bashrcFile, updatedContent)
 
     println(s"  [32m[OK][0m Created $configSymlinkCount config symlinks and $binSymlinkCount CLI subcommand symlinks")
     println("\n[1;32m[SUCCESS][0m polyomino-dotfiles deployment complete!")

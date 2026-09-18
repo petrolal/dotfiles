@@ -305,60 +305,72 @@ object ToolInstallers:
       catch case _: Exception => ()
 
     // 3. Set default shell to Zsh (non-blocking, trying sudo usermod / sudo chsh first, then safe user chsh)
-    val zshBin =
-      if os.exists(os.root / "usr" / "bin" / "zsh") then "/usr/bin/zsh"
-      else if os.exists(os.root / "bin" / "zsh") then "/bin/zsh"
-      else if isAvailable("zsh") then os.proc("which", "zsh").call(check = false).out.text().trim
-      else ""
+    ensureDefaultShell(ctx)
+    pkgRes
 
-    if zshBin.nonEmpty then
-      val currentUser = sys.env.getOrElse("USER", sys.env.getOrElse("LOGNAME", ""))
-      val currentShell = sys.env.getOrElse("SHELL", "")
-      if !currentShell.endsWith("zsh") then
-        println(s"  \u001b[36m[INFO]\u001b[0m Setting default shell to $zshBin...")
-        var shellSet = false
-        // 1. Try passwordless sudo usermod / sudo chsh first (quick, never prompts)
-        if currentUser.nonEmpty then
-          try
-            val res = os.proc("sudo", "-n", "usermod", "-s", zshBin, currentUser).call(check = false, stdin = os.Pipe)
-            if res.exitCode == 0 then shellSet = true
-          catch case _: Exception => ()
-          if !shellSet then
+  def ensureDefaultShell(ctx: Context): Unit =
+    if ctx.isTest then ()
+    else
+      val zshBin =
+        if os.exists(os.root / "usr" / "bin" / "zsh") then "/usr/bin/zsh"
+        else if os.exists(os.root / "bin" / "zsh") then "/bin/zsh"
+        else if isAvailable("zsh") then
+          try os.proc("which", "zsh").call(check = false).out.text().trim catch case _: Exception => ""
+        else ""
+
+      if zshBin.nonEmpty then
+        val currentUser = sys.env.getOrElse("USER", sys.env.getOrElse("LOGNAME", ""))
+        val configuredShell =
+          if currentUser.nonEmpty then
             try
-              val res = os.proc("sudo", "-n", "chsh", "-s", zshBin, currentUser).call(check = false, stdin = os.Pipe)
+              val res = os.proc("getent", "passwd", currentUser).call(check = false)
+              if res.exitCode == 0 then res.out.text().trim.split(":").lastOption.getOrElse("")
+              else sys.env.getOrElse("SHELL", "")
+            catch case _: Exception => sys.env.getOrElse("SHELL", "")
+          else sys.env.getOrElse("SHELL", "")
+
+        if !configuredShell.endsWith("zsh") then
+          println(s"  \u001b[36m[INFO]\u001b[0m Setting default shell to $zshBin...")
+          var shellSet = false
+          // 1. Try passwordless sudo usermod / sudo chsh first (quick, never prompts)
+          if currentUser.nonEmpty then
+            try
+              val res = os.proc("sudo", "-n", "usermod", "-s", zshBin, currentUser).call(check = false, stdin = os.Pipe)
+              if res.exitCode == 0 then shellSet = true
+            catch case _: Exception => ()
+            if !shellSet then
+              try
+                val res = os.proc("sudo", "-n", "chsh", "-s", zshBin, currentUser).call(check = false, stdin = os.Pipe)
+                if res.exitCode == 0 then shellSet = true
+              catch case _: Exception => ()
+
+          // 2. Passwordless sudo failed; if attached to a real terminal, let sudo/chsh
+          // prompt for a password interactively instead of silently giving up.
+          val interactive = System.console() != null
+            && !sys.env.get("CI").contains("true")
+            && !sys.env.get("NON_INTERACTIVE").contains("true")
+          if !shellSet && interactive && currentUser.nonEmpty then
+            try
+              val res = os.proc("sudo", "chsh", "-s", zshBin, currentUser)
+                .call(check = false, stdin = os.Inherit, stdout = os.Inherit, stderr = os.Inherit)
               if res.exitCode == 0 then shellSet = true
             catch case _: Exception => ()
 
-        // 2. Passwordless sudo failed; if attached to a real terminal, let sudo/chsh
-        // prompt for a password interactively instead of silently giving up.
-        val interactive = System.console() != null
-          && !sys.env.get("CI").contains("true")
-          && !sys.env.get("NON_INTERACTIVE").contains("true")
-        if !shellSet && interactive && currentUser.nonEmpty then
-          try
-            val res = os.proc("sudo", "chsh", "-s", zshBin, currentUser)
-              .call(check = false, stdin = os.Inherit, stdout = os.Inherit, stderr = os.Inherit)
-            if res.exitCode == 0 then shellSet = true
-          catch case _: Exception => ()
+          // 3. Not root/sudo-able: attempt the user's own chsh (may prompt for their password via PAM)
+          if !shellSet then
+            try
+              val res =
+                if interactive then
+                  os.proc("chsh", "-s", zshBin).call(check = false, stdin = os.Inherit, stdout = os.Inherit, stderr = os.Inherit)
+                else
+                  os.proc("chsh", "-s", zshBin).call(check = false, stdin = os.Pipe)
+              if res.exitCode == 0 then shellSet = true
+            catch case _: Exception => ()
 
-        // 3. Not root/sudo-able: attempt the user's own chsh (may prompt for their password via PAM)
-        if !shellSet then
-          try
-            val res =
-              if interactive then
-                os.proc("chsh", "-s", zshBin).call(check = false, stdin = os.Inherit, stdout = os.Inherit, stderr = os.Inherit)
-              else
-                os.proc("chsh", "-s", zshBin).call(check = false, stdin = os.Pipe)
-            if res.exitCode == 0 then shellSet = true
-          catch case _: Exception => ()
-
-        if shellSet then
-          println(s"  \u001b[32m[OK]\u001b[0m Default shell set to $zshBin.")
-        else
-          println(s"  \u001b[33m[NOTE]\u001b[0m Direct shell change skipped (interactive password required); auto-switch hook in ~/.bashrc active.")
-
-
-    pkgRes
+          if shellSet then
+            println(s"  \u001b[32m[OK]\u001b[0m Default shell set to $zshBin.")
+          else
+            println(s"  \u001b[33m[NOTE]\u001b[0m Direct shell change skipped (interactive password required); auto-switch hook in ~/.bashrc active.")
 
   /** Install a SDKMAN! candidate and mark it the default so its
     * `current/bin` symlink is populated. SDKMAN!'s init script (sourced

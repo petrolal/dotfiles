@@ -1118,16 +1118,47 @@ setup_zsh_and_ohmyzsh() {
     fi
 
     # 3. Ensure ~/.bashrc seamless interactive auto-switch to Zsh
-    if [ -f "$HOME/.bashrc" ] && ! grep -q "Polyomino Zsh auto-switch" "$HOME/.bashrc"; then
-      cat << 'EOF' >> "$HOME/.bashrc"
+    if [ -f "$HOME/.bashrc" ]; then
+      if ! grep -q "Polyomino Zsh auto-switch" "$HOME/.bashrc"; then
+        cat << 'EOF' >> "$HOME/.bashrc"
 
 # Polyomino Zsh auto-switch
-if [ -t 1 ] && [ -n "$PS1" ] && [ -z "$POLYOMINO_SHELL_SWITCHED" ] && command -v zsh >/dev/null 2>&1; then
+if [ -t 1 ] && [ -z "$POLYOMINO_SHELL_SWITCHED" ] && command -v zsh >/dev/null 2>&1; then
   export POLYOMINO_SHELL_SWITCHED=1
   export SHELL="$(command -v zsh)"
   exec zsh
 fi
 EOF
+      elif grep -q '\[ -n "\$PS1" \]' "$HOME/.bashrc"; then
+        sed -i 's/if \[ -t 1 \] && \[ -n "\$PS1" \] && \[ -z "\$POLYOMINO_SHELL_SWITCHED" \]/if [ -t 1 ] && [ -z "$POLYOMINO_SHELL_SWITCHED" ]/' "$HOME/.bashrc" 2>/dev/null || true
+      fi
+    fi
+
+    # 4. Set default login shell to Zsh
+    local zsh_bin
+    zsh_bin="$(command -v zsh 2>/dev/null || true)"
+    if [ -n "$zsh_bin" ]; then
+      local current_user="${USER:-$(id -un 2>/dev/null || true)}"
+      local current_user_shell
+      current_user_shell="$(getent passwd "$current_user" 2>/dev/null | cut -d: -f7 || echo "${SHELL:-}")"
+      if [[ "$current_user_shell" != *"zsh"* ]]; then
+        # 1. Try passwordless sudo usermod / sudo chsh first (quick, non-blocking)
+        if [ -n "$current_user" ] && sudo -n usermod -s "$zsh_bin" "$current_user" >/dev/null 2>&1; then
+          :
+        elif [ -n "$current_user" ] && sudo -n chsh -s "$zsh_bin" "$current_user" >/dev/null 2>&1; then
+          :
+        elif [ -t 0 ] && [ -t 1 ] && [ -z "${CI:-}" ] && [ -z "${NON_INTERACTIVE:-}" ]; then
+          # 2. Interactive sudo or user chsh
+          if [ -n "$current_user" ]; then
+            sudo chsh -s "$zsh_bin" "$current_user" 2>/dev/null || chsh -s "$zsh_bin" 2>/dev/null || true
+          else
+            chsh -s "$zsh_bin" 2>/dev/null || true
+          fi
+        else
+          # 3. Non-interactive fallback
+          chsh -s "$zsh_bin" >/dev/null 2>&1 || true
+        fi
+      fi
     fi
   }
 
