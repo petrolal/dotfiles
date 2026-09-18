@@ -17,3 +17,9 @@ on-button-left=dismiss
 on-button-middle=dismiss-all
 on-button-right=dismiss-all
 on-touch=dismiss
+
+[app-name=kitty summary~="^[0-9]+;[0-9]+.*"]
+invisible=1
+
+[app-name=kitty body~="^[0-9]+;[0-9]+.*"]
+invisible=1

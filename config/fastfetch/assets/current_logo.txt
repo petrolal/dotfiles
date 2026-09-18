@@ -1,1 +1,1 @@
-/home/petrolal/.config/fastfetch/logos/polyomino_arch_tetris.txt
+/home/luhenr@ad.global/.config/fastfetch/logos/polyomino_debian_tetris.txt

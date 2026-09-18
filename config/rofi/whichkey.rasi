@@ -76,7 +76,7 @@ textbox-header-title {
 }
 textbox-header-subtitle {
     expand:           false;
-    str:              "Arch Linux · SwayFX";
+    str:              "Ubuntu 24.04.5 LTS · SwayFX";
     font:             "JetBrainsMono Nerd Font 9";
     text-color:       @fg-secondary;
 }

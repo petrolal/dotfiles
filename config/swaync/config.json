@@ -29,6 +29,16 @@
   "hide-on-action": true,
   "script-fail-notify": true,
   "notification-visibility": {
+    "kitty-progress-summary": {
+      "state": "ignored",
+      "app-name": "(?i)kitty",
+      "summary": "^[0-9]+;[0-9]+.*"
+    },
+    "kitty-progress-body": {
+      "state": "ignored",
+      "app-name": "(?i)kitty",
+      "body": "^[0-9]+;[0-9]+.*"
+    },
     "polyomino-osd": {
       "state": "transient",
       "app-name": "polyomino-osd"
