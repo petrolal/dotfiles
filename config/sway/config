@@ -113,10 +113,10 @@ for_window [app_id="polyomino-power-menu"] floating enable, border pixel 1, resi
 for_window [class="polyomino-power-menu"] floating enable, border pixel 1, resize set 860 880, move position center, blur enable, shadow enable
 for_window [app_id="kitty" title="(?i).*polyomino.*power-menu.*"] floating enable, border pixel 1, resize set 860 880, move position center, blur enable, shadow enable
 
-# Screen recording control panel (polyomino record-panel)
-for_window [app_id="polyomino-record-panel"] floating enable, border pixel 0, resize set 220 44, move position 20 20, blur enable, shadow enable, sticky enable
-for_window [class="polyomino-record-panel"] floating enable, border pixel 0, resize set 220 44, move position 20 20, blur enable, shadow enable, sticky enable
-for_window [app_id="kitty" title="(?i).*polyomino.*record-panel.*"] floating enable, border pixel 0, resize set 220 44, move position 20 20, blur enable, shadow enable, sticky enable
+# Screen recording status bar (polyomino record-panel)
+for_window [app_id="polyomino-record-panel"] floating enable, border pixel 0, resize set 560 40, move position 20 20, blur enable, shadow enable, sticky enable
+for_window [class="polyomino-record-panel"] floating enable, border pixel 0, resize set 560 40, move position 20 20, blur enable, shadow enable, sticky enable
+for_window [app_id="kitty" title="(?i).*polyomino.*record-panel.*"] floating enable, border pixel 0, resize set 560 40, move position 20 20, blur enable, shadow enable, sticky enable
 
 # Puzzle Micro-Utilities (Bento Floating Modals)
 for_window [app_id="(?i).*polyomino-puzzle.*"] floating enable, border pixel 1, resize set 860 800, move position center, blur enable, shadow enable

@@ -5,7 +5,7 @@ import polyomino.dotfiles.error.{CommandError, PolyominoError}
 
 import scala.util.control.NonFatal
 
-/** `record-panel` -- small floating TUI control panel shown while a
+/** `record-panel` -- small floating single-line status bar shown while a
   * `wf-recorder` capture started via `polyomino record` is active. Spawned
   * automatically by SysUtils.spawnRecordPanel in its own kitty window; not
   * meant to be launched standalone (though it degrades gracefully if run
@@ -155,8 +155,10 @@ object RecordPanel:
 
       val sb = new StringBuilder
       sb.append("\u001b[H\u001b[2J")
-      sb.append(s" $statusColor\u25cf $statusLabel\u001b[0m  \u001b[1m$timer\u001b[0m  \u001b[2m$fileLine\u001b[0m\r\n")
-      sb.append(" \u001b[32ms\u001b[0m stop  \u001b[33mp\u001b[0m pause  \u001b[31mc\u001b[0m cancel\r\n")
+      sb.append(
+        s" $statusColor\u25cf $statusLabel\u001b[0m \u001b[1m$timer\u001b[0m \u001b[2m$fileLine\u001b[0m" +
+          s"  \u001b[32ms\u001b[0m stop \u001b[33mp\u001b[0m pause \u001b[31mc\u001b[0m cancel"
+      )
       sb.toString
 
   private val HelpText: String =
