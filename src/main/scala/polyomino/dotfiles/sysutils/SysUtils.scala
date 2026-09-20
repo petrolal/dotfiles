@@ -135,11 +135,18 @@ object SysUtils:
       case e: Exception => Left(CommandError(s"Screenshot failed: ${e.getMessage}"))
 
   def runRecord(ctx: Context, args: List[String]): Either[PolyominoError, Unit] =
-    val mode = args.headOption.getOrElse("toggle")
+    val (flags, nonFlags) = args.partition(_.startsWith("-"))
+    val mode = nonFlags.headOption.getOrElse("toggle")
 
     if mode != "start" && mode != "stop" && mode != "toggle" && mode != "status" then
-      System.err.println("Usage: polyomino record {start|stop|toggle|status}")
-      return Left(CommandError("Usage: polyomino record {start|stop|toggle|status}", 1))
+      System.err.println("Usage: polyomino record {start|stop|toggle|status} [--full|--region|--window]")
+      return Left(CommandError("Usage: polyomino record {start|stop|toggle|status} [--full|--region|--window]", 1))
+
+    val target = flags.collectFirst {
+      case "--full" | "-f" => "full"
+      case "--region" | "-r" => "region"
+      case "--window" | "-w" => "window"
+    }
 
     if ctx.isTest then return Right(())
 
@@ -158,7 +165,7 @@ object SysUtils:
           println("[1;33m[polyomino record][0m Already recording.")
           Right(())
         else
-          startRecording(ctx)
+          startRecording(ctx, target)
       case "stop" =>
         if recording then
           stopRecording()
@@ -166,24 +173,69 @@ object SysUtils:
           println("[1;33m[polyomino record][0m Not currently recording.")
           Right(())
       case "toggle" =>
-        if recording then stopRecording() else startRecording(ctx)
+        if recording then stopRecording() else startRecording(ctx, target)
 
   private def isRecording(): Boolean =
     try os.proc("pgrep", "-x", "wf-recorder").call(check = false).exitCode == 0
     catch case _: Exception => false
 
-  private def startRecording(ctx: Context): Either[PolyominoError, Unit] =
-    val videosDir = ctx.home / "Videos"
-    os.makeDir.all(videosDir)
-    val timestamp = java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss"))
-    val file = videosDir / s"polyomino-recording-$timestamp.mp4"
+  /** Returns Right(Some(geom)) / Right(None) for full-screen, or Left with an
+    * empty-message CommandError(code=0) when the user cancelled selection. */
+  private def resolveRecordGeometry(target: String): Either[PolyominoError, Option[String]] =
+    target match
+      case "region" =>
+        val slurpRes = os.proc("slurp").call(check = false, stdin = os.Inherit, stdout = os.Pipe, stderr = os.Inherit)
+        if slurpRes.exitCode == 0 && slurpRes.out.text().trim.nonEmpty then Right(Some(slurpRes.out.text().trim))
+        else
+          notifyDesktop("Cancelled", "Screen recording region selection cancelled.")
+          Left(CommandError("", 0))
+      case "window" =>
+        getFocusedWindowGeometry() match
+          case Some(geom) => Right(Some(geom))
+          case None =>
+            notifyDesktop("Failed", "No focused window found.")
+            Left(CommandError("No focused window found", 1))
+      case _ => Right(None)
+
+  private def startRecording(ctx: Context, targetArg: Option[String]): Either[PolyominoError, Unit] =
+    val targetOpt = targetArg.orElse(polyomino.dotfiles.pickers.WofiPickers.pickRecordTarget(ctx))
+    targetOpt match
+      case None =>
+        notifyDesktop("Cancelled", "Screen recording target selection cancelled.")
+        Right(())
+      case Some(t) =>
+        resolveRecordGeometry(t) match
+          case Left(err) if err.message.isEmpty => Right(())
+          case Left(err) => Left(err)
+          case Right(geomOpt) =>
+            val videosDir = ctx.home / "Videos"
+            os.makeDir.all(videosDir)
+            val timestamp = java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss"))
+            val file = videosDir / s"polyomino-recording-$timestamp.mp4"
+            try
+              val cmd: Seq[os.Shellable] = Seq("wf-recorder": os.Shellable) ++
+                geomOpt.toSeq.flatMap(g => Seq("-g": os.Shellable, g: os.Shellable)) ++
+                Seq("-f": os.Shellable, file.toString: os.Shellable)
+              os.proc(cmd*).spawn(stdout = os.Inherit, stderr = os.Inherit)
+              println(s"[1;34m[polyomino record][0m Recording ($t) to $file...")
+              notifyDesktop("Screen Recording Started", s"Saving to ${file.toString}")
+              spawnRecordPanel(ctx, file)
+              Right(())
+            catch
+              case e: Exception => Left(CommandError(s"Recording failed to start: ${e.getMessage}"))
+
+  private def spawnRecordPanel(ctx: Context, file: os.Path): Unit =
     try
-      os.proc("wf-recorder", "-f", file.toString).spawn(stdout = os.Inherit, stderr = os.Inherit)
-      println(s"[1;34m[polyomino record][0m Recording to $file...")
-      notifyDesktop("Screen Recording Started", s"Saving to ${file.toString}")
-      Right(())
+      if isCommandAvailable("kitty") then
+        val binary = ctx.home / ".local" / "bin" / "polyomino"
+        val binaryArg: os.Shellable = (if os.exists(binary) then binary.toString else "polyomino"): os.Shellable
+        os.proc(
+          "kitty": os.Shellable, "--class": os.Shellable, "polyomino-record-panel": os.Shellable,
+          "--title": os.Shellable, "polyomino-record-panel": os.Shellable,
+          "-e": os.Shellable, binaryArg, "record-panel": os.Shellable, file.toString: os.Shellable
+        ).spawn(stdout = os.Inherit, stderr = os.Inherit)
     catch
-      case e: Exception => Left(CommandError(s"Recording failed to start: ${e.getMessage}"))
+      case _: Exception => ()
 
   private def stopRecording(): Either[PolyominoError, Unit] =
     try

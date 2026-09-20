@@ -93,6 +93,20 @@ class SysUtilsSuite extends FunSuite:
       assert(res.isRight)
     }
 
+  test("SysUtils.runRecord accepts --full/--region/--window target flags in test sandbox"):
+    withIsolatedContext { ctx =>
+      assert(SysUtils.runRecord(ctx, List("start", "--full")).isRight)
+      assert(SysUtils.runRecord(ctx, List("start", "--region")).isRight)
+      assert(SysUtils.runRecord(ctx, List("start", "--window")).isRight)
+      assert(SysUtils.runRecord(ctx, List("toggle", "-f")).isRight)
+    }
+
+  test("SysUtils.runRecordPanel returns Right in test mode"):
+    withIsolatedContext { ctx =>
+      val res = polyomino.dotfiles.sysutils.RecordPanel.run(ctx, Nil)
+      assert(res.isRight)
+    }
+
   test("SysUtils.findFocusedNodeGeometry extracts window coordinates from tree"):
     val mockTree = ujson.Obj(
       "nodes" -> ujson.Arr(

@@ -526,6 +526,9 @@ object WofiPickers:
       case a if a.contains("polyomino screenshot full") => "Screenshot full screen"
       case a if a.contains("polyomino screenshot region") => "Screenshot region selection"
       case a if a.contains("polyomino screenshot window") => "Screenshot active window"
+      case a if a.contains("record region") => "Record screen region (wf-recorder)"
+      case a if a.contains("record window") => "Record active window (wf-recorder)"
+      case a if a.contains("record-panel") => "Screen recording control panel"
       case a if a.contains("polyomino record") || a.contains("polyomino-record") => "Toggle screen recording (wf-recorder)"
       case a if a.contains("swaync-client -t -sw") => "Toggle notification center"
       case a if a.contains("kitty -e yazi") => "File manager (yazi)"
@@ -587,6 +590,17 @@ object WofiPickers:
     "Mod4+Print               → Screenshot region selection",
     "Mod4+Shift+Print         → Screenshot active window"
   )
+
+  /** Synchronous tile picker asking which capture target to record. Returns
+    * "full" / "region" / "window", or None if the picker was cancelled. */
+  def pickRecordTarget(ctx: Context): Option[String] =
+    val tiles = Seq(
+      tile("full", "󰍹", "Full Screen", "Record the entire output", "accent"),
+      tile("region", "󰆞", "Region", "Draw a rectangle with slurp", "teal"),
+      tile("window", "󰖯", "Window", "Record the focused window", "blue")
+    )
+    val selected = tilePick(ctx, "POLYOMINO // RECORD", tiles, columns = 3, width = 640, height = 280, badge = "RECORD")
+    if selected.isEmpty then None else Some(selected)
 
   def runAudioPicker(ctx: Context, args: List[String] = Nil): Either[PolyominoError, Unit] =
     try

@@ -113,6 +113,11 @@ for_window [app_id="polyomino-power-menu"] floating enable, border pixel 1, resi
 for_window [class="polyomino-power-menu"] floating enable, border pixel 1, resize set 860 880, move position center, blur enable, shadow enable
 for_window [app_id="kitty" title="(?i).*polyomino.*power-menu.*"] floating enable, border pixel 1, resize set 860 880, move position center, blur enable, shadow enable
 
+# Screen recording control panel (polyomino record-panel)
+for_window [app_id="polyomino-record-panel"] floating enable, border pixel 0, resize set 220 44, move position 20 20, blur enable, shadow enable, sticky enable
+for_window [class="polyomino-record-panel"] floating enable, border pixel 0, resize set 220 44, move position 20 20, blur enable, shadow enable, sticky enable
+for_window [app_id="kitty" title="(?i).*polyomino.*record-panel.*"] floating enable, border pixel 0, resize set 220 44, move position 20 20, blur enable, shadow enable, sticky enable
+
 # Puzzle Micro-Utilities (Bento Floating Modals)
 for_window [app_id="(?i).*polyomino-puzzle.*"] floating enable, border pixel 1, resize set 860 800, move position center, blur enable, shadow enable
 for_window [class="(?i).*polyomino-puzzle.*"] floating enable, border pixel 1, resize set 860 800, move position center, blur enable, shadow enable
@@ -551,6 +556,8 @@ bindsym $mod+Shift+Print exec ~/.local/bin/polyomino screenshot window
 
 # Screen recording (wf-recorder)
 bindsym $mod+Ctrl+Print exec ~/.local/bin/polyomino record toggle
+bindsym $mod+Ctrl+Shift+Print exec ~/.local/bin/polyomino record start --region
+bindsym $mod+Ctrl+Alt+Print exec ~/.local/bin/polyomino record start --window
 
 # Audio, Media & Hardware Keys (with visual OSD bar indicators)
 bindsym --locked XF86AudioRaiseVolume exec ~/.local/bin/polyomino-osd volume raise || wpctl set-volume -l 1.0 @DEFAULT_AUDIO_SINK@ 5%+
