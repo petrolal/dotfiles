@@ -53,6 +53,7 @@ object Main:
       case "preview-lock" | "lock-preview" => polyomino.dotfiles.sysutils.SysUtils.runLockPreview(ctx, args)
       case "idle" => polyomino.dotfiles.sysutils.SysUtils.runIdle(ctx)
       case "screenshot" => polyomino.dotfiles.sysutils.SysUtils.runScreenshot(ctx, args)
+      case "record" => polyomino.dotfiles.sysutils.SysUtils.runRecord(ctx, args)
       case "power-menu" | "powermenu" => polyomino.dotfiles.power.PowerMenu.run(ctx, args)
       case "sokoban" =>
         runPythonScript(ctx.dotfilesDir / "config" / "sway" / "scripts" / "polyomino-sokoban", "sokoban")
@@ -130,6 +131,7 @@ object Main:
       |  preview-lock     preview and test lock screen safely without locking session
       |  idle             run the swayidle daemon (auto-lock, dpms, suspend)
       |  screenshot       capture a screenshot (full|region|window)
+      |  record           toggle screen recording via wf-recorder (start|stop|toggle|status)
       |  draw-window      interactively draw floating window geometry with slurp
       |  power-menu       workstation power & session modal (reboot | shutdown | suspend | lock)
       |  sokoban          Sokoban scratchpad & workspace arranger puzzle

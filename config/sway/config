@@ -549,6 +549,9 @@ bindcode 107 exec ~/.local/bin/polyomino screenshot full
 bindsym $mod+Print exec ~/.local/bin/polyomino screenshot region
 bindsym $mod+Shift+Print exec ~/.local/bin/polyomino screenshot window
 
+# Screen recording (wf-recorder)
+bindsym $mod+Ctrl+Print exec ~/.local/bin/polyomino record toggle
+
 # Audio, Media & Hardware Keys (with visual OSD bar indicators)
 bindsym --locked XF86AudioRaiseVolume exec ~/.local/bin/polyomino-osd volume raise || wpctl set-volume -l 1.0 @DEFAULT_AUDIO_SINK@ 5%+
 bindsym --locked XF86AudioLowerVolume exec ~/.local/bin/polyomino-osd volume lower || wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-

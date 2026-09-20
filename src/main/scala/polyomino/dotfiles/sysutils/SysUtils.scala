@@ -134,6 +134,66 @@ object SysUtils:
     catch
       case e: Exception => Left(CommandError(s"Screenshot failed: ${e.getMessage}"))
 
+  def runRecord(ctx: Context, args: List[String]): Either[PolyominoError, Unit] =
+    val mode = args.headOption.getOrElse("toggle")
+
+    if mode != "start" && mode != "stop" && mode != "toggle" && mode != "status" then
+      System.err.println("Usage: polyomino record {start|stop|toggle|status}")
+      return Left(CommandError("Usage: polyomino record {start|stop|toggle|status}", 1))
+
+    if ctx.isTest then return Right(())
+
+    if !isCommandAvailable("wf-recorder") then
+      notifyDesktop("Screen Recording", "Install wf-recorder to record the screen.")
+      return Left(CommandError("wf-recorder is required but not installed.", 1))
+
+    val recording = isRecording()
+
+    mode match
+      case "status" =>
+        println(if recording then "recording" else "idle")
+        Right(())
+      case "start" =>
+        if recording then
+          println("[1;33m[polyomino record][0m Already recording.")
+          Right(())
+        else
+          startRecording(ctx)
+      case "stop" =>
+        if recording then
+          stopRecording()
+        else
+          println("[1;33m[polyomino record][0m Not currently recording.")
+          Right(())
+      case "toggle" =>
+        if recording then stopRecording() else startRecording(ctx)
+
+  private def isRecording(): Boolean =
+    try os.proc("pgrep", "-x", "wf-recorder").call(check = false).exitCode == 0
+    catch case _: Exception => false
+
+  private def startRecording(ctx: Context): Either[PolyominoError, Unit] =
+    val videosDir = ctx.home / "Videos"
+    os.makeDir.all(videosDir)
+    val timestamp = java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss"))
+    val file = videosDir / s"polyomino-recording-$timestamp.mp4"
+    try
+      os.proc("wf-recorder", "-f", file.toString).spawn(stdout = os.Inherit, stderr = os.Inherit)
+      println(s"[1;34m[polyomino record][0m Recording to $file...")
+      notifyDesktop("Screen Recording Started", s"Saving to ${file.toString}")
+      Right(())
+    catch
+      case e: Exception => Left(CommandError(s"Recording failed to start: ${e.getMessage}"))
+
+  private def stopRecording(): Either[PolyominoError, Unit] =
+    try
+      os.proc("pkill", "-INT", "-x", "wf-recorder").call(check = false)
+      println("[1;34m[polyomino record][0m Stopped recording.")
+      notifyDesktop("Screen Recording Stopped", "Recording saved to ~/Videos")
+      Right(())
+    catch
+      case e: Exception => Left(CommandError(s"Recording failed to stop: ${e.getMessage}"))
+
   private def getFocusedWindowGeometry(): Option[String] =
     try
       val res = os.proc("swaymsg", "-t", "get_tree").call(check = false)

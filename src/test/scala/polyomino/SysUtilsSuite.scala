@@ -73,6 +73,26 @@ class SysUtilsSuite extends FunSuite:
       assertEquals(os.list(shotsDir).length, 1)
     }
 
+  test("SysUtils.runRecord rejects invalid mode"):
+    withIsolatedContext { ctx =>
+      val res = SysUtils.runRecord(ctx, List("invalid-mode"))
+      assert(res.isLeft)
+    }
+
+  test("SysUtils.runRecord accepts start/stop/toggle/status in test sandbox"):
+    withIsolatedContext { ctx =>
+      assert(SysUtils.runRecord(ctx, List("start")).isRight)
+      assert(SysUtils.runRecord(ctx, List("stop")).isRight)
+      assert(SysUtils.runRecord(ctx, List("toggle")).isRight)
+      assert(SysUtils.runRecord(ctx, List("status")).isRight)
+    }
+
+  test("SysUtils.runRecord defaults to toggle mode when args are empty"):
+    withIsolatedContext { ctx =>
+      val res = SysUtils.runRecord(ctx, Nil)
+      assert(res.isRight)
+    }
+
   test("SysUtils.findFocusedNodeGeometry extracts window coordinates from tree"):
     val mockTree = ujson.Obj(
       "nodes" -> ujson.Arr(
