@@ -309,9 +309,9 @@ assign [app_id="kitty" title="spotify"] $ws4
 assign [app_id="kitty" title="^spotify$"] $ws4
 for_window [app_id="spotify"] move to workspace $ws4, workspace $ws4
 for_window [class="[sS]potify.*"] move to workspace $ws4, workspace $ws4
-for_window [app_id="spotify_player"] move to workspace $ws4
+for_window [app_id="spotify_player"] move to workspace $ws4, workspace $ws4
 for_window [app_id="kitty" title="spotify"] move to workspace $ws4, workspace $ws4
-for_window [app_id="kitty" title="^spotify$"] move to workspace $ws4
+for_window [app_id="kitty" title="^spotify$"] move to workspace $ws4, workspace $ws4
 assign [app_id="mpv"] $ws4
 assign [class="mpv"] $ws4
 assign [app_id="vlc"] $ws4
