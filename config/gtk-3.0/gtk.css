@@ -1,0 +1,80 @@
+/* ==========================================================================
+   SYSTEM 7 RETRO DROPDOWN MENUS (APPLICATIONS / CONTEXT / APPLET POPUPS)
+   ========================================================================== */
+
+/* The main popup menu container */
+menu,
+.xfce4-panel menu,
+.xfce4-panel-menu,
+#whiskermenu-window,
+window.background.popup {
+    background-color: #ffffff !important;
+    background-image: none !important;
+    border: 2px solid #000000 !important;
+    border-radius: 0px !important;
+    box-shadow: 2px 2px 0px #000000 !important;
+    padding: 2px !important;
+    color: #000000 !important;
+}
+
+/* Menu Items (Default / Inactive) */
+menu menuitem,
+.xfce4-panel menu menuitem,
+menuitem {
+    background-color: #ffffff !important;
+    background-image: none !important;
+    border: 1px solid transparent !important;
+    border-radius: 0px !important;
+    color: #000000 !important;
+    font-family: "DejaVu Sans", "Chicago", "Terminus", sans-serif !important;
+    font-size: 11px !important;
+    font-weight: normal !important;
+    padding: 3px 12px !important;
+    min-height: 18px !important;
+}
+
+/* Force menu item labels and text to pure black */
+menu menuitem label,
+.xfce4-panel menu menuitem label,
+menuitem label {
+    color: #000000 !important;
+    text-shadow: none !important;
+}
+
+/* Menu Item Hover / Selected State (Classic 1-bit solid inverted black bar) */
+menu menuitem:hover,
+.xfce4-panel menu menuitem:hover,
+menuitem:hover {
+    background-color: #000000 !important;
+    background-image: none !important;
+    color: #ffffff !important;
+}
+
+menu menuitem:hover label,
+.xfce4-panel menu menuitem:hover label,
+menuitem:hover label {
+    color: #ffffff !important;
+    text-shadow: none !important;
+}
+
+/* Menu Separators: Thin 1px solid line */
+menu separator,
+.xfce4-panel menu separator {
+    background-color: #000000 !important;
+    border: none !important;
+    min-height: 1px !important;
+    margin: 3px 0 !important;
+}
+
+/* Submenu Arrow Indicators */
+menu menuitem arrow,
+.xfce4-panel menu menuitem arrow {
+    color: #000000 !important;
+    min-height: 10px !important;
+    min-width: 10px !important;
+}
+
+menu menuitem:hover arrow,
+.xfce4-panel menu menuitem:hover arrow {
+    color: #ffffff !important;
+}

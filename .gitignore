@@ -1,0 +1,20 @@
+# Editor and temporary files
+*~
+*.swp
+*.swo
+*.bak
+.#*
+\#*#
+
+# Build artifacts and compiled binaries
+bin/invoker
+*.fasl
+*.dx64fsl
+
+# Nix build outputs
+result
+result-*
+
+# OS-specific files
+.DS_Store
+Thumbs.db
