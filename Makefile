@@ -66,7 +66,7 @@ help:
 	@echo '  install         Link dotfiles and apply the XFCE theme (= deploy)'
 	@echo '  deploy          Same as install'
 	@echo '  dry-run         Show what deploy would do without changing anything'
-	@echo '  scale           Reset panel height (26px) and WM margins, reload XFCE'
+	@echo '  scale           Reset panel height (28px) and WM margins, reload XFCE'
 	@echo '  quick-deploy    Deploy via SBCL script mode, without compiling'
 	@echo '  installcheck    Verify the installed invoker runs'
 	@echo ''
@@ -132,9 +132,10 @@ nix-link:
 	$(SUDO) $(LN_S) $(abspath $(nixosdir))/configuration.nix $(sysconfdir)/configuration.nix
 	$(SUDO) $(LN_S) $(abspath $(nixosdir))/flake.nix $(sysconfdir)/flake.nix
 
+# `switch` (not `build` + switch-to-configuration) registers the new system
+# profile generation and installs the boot entry, so it survives a reboot.
 nix-switch: nix-link
-	$(SUDO) $(NIXOS_REBUILD) build --flake $(nixosdir) --impure
-	$(SUDO) ./result/bin/switch-to-configuration switch
+	$(SUDO) $(NIXOS_REBUILD) switch --flake $(nixosdir) --impure
 
 system-install: nix-switch
 	$(MAKE) install

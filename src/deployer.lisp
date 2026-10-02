@@ -100,8 +100,8 @@
     ("xfce4-panel"              "/panels/panel-1/position"                "string" "p=6;x=0;y=0")
     ("xfce4-panel"              "/panels/panel-1/position-locked"         "bool"   "true")
     ("xfce4-panel"              "/panels/panel-1/background-style"        "int"    "0")
-    ;; Native XFCE defaults (etc/xdg/xfce4/panel/default.xml): 26px bar, 16px icons
-    ("xfce4-panel"              "/panels/panel-1/size"                    "uint"   "26")
+    ;; Windows 98 taskbar height at 96 DPI: 28px bar, 16px icons
+    ("xfce4-panel"              "/panels/panel-1/size"                    "uint"   "28")
     ("xfce4-panel"              "/panels/panel-1/icon-size"               "uint"   "16")
     ;; NOTE: plugin-ids is an xfconf array — set via set-panel-plugin-ids, not here.
     ("xfce4-panel"              "/plugins/plugin-2/flat-buttons"          "bool"   "false")
@@ -256,13 +256,13 @@ Uses xfconf-query -a with repeated -t int -s N flags."
 
 (defun apply-dynamic-resolution-scaling (&key dry-run verbose)
   "Detect current display resolution, reset the panel to the native XFCE default
-height (26px) and enforce 0px window manager margins via xfconf."
+height (28px, Windows 98 taskbar) and enforce 0px window manager margins via xfconf."
   (multiple-value-bind (w h output) (determine-primary-resolution)
     (when verbose
-      (format t "Display detection: ~Ax~A~@[ (~A)~] -> Panel: 26px (XFCE default), WM margins: 0px~%"
+      (format t "Display detection: ~Ax~A~@[ (~A)~] -> Panel: 28px (Windows 98), WM margins: 0px~%"
               w h output))
     ;; Overwrite any stale scaled height (28/34/44px) left by older deploys.
-    (set-xfconf "xfce4-panel" "/panels/panel-1/size" "uint" "26" :dry-run dry-run)
+    (set-xfconf "xfce4-panel" "/panels/panel-1/size" "uint" "28" :dry-run dry-run)
     ;; Strictly 0px margins on all sides — prevents gaps/borders around tiled/maximized windows.
     (set-xfconf "xfwm4" "/general/margin_bottom" "int" "0" :dry-run dry-run)
     (set-xfconf "xfwm4" "/general/margin_left"   "int" "0" :dry-run dry-run)
