@@ -14,20 +14,24 @@
     xwinwrap
     feh
 
-    # System & Terminal Utilities
+    # Development
     emacs
-    wget
-    curl
+    claude-code
+
+    # System & Terminal Utilities
     pciutils
     htop
     fastfetch
     xclip
-    claude-code
-    unzip
+    curl
+    wget
     zip
-    appimage-run
+    unzip
+    which
+    less
 
     # Utils and good tools
     shotcut
+    appimage-run
   ];
 }
