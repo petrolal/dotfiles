@@ -54,17 +54,5 @@
   # Portal and dconf management
   programs.dconf.enable = true;
 
-  # User petrolal
-  users.users."petrolal" = {
-    isNormalUser = true;
-    description = "Petrola Lucas";
-    extraGroups = [ "networkmanager" "wheel" ];
-    packages = with pkgs; [
-      thunderbird
-      google-chrome
-    ];
-  };
 
-  programs.firefox.enable = false;
-  services.openssh.enable = true;
 }

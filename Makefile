@@ -49,7 +49,7 @@ DEPLOYER_SRC  = $(srcdir)/src/deployer.lisp
 # ---------------------------------------------------------------------------
 .PHONY: all help check install uninstall installcheck \
         deploy quick-deploy dry-run scale \
-        nix-link nix-switch system-install \
+        bootstrap nix-link nix-switch system-install \
         mostlyclean clean distclean maintainer-clean
 
 # Default goal: build everything, change nothing on the system.
@@ -71,6 +71,7 @@ help:
 	@echo '  installcheck    Verify the installed invoker runs'
 	@echo ''
 	@echo 'NixOS (requires sudo):'
+	@echo '  bootstrap       First-time setup from a fresh NixOS (no make/sbcl needed)'
 	@echo '  nix-link        Symlink configuration.nix and flake.nix into $(sysconfdir)'
 	@echo '  nix-switch      Rebuild NixOS from the flake and switch to it'
 	@echo '  system-install  nix-switch, then install'
@@ -127,6 +128,10 @@ uninstall:
 # ---------------------------------------------------------------------------
 # Flakes only see files git knows about; `add -N` registers new files
 # without staging their contents.
+bootstrap:
+	@echo '==> Running first-time bootstrap (no make/sbcl required)...'
+	$(srcdir)/bootstrap.sh
+
 nix-link:
 	-$(GIT) add -N .
 	$(SUDO) $(LN_S) $(abspath $(nixosdir))/configuration.nix $(sysconfdir)/configuration.nix

@@ -6,6 +6,22 @@
    so every widget renders against the imp95 dark palette.
    ========================================================================== */
 
+@define-color imp95_bg #242424;
+@define-color imp95_surface #2F2F2F;
+@define-color imp95_hover #3C3C3C;
+@define-color imp95_light #555555;
+@define-color imp95_shadow #1E1E1E;
+@define-color imp95_dark #000000;
+@define-color imp95_text #FFFFFF;
+@define-color imp95_disabled #707070;
+@define-color imp95_accent #9E2A2B;
+@define-color imp95_accent_dark #801E1F;
+@define-color imp95_accent_hover #b83a3b;
+@define-color imp95_accent_light #c45455;
+@define-color imp95_accent_darkest #541617;
+@define-color imp95_tooltip_bg #ffffe1;
+@define-color imp95_tooltip_fg #000000;
+
 /* --------------------------------------------------------------------------
    Base surfaces: windows, dialogs, headerbars, toolbars
    -------------------------------------------------------------------------- */
@@ -14,23 +30,23 @@ window,
 dialog,
 messagedialog,
 .background {
-    background-color: #2F2F2F;
-    color: #FFFFFF;
+    background-color: @imp95_surface;
+    color: @imp95_text;
 }
 
 headerbar,
 .titlebar,
 toolbar,
 .toolbar {
-    background-color: #2F2F2F;
+    background-color: @imp95_surface;
     background-image: none;
-    border-color: #000000;
-    color: #FFFFFF;
-    box-shadow: inset 0 -1px #1E1E1E;
+    border-color: @imp95_dark;
+    color: @imp95_text;
+    box-shadow: inset 0 -1px @imp95_shadow;
 }
 
 decoration {
-    background-color: #2F2F2F;
+    background-color: @imp95_surface;
 }
 
 /* --------------------------------------------------------------------------
@@ -38,41 +54,41 @@ decoration {
    -------------------------------------------------------------------------- */
 
 button {
-    background-color: #2F2F2F;
+    background-color: @imp95_surface;
     background-image: none;
     border-style: solid;
     border-width: 1px;
-    border-color: #555555 #000000 #000000 #555555;
+    border-color: @imp95_light @imp95_dark @imp95_dark @imp95_light;
     border-radius: 0px;
-    box-shadow: inset 1px 1px #3C3C3C, inset -1px -1px #1E1E1E;
-    color: #FFFFFF;
+    box-shadow: inset 1px 1px @imp95_hover, inset -1px -1px @imp95_shadow;
+    color: @imp95_text;
     text-shadow: none;
 }
 
 button:hover {
-    background-color: #3C3C3C;
+    background-color: @imp95_hover;
     background-image: none;
 }
 
 button:active,
 button:checked {
-    background-color: #242424;
-    border-color: #000000 #555555 #555555 #000000;
-    box-shadow: inset 1px 1px #1E1E1E, inset -1px -1px #3C3C3C;
+    background-color: @imp95_bg;
+    border-color: @imp95_dark @imp95_light @imp95_light @imp95_dark;
+    box-shadow: inset 1px 1px @imp95_shadow, inset -1px -1px @imp95_hover;
 }
 
 button:disabled {
-    background-color: #2F2F2F;
-    color: #707070;
+    background-color: @imp95_surface;
+    color: @imp95_disabled;
     box-shadow: none;
 }
 
 button label {
-    color: #FFFFFF;
+    color: @imp95_text;
 }
 
 button:disabled label {
-    color: #707070;
+    color: @imp95_disabled;
 }
 
 /* --------------------------------------------------------------------------
@@ -81,44 +97,44 @@ button:disabled label {
 
 entry,
 spinbutton {
-    background-color: #242424;
+    background-color: @imp95_bg;
     background-image: none;
     border-style: solid;
     border-width: 1px;
-    border-color: #1E1E1E #555555 #555555 #1E1E1E;
+    border-color: @imp95_shadow @imp95_light @imp95_light @imp95_shadow;
     border-radius: 0px;
-    box-shadow: inset 1px 1px #000000;
-    color: #FFFFFF;
+    box-shadow: inset 1px 1px @imp95_dark;
+    color: @imp95_text;
 }
 
 entry:disabled,
 spinbutton:disabled {
-    background-color: #2F2F2F;
-    color: #707070;
+    background-color: @imp95_surface;
+    color: @imp95_disabled;
 }
 
 entry selection,
 textview text selection {
-    background-color: #9E2A2B;
-    color: #FFFFFF;
+    background-color: @imp95_accent;
+    color: @imp95_text;
 }
 
 combobox button,
 combobox button.combo {
-    background-color: #2F2F2F;
+    background-color: @imp95_surface;
     background-image: none;
-    border-color: #555555 #000000 #000000 #555555;
-    box-shadow: inset 1px 1px #3C3C3C, inset -1px -1px #1E1E1E;
-    color: #FFFFFF;
+    border-color: @imp95_light @imp95_dark @imp95_dark @imp95_light;
+    box-shadow: inset 1px 1px @imp95_hover, inset -1px -1px @imp95_shadow;
+    color: @imp95_text;
 }
 
 combobox button:hover,
 combobox button.combo:hover {
-    background-color: #3C3C3C;
+    background-color: @imp95_hover;
 }
 
 combobox cellview {
-    color: #FFFFFF;
+    color: @imp95_text;
 }
 
 /* --------------------------------------------------------------------------
@@ -130,17 +146,17 @@ menu,
 .context-menu,
 popover,
 popover.background {
-    background-color: #2F2F2F;
+    background-color: @imp95_surface;
     background-image: none;
-    border: 1px solid #000000;
+    border: 1px solid @imp95_dark;
     border-radius: 0px;
     box-shadow: 2px 2px 0px rgba(0, 0, 0, 0.5);
-    color: #FFFFFF;
+    color: @imp95_text;
 }
 
 menuitem,
 modelbutton {
-    color: #FFFFFF;
+    color: @imp95_text;
     background-color: transparent;
     border-radius: 0px;
 }
@@ -149,33 +165,33 @@ menuitem:hover,
 modelbutton:hover,
 menuitem:focus,
 modelbutton:focus {
-    background-color: #9E2A2B;
-    color: #FFFFFF;
+    background-color: @imp95_accent;
+    color: @imp95_text;
 }
 
 menuitem:hover label,
 modelbutton:hover label {
-    color: #FFFFFF;
+    color: @imp95_text;
 }
 
 menuitem:disabled,
 modelbutton:disabled {
-    color: #707070;
+    color: @imp95_disabled;
 }
 
 menuitem:disabled label,
 modelbutton:disabled label {
-    color: #707070;
+    color: @imp95_disabled;
 }
 
 menuitem accelerator {
-    color: #707070;
+    color: @imp95_disabled;
 }
 
 menuitem separator,
 menu separator {
-    background-color: #1E1E1E;
-    border-top: 1px solid #555555;
+    background-color: @imp95_shadow;
+    border-top: 1px solid @imp95_light;
     margin: 2px 0;
 }
 
@@ -184,31 +200,31 @@ menu separator {
    -------------------------------------------------------------------------- */
 
 scrollbar {
-    background-color: #242424;
-    border-color: #1E1E1E;
+    background-color: @imp95_bg;
+    border-color: @imp95_shadow;
 }
 
 scrollbar slider {
-    background-color: #2F2F2F;
-    border: 1px solid #555555;
+    background-color: @imp95_surface;
+    border: 1px solid @imp95_light;
     border-radius: 0px;
     min-width: 12px;
     min-height: 12px;
 }
 
 scrollbar slider:hover {
-    background-color: #3C3C3C;
+    background-color: @imp95_hover;
 }
 
 scrollbar slider:active {
-    background-color: #555555;
+    background-color: @imp95_light;
 }
 
 scrollbar button {
-    background-color: #2F2F2F;
-    border-color: #555555 #000000 #000000 #555555;
-    box-shadow: inset 1px 1px #3C3C3C, inset -1px -1px #1E1E1E;
-    color: #FFFFFF;
+    background-color: @imp95_surface;
+    border-color: @imp95_light @imp95_dark @imp95_dark @imp95_light;
+    box-shadow: inset 1px 1px @imp95_hover, inset -1px -1px @imp95_shadow;
+    color: @imp95_text;
 }
 
 /* --------------------------------------------------------------------------
@@ -224,8 +240,8 @@ list,
 listbox,
 .sidebar,
 placessidebar {
-    background-color: #242424;
-    color: #FFFFFF;
+    background-color: @imp95_bg;
+    color: @imp95_text;
 }
 
 treeview:selected,
@@ -235,8 +251,8 @@ list row:selected,
 listbox row:selected,
 .sidebar row:selected,
 placessidebar row:selected {
-    background-color: #9E2A2B;
-    color: #FFFFFF;
+    background-color: @imp95_accent;
+    color: @imp95_text;
 }
 
 treeview:hover,
@@ -244,15 +260,15 @@ list row:hover,
 listbox row:hover,
 .sidebar row:hover,
 placessidebar row:hover {
-    background-color: #3C3C3C;
-    color: #FFFFFF;
+    background-color: @imp95_hover;
+    color: @imp95_text;
 }
 
 treeview header button {
-    background-color: #2F2F2F;
+    background-color: @imp95_surface;
     background-image: none;
-    border-color: #555555 #000000 #000000 #555555;
-    color: #FFFFFF;
+    border-color: @imp95_light @imp95_dark @imp95_dark @imp95_light;
+    color: @imp95_text;
 }
 
 /* --------------------------------------------------------------------------
@@ -261,16 +277,16 @@ treeview header button {
 
 frame,
 frame > border {
-    border-color: #555555;
+    border-color: @imp95_light;
 }
 
 separator {
-    background-color: #1E1E1E;
+    background-color: @imp95_shadow;
 }
 
 paned > separator {
-    background-color: #2F2F2F;
-    border-color: #555555;
+    background-color: @imp95_surface;
+    border-color: @imp95_light;
 }
 
 /* --------------------------------------------------------------------------
@@ -279,17 +295,17 @@ paned > separator {
 
 statusbar,
 statusbar label {
-    background-color: #2F2F2F;
-    color: #FFFFFF;
+    background-color: @imp95_surface;
+    color: @imp95_text;
 }
 
 label,
 label.dim-label {
-    color: #FFFFFF;
+    color: @imp95_text;
 }
 
 label:disabled {
-    color: #707070;
+    color: @imp95_disabled;
 }
 
 /* --------------------------------------------------------------------------
@@ -298,29 +314,29 @@ label:disabled {
 
 /* Tab strip (header area) */
 notebook > header {
-    background-color: #2F2F2F;
-    border-color: #000000;
+    background-color: @imp95_surface;
+    border-color: @imp95_dark;
 }
 
 /* Individual tabs: flat, blending into the surface */
 notebook > header tab {
-    background-color: #2F2F2F;
+    background-color: @imp95_surface;
     background-image: none;
     border-style: solid;
     border-width: 1px;
-    border-color: #555555 #000000 #000000 #555555;
-    box-shadow: inset 1px 1px #3C3C3C, inset -1px -1px #1E1E1E;
+    border-color: @imp95_light @imp95_dark @imp95_dark @imp95_light;
+    box-shadow: inset 1px 1px @imp95_hover, inset -1px -1px @imp95_shadow;
     border-radius: 0px;
     padding: 2px 8px;
-    color: #FFFFFF;
+    color: @imp95_text;
 }
 
 /* Active tab pops up (reversed bevel = raised) */
 notebook > header tab:checked {
-    background-color: #2F2F2F;
-    border-color: #555555 #000000 #2F2F2F #555555;
-    box-shadow: inset 1px 1px #3C3C3C;
-    color: #FFFFFF;
+    background-color: @imp95_surface;
+    border-color: @imp95_light @imp95_dark @imp95_surface @imp95_light;
+    box-shadow: inset 1px 1px @imp95_hover;
+    color: @imp95_text;
     font-weight: normal;
     text-shadow: none;
 }
@@ -335,34 +351,34 @@ notebook > header tab button.flat {
     min-width: 14px;
     padding: 0px;
     margin: 0px 0px 0px 6px;
-    color: #FFFFFF;
+    color: @imp95_text;
 }
 
 notebook > header tab button:active {
-    border-color: #1E1E1E #555555 #555555 #1E1E1E;
+    border-color: @imp95_shadow @imp95_light @imp95_light @imp95_shadow;
 }
 
 notebook > stack:not(:only-child) {
-    background-color: #2F2F2F;
+    background-color: @imp95_surface;
     border-style: solid;
     border-width: 1px;
-    border-color: #555555 #000000 #000000 #555555;
-    box-shadow: inset -1px -1px #1E1E1E;
+    border-color: @imp95_light @imp95_dark @imp95_dark @imp95_light;
+    box-shadow: inset -1px -1px @imp95_shadow;
 }
 
 /* Tooltips: pale yellow with a thin black border */
 tooltip,
 tooltip.background {
-    background-color: #ffffe1;
-    color: #000000;
-    border: 1px solid #000000;
+    background-color: @imp95_tooltip_bg;
+    color: @imp95_tooltip_fg;
+    border: 1px solid @imp95_dark;
     border-radius: 0px;
     box-shadow: none;
     text-shadow: none;
 }
 
 tooltip label {
-    color: #000000;
+    color: @imp95_tooltip_fg;
 }
 
 /* --------------------------------------------------------------------------
@@ -372,13 +388,13 @@ tooltip label {
 /* Check boxes and radio buttons: sunken dark well, red mark */
 check,
 radio {
-    background-color: #242424;
+    background-color: @imp95_bg;
     background-image: none;
     border-style: solid;
     border-width: 1px;
-    border-color: #1E1E1E #555555 #555555 #1E1E1E;
-    box-shadow: inset 1px 1px #000000, inset -1px -1px #3C3C3C;
-    color: #9E2A2B;
+    border-color: @imp95_shadow @imp95_light @imp95_light @imp95_shadow;
+    box-shadow: inset 1px 1px @imp95_dark, inset -1px -1px @imp95_hover;
+    color: @imp95_accent;
     -gtk-icon-shadow: none;
 }
 
@@ -394,49 +410,49 @@ check:checked,
 check:indeterminate,
 radio:checked,
 radio:indeterminate {
-    background-color: #242424;
+    background-color: @imp95_bg;
     background-image: none;
-    color: #9E2A2B;
+    color: @imp95_accent;
 }
 
 check:disabled,
 radio:disabled {
-    background-color: #2F2F2F;
-    color: #707070;
+    background-color: @imp95_surface;
+    color: @imp95_disabled;
 }
 
 /* Switches */
 switch {
-    background-color: #3C3C3C;
+    background-color: @imp95_hover;
     background-image: none;
-    border-color: #1E1E1E #555555 #555555 #1E1E1E;
+    border-color: @imp95_shadow @imp95_light @imp95_light @imp95_shadow;
     border-radius: 0px;
 }
 
 switch:checked {
-    background-color: #9E2A2B;
-    color: #FFFFFF;
+    background-color: @imp95_accent;
+    color: @imp95_text;
 }
 
 switch slider {
-    background-color: #2F2F2F;
+    background-color: @imp95_surface;
     background-image: none;
     border-style: solid;
     border-width: 1px;
-    border-color: #555555 #000000 #000000 #555555;
+    border-color: @imp95_light @imp95_dark @imp95_dark @imp95_light;
     border-radius: 0px;
-    box-shadow: inset 1px 1px #3C3C3C, inset -1px -1px #1E1E1E;
+    box-shadow: inset 1px 1px @imp95_hover, inset -1px -1px @imp95_shadow;
 }
 
 /* Progress bars, level bars and slider fills */
 progressbar trough,
 levelbar trough,
 scale trough {
-    background-color: #242424;
+    background-color: @imp95_bg;
     background-image: none;
     border-style: solid;
     border-width: 1px;
-    border-color: #1E1E1E #555555 #555555 #1E1E1E;
+    border-color: @imp95_shadow @imp95_light @imp95_light @imp95_shadow;
     border-radius: 0px;
 }
 
@@ -444,113 +460,113 @@ progressbar progress,
 levelbar block.filled,
 scale highlight,
 entry progress {
-    background-color: #9E2A2B;
+    background-color: @imp95_accent;
     background-image: none;
-    border-color: #801E1F;
+    border-color: @imp95_accent_dark;
     border-radius: 0px;
     box-shadow: none;
 }
 
 levelbar block.filled.low {
-    background-color: #c45455;
+    background-color: @imp95_accent_light;
 }
 
 levelbar block.filled.full {
-    background-color: #801E1F;
+    background-color: @imp95_accent_dark;
 }
 
 scale slider {
-    background-color: #2F2F2F;
+    background-color: @imp95_surface;
     background-image: none;
     border-style: solid;
     border-width: 1px;
-    border-color: #555555 #000000 #000000 #555555;
+    border-color: @imp95_light @imp95_dark @imp95_dark @imp95_light;
     border-radius: 0px;
-    box-shadow: inset 1px 1px #3C3C3C, inset -1px -1px #1E1E1E;
+    box-shadow: inset 1px 1px @imp95_hover, inset -1px -1px @imp95_shadow;
 }
 
 /* Links */
 *:link,
 button:link,
 button:link label {
-    color: #9E2A2B;
+    color: @imp95_accent;
 }
 
 *:link:hover,
 button:link:hover label {
-    color: #b83a3b;
+    color: @imp95_accent_hover;
 }
 
 *:visited,
 button:visited,
 button:visited label {
-    color: #801E1F;
+    color: @imp95_accent_dark;
 }
 
 /* Default ("suggested") action buttons */
 button.suggested-action {
-    background-color: #9E2A2B;
-    color: #FFFFFF;
-    border-color: #555555 #000000 #000000 #555555;
-    box-shadow: inset 1px 1px #c45455, inset -1px -1px #541617;
+    background-color: @imp95_accent;
+    color: @imp95_text;
+    border-color: @imp95_light @imp95_dark @imp95_dark @imp95_light;
+    box-shadow: inset 1px 1px @imp95_accent_light, inset -1px -1px @imp95_accent_darkest;
 }
 
 button.suggested-action label {
-    color: #FFFFFF;
+    color: @imp95_text;
 }
 
 button.suggested-action:hover {
-    background-color: #b83a3b;
+    background-color: @imp95_accent_hover;
 }
 
 button.suggested-action:active,
 button.suggested-action:checked {
-    background-color: #801E1F;
-    border-color: #000000 #555555 #555555 #000000;
-    box-shadow: inset 1px 1px #541617, inset -1px -1px #c45455;
+    background-color: @imp95_accent_dark;
+    border-color: @imp95_dark @imp95_light @imp95_light @imp95_dark;
+    box-shadow: inset 1px 1px @imp95_accent_darkest, inset -1px -1px @imp95_accent_light;
 }
 
 /* Menubar items (File, Edit, ...) */
 menubar > menuitem:hover,
 .menubar > menuitem:hover {
-    background-color: #9E2A2B;
-    color: #FFFFFF;
+    background-color: @imp95_accent;
+    color: @imp95_text;
     box-shadow: none;
 }
 
 menubar > menuitem:hover label {
-    color: #FFFFFF;
+    color: @imp95_text;
 }
 
 /* Info bars, selection-mode header bars, drag-and-drop and rubberband */
 infobar.info > revealer > box,
 infobar.question > revealer > box {
-    background-color: #9E2A2B;
-    color: #FFFFFF;
+    background-color: @imp95_accent;
+    color: @imp95_text;
 }
 
 headerbar.selection-mode {
-    background-color: #801E1F;
-    color: #FFFFFF;
+    background-color: @imp95_accent_dark;
+    color: @imp95_text;
 }
 
 *:drop(active),
 *:drop(active):focus {
-    border-color: #9E2A2B;
-    box-shadow: inset 0 0 0 1px #9E2A2B;
-    caret-color: #9E2A2B;
+    border-color: @imp95_accent;
+    box-shadow: inset 0 0 0 1px @imp95_accent;
+    caret-color: @imp95_accent;
 }
 
 rubberband,
 .rubberband {
-    border: 1px solid #9E2A2B;
+    border: 1px solid @imp95_accent;
     background-color: rgba(158, 42, 43, 0.3);
 }
 
 /* Text cursor */
 entry,
 textview text {
-    caret-color: #FFFFFF;
+    caret-color: @imp95_text;
 }
 
 /* --------------------------------------------------------------------------
@@ -560,9 +576,9 @@ textview text {
 
 .xfce4-panel.background,
 .xfce4-panel {
-    background-color: #2F2F2F;
+    background-color: @imp95_surface;
     background-image: none;
-    color: #FFFFFF;
+    color: @imp95_text;
     font-family: "MS Sans Serif", "Microsoft Sans Serif", "Tahoma", "DejaVu Sans", sans-serif;
     font-size: 11px;
 }
@@ -570,31 +586,31 @@ textview text {
 /* Raised edge facing the desktop (the panel sits at the top of the screen) */
 .xfce4-panel.background {
     border: none;
-    box-shadow: inset 0 1px #3C3C3C, inset 0 -1px #000000, inset 0 -2px #1E1E1E;
+    box-shadow: inset 0 1px @imp95_hover, inset 0 -1px @imp95_dark, inset 0 -2px @imp95_shadow;
 }
 
 .xfce4-panel button {
     margin: 2px 1px 3px 1px;
     padding: 0px 4px;
-    background-color: #2F2F2F;
+    background-color: @imp95_surface;
     background-image: none;
-    border-color: #555555 #000000 #000000 #555555;
-    box-shadow: inset 1px 1px #3C3C3C, inset -1px -1px #1E1E1E;
+    border-color: @imp95_light @imp95_dark @imp95_dark @imp95_light;
+    box-shadow: inset 1px 1px @imp95_hover, inset -1px -1px @imp95_shadow;
 }
 
 .xfce4-panel button:hover {
-    background-color: #3C3C3C;
+    background-color: @imp95_hover;
 }
 
 .xfce4-panel button:active,
 .xfce4-panel button:checked {
-    background-color: #242424;
-    border-color: #000000 #555555 #555555 #000000;
-    box-shadow: inset 1px 1px #1E1E1E, inset -1px -1px #3C3C3C;
+    background-color: @imp95_bg;
+    border-color: @imp95_dark @imp95_light @imp95_light @imp95_dark;
+    box-shadow: inset 1px 1px @imp95_shadow, inset -1px -1px @imp95_hover;
 }
 
 .xfce4-panel button label {
-    color: #FFFFFF;
+    color: @imp95_text;
     text-shadow: none;
 }
 
@@ -602,34 +618,34 @@ textview text {
 #applicationsmenu-1 menu,
 .xfce4-popup-applicationsmenu,
 .xfce4-popup-applicationsmenu .background {
-    background-color: #2F2F2F;
-    color: #FFFFFF;
-    border: 1px solid #000000;
+    background-color: @imp95_surface;
+    color: @imp95_text;
+    border: 1px solid @imp95_dark;
 }
 
 #applicationsmenu-1 menuitem,
 .xfce4-popup-applicationsmenu menuitem {
-    color: #FFFFFF;
+    color: @imp95_text;
 }
 
 #applicationsmenu-1 menuitem:hover,
 .xfce4-popup-applicationsmenu menuitem:hover {
-    background-color: #9E2A2B;
-    color: #FFFFFF;
+    background-color: @imp95_accent;
+    color: @imp95_text;
 }
 
 /* "Start" button */
 #applicationsmenu-1 button {
     padding: 0px 5px 0px 3px;
-    background-color: #2F2F2F;
-    border-color: #555555 #000000 #000000 #555555;
-    box-shadow: inset 1px 1px #3C3C3C, inset -1px -1px #1E1E1E;
+    background-color: @imp95_surface;
+    border-color: @imp95_light @imp95_dark @imp95_dark @imp95_light;
+    box-shadow: inset 1px 1px @imp95_hover, inset -1px -1px @imp95_shadow;
 }
 
 #applicationsmenu-1 button:checked,
 #applicationsmenu-1 button:active {
-    border-color: #000000 #555555 #555555 #000000;
-    box-shadow: inset 1px 1px #1E1E1E, inset -1px -1px #3C3C3C;
+    border-color: @imp95_dark @imp95_light @imp95_light @imp95_dark;
+    box-shadow: inset 1px 1px @imp95_shadow, inset -1px -1px @imp95_hover;
 }
 
 #applicationsmenu-1 button label {
@@ -642,9 +658,9 @@ textview text {
 }
 
 #tasklist-2 button:checked {
-    background-color: #3C3C3C;
-    border-color: #000000 #555555 #555555 #000000;
-    box-shadow: inset 1px 1px #1E1E1E, inset -1px -1px #3C3C3C;
+    background-color: @imp95_hover;
+    border-color: @imp95_dark @imp95_light @imp95_light @imp95_dark;
+    box-shadow: inset 1px 1px @imp95_shadow, inset -1px -1px @imp95_hover;
 }
 
 #tasklist-2 button:checked label {
@@ -653,13 +669,13 @@ textview text {
 
 /* Workspace pager: sunken wells */
 #pager-4 button {
-    border-color: #1E1E1E #555555 #555555 #1E1E1E;
+    border-color: @imp95_shadow @imp95_light @imp95_light @imp95_shadow;
     box-shadow: none;
-    background-color: #2F2F2F;
+    background-color: @imp95_surface;
 }
 
 #pager-4 button:checked {
-    background-color: #9E2A2B;
+    background-color: @imp95_accent;
 }
 
 /* Notification area + clock: one sunken tray */
@@ -667,7 +683,7 @@ textview text {
 #clock-8 {
     margin: 2px 0px 3px 0px;
     border-style: solid;
-    border-color: #1E1E1E #555555 #555555 #1E1E1E;
+    border-color: @imp95_shadow @imp95_light @imp95_light @imp95_shadow;
 }
 
 #systray-6 {
@@ -696,6 +712,6 @@ textview text {
     background-color: transparent;
     border-style: solid;
     border-width: 0 1px 0 1px;
-    border-color: transparent #555555 transparent #1E1E1E;
+    border-color: transparent @imp95_light transparent @imp95_shadow;
     margin: 3px 2px;
 }
