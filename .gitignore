@@ -18,3 +18,8 @@ result-*
 # OS-specific files
 .DS_Store
 Thumbs.db
+
+# Icon cache files
+*.cache
+.icon-theme.cache
+icon-theme.cache

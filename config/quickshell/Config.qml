@@ -102,7 +102,7 @@ Singleton {
                 property string currentTheme: "default"
                 property bool setWallpaperToThemeWallpaper: true
                 property JsonObject execCommands: JsonObject {
-                    property string terminal: "kitty"
+                    property string terminal: "xfce4-terminal"
                     property string files: "nemo"
                 }
                 property JsonObject systemDetails: JsonObject {

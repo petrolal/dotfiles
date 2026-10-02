@@ -13,6 +13,8 @@
            #:user-home-directory
            #:link-file
            #:apply-xfce-settings
+           #:remove-panel-dock
+           #:apply-gnome-settings
            #:reload-desktop-services
            #:deploy
            #:main))
@@ -23,12 +25,15 @@
 (defparameter *program-name* "invoker")
 
 (defparameter *mappings*
-  '(("config/alacritty/alacritty.toml" . ".config/alacritty/alacritty.toml")
-    ("config/gtk-3.0/gtk.css"          . ".config/gtk-3.0/gtk.css")
+  '(("config/gtk-3.0/gtk.css"          . ".config/gtk-3.0/gtk.css")
+    ("config/gtk-3.0/settings.ini"     . ".config/gtk-3.0/settings.ini")
+    ("config/gtk-4.0/settings.ini"     . ".config/gtk-4.0/settings.ini")
+    ("config/gtk-2.0/gtkrc"            . ".gtkrc-2.0")
     ("config/quickshell"               . ".config/quickshell")
     ("themes/hell-borders/xfwm4"       . ".local/share/themes/hell-borders/xfwm4")
     ("themes/mac-os-9-classic"         . ".local/share/themes/Mac OS 9 Classic")
-    ("themes/icons"                    . ".local/share/icons/RetroismIcons")))
+    ("themes/icons"                    . ".local/share/icons/RetroismIcons")
+    ("themes/icons"                    . ".icons/RetroismIcons")))
 
 (defparameter *xfce-settings*
   '(;; GTK and Theme Configuration (Mac OS 9 / Retroism)
@@ -56,7 +61,7 @@
     ("xfwm4"                    "/general/frame_opacity"                  "int"    "100")
     ("xfwm4"                    "/general/inactive_opacity"               "int"    "100")
 
-    ;; Panel Configuration
+    ;; Panel Configuration (Single Top Bar)
     ("xfce4-panel"              "/panels/panel-1/size"                    "int"    "28")
     ("xfce4-panel"              "/panels/panel-1/background-style"        "int"    "0")
     ("xfce4-panel"              "/plugins/plugin-2/flat-buttons"          "bool"   "false")
@@ -64,7 +69,8 @@
     ("xfce4-panel"              "/plugins/plugin-8/custom-format"         "string" "%b %d %Y | %H:%M")
 
     ;; Hyprland-adapted Keybindings (Super+Return, Super+Q, Super+F, Workspaces 1-4)
-    ("xfce4-keyboard-shortcuts" "/commands/custom/<Super>Return"          "string" "alacritty")
+    ("xfce4-keyboard-shortcuts" "/commands/custom/<Super>Return"          "string" "xfce4-terminal")
+    ("xfce4-keyboard-shortcuts" "/commands/custom/<Primary><Alt>t"        "string" "xfce4-terminal")
     ("xfce4-keyboard-shortcuts" "/commands/custom/<Super>e"               "string" "thunar")
     ("xfce4-keyboard-shortcuts" "/commands/custom/<Shift><Super>s"        "string" "xfce4-screenshooter -r")
     ("xfce4-keyboard-shortcuts" "/xfwm4/custom/<Super>q"                  "string" "close_window_key")
@@ -134,6 +140,31 @@
        (list "xfconf-query" "-c" channel "-p" property "-s" value "--create" "-t" type)
        :ignore-error-status t)))
 
+(defun remove-panel-dock (&key dry-run verbose)
+  (when verbose
+    (format t "Ensuring bottom dock panel is removed...~%"))
+  (if dry-run
+      (format t "[DRY-RUN] xfconf-query -c xfce4-panel -p /panels -a -t int -s 1~%")
+      (progn
+        (uiop:run-program '("xfconf-query" "-c" "xfce4-panel" "-p" "/panels" "-a" "-t" "int" "-s" "1")
+                          :ignore-error-status t)
+        (uiop:run-program '("xfconf-query" "-c" "xfce4-panel" "-p" "/panels/panel-2" "-r" "-R")
+                          :ignore-error-status t))))
+
+(defun apply-gnome-settings (&key dry-run verbose)
+  (when (command-exists-p "gsettings")
+    (when verbose
+      (format t "Syncing GSettings for GNOME/GTK apps...~%"))
+    (if dry-run
+        (progn
+          (format t "[DRY-RUN] gsettings set org.gnome.desktop.interface icon-theme 'RetroismIcons'~%")
+          (format t "[DRY-RUN] gsettings set org.gnome.desktop.interface gtk-theme 'Mac OS 9 Classic'~%"))
+        (progn
+          (uiop:run-program '("gsettings" "set" "org.gnome.desktop.interface" "icon-theme" "RetroismIcons")
+                            :ignore-error-status t)
+          (uiop:run-program '("gsettings" "set" "org.gnome.desktop.interface" "gtk-theme" "Mac OS 9 Classic")
+                            :ignore-error-status t)))))
+
 (defun apply-xfce-settings (&key dry-run verbose)
   (unless (command-exists-p "xfconf-query")
     (when verbose
@@ -141,9 +172,11 @@
     (return-from apply-xfce-settings nil))
   (when verbose
     (format t "Applying XFCE panel and retro theme settings...~%"))
+  (remove-panel-dock :dry-run dry-run :verbose verbose)
   (dolist (setting *xfce-settings*)
     (destructuring-bind (channel prop type val) setting
-      (set-xfconf channel prop type val :dry-run dry-run))))
+      (set-xfconf channel prop type val :dry-run dry-run)))
+  (apply-gnome-settings :dry-run dry-run :verbose verbose))
 
 (defun reload-desktop-services (&key dry-run verbose)
   (unless (uiop:getenv "DISPLAY")

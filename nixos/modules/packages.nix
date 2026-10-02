@@ -9,10 +9,9 @@
     sbcl
     git
 
-    # Video Wallpaper & Terminal Aesthetics
+    # Video Wallpaper & Wallpapers
     mpv
     xwinwrap
-    cool-retro-term
     feh
 
     # System & Terminal Utilities

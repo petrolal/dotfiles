@@ -8,7 +8,7 @@
     "currentTheme": "default",
     "execCommands": {
       "files": "nemo",
-      "terminal": "kitty"
+      "terminal": "xfce4-terminal"
     },
     "militaryTimeClockFormat": true,
     "setWallpaperToThemeWallpaper": true,
