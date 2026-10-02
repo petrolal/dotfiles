@@ -77,6 +77,17 @@ Singleton {
             "outline": "#21351a",
             "outlineGradientFade": "#284223",
             "defaultWallpaperPath": ""
+        },
+        "imp95": {
+            "base": "#2F2F2F",
+            "shadow": "#1E1E1E",
+            "highlight": "#3C3C3C",
+            "urgent": "#9E2A2B",
+            "accent": "#9E2A2B",
+            "text": "#FFFFFF",
+            "outline": "#000000",
+            "outlineGradientFade": "#555555",
+            "defaultWallpaperPath": ""
         }
     }
 

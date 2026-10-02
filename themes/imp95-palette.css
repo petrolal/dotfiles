@@ -1,0 +1,27 @@
+:root {
+  /* Accent / Replaced Blue */
+  --imp95-accent: #9E2A2B;
+  --imp95-accent-text: #FFFFFF;
+
+  /* Surfaces & Backgrounds */
+  --imp95-bg: #242424;
+  --imp95-surface: #2F2F2F;
+
+  /* Bevels & Borders */
+  --imp95-light: #555555;
+  --imp95-inner-light: #3C3C3C;
+  --imp95-shadow: #1E1E1E;
+  --imp95-dark-shadow: #000000;
+
+  /* Titlebars */
+  --imp95-titlebar-active: #9E2A2B;
+  --imp95-titlebar-active-text: #FFFFFF;
+  --imp95-titlebar-inactive: #404040;
+  --imp95-titlebar-inactive-text: #808080;
+
+  /* Typography & Selection */
+  --imp95-text: #FFFFFF;
+  --imp95-text-disabled: #707070;
+  --imp95-selection: #9E2A2B;
+  --imp95-selection-text: #FFFFFF;
+}

@@ -1,403 +1,326 @@
 /* ==========================================================================
-   WINDOWS 98 RETRO DESKTOP: MENUS, TOP PANEL AND WINDOW CONTENTS
-   Window frames (title bar, borders) live in themes/imp98/xfwm4 (the "imp98" theme).
+   IMP95 DARK PALETTE — GTK3 OVERRIDES
+   Panel, tabs, controls, accent: dark Win95 aesthetic with red (#9E2A2B).
+
+   These rules override the "Mac OS 9 Classic" GTK theme's light surfaces
+   so every widget renders against the imp95 dark palette.
    ========================================================================== */
 
 /* --------------------------------------------------------------------------
-   Dropdown menus (Applications / context / applet popups)
+   Base surfaces: windows, dialogs, headerbars, toolbars
    -------------------------------------------------------------------------- */
 
-/* Palette (classic Win98 "Windows Standard" scheme)
-     face      #c0c0c0   menu / 3D face
-     light     #ffffff   bevel highlight
-     shadow    #808080   bevel shadow
-     dark      #000000   outer bevel shadow
-     highlight #9E2A2B   selected item (red)
-     text      #000000   menu text
-     disabled  #808080   grayed text, embossed with #ffffff
+window,
+dialog,
+messagedialog,
+.background {
+    background-color: #2F2F2F;
+    color: #FFFFFF;
+}
 
-   Red accent ramp (replaces every blue accent)
-     accent    #9E2A2B   primary: selection, title bars, checked controls
-     light     #b83a3b   secondary: hover
-     lighter   #c45455   tertiary: subtle highlights
-     dark      #801E1F   pressed, borders, visited links
-     darkest   #541617   deep shadow / gradient ends */
-
-/* Named colors: apps that draw their own widgets (Thunar's icon view,
-   Xfce dialogs, ...) look these up instead of using CSS selectors */
-@define-color theme_selected_bg_color #9E2A2B;
-@define-color theme_selected_fg_color #ffffff;
-@define-color theme_unfocused_selected_bg_color #801E1F;
-@define-color theme_unfocused_selected_fg_color #ffffff;
-@define-color selected_bg_color #9E2A2B;
-@define-color selected_fg_color #ffffff;
-@define-color accent_color #9E2A2B;
-@define-color accent_bg_color #9E2A2B;
-@define-color accent_fg_color #ffffff;
-@define-color link_color #9E2A2B;
-@define-color visited_link_color #801E1F;
-
-/* The main popup menu container: raised 2px 3D bevel */
-menu,
-.menu,
-.xfce4-panel menu,
-.xfce4-panel-menu,
-.csd menu,
-window.popup menu {
-    background-color: #c0c0c0;
+headerbar,
+.titlebar,
+toolbar,
+.toolbar {
+    background-color: #2F2F2F;
     background-image: none;
-    color: #000000;
-    border-style: solid;
-    border-width: 1px;
-    border-color: #dfdfdf #000000 #000000 #dfdfdf;
-    border-radius: 0px;
-    box-shadow: inset 1px 1px #ffffff, inset -1px -1px #808080;
-    padding: 2px;
-    margin: 0px;
+    border-color: #000000;
+    color: #FFFFFF;
+    box-shadow: inset 0 -1px #1E1E1E;
 }
 
-/* Menu Items (Default / Inactive) */
-menu menuitem,
-.menu menuitem,
-.xfce4-panel menu menuitem {
-    background-color: transparent;
-    background-image: none;
-    border: none;
-    border-radius: 0px;
-    box-shadow: none;
-    color: #000000;
-    text-shadow: none;
-    font-family: "MS Sans Serif", "Microsoft Sans Serif", "Tahoma", "DejaVu Sans", sans-serif;
-    font-size: 11px;
-    font-weight: normal;
-    padding: 3px 20px 3px 6px;
-    min-height: 16px;
-}
-
-menu menuitem label,
-menu menuitem accelerator,
-.menu menuitem label,
-.xfce4-panel menu menuitem label {
-    color: #000000;
-    text-shadow: none;
-}
-
-/* Hover / Selected: solid red bar with white text */
-menu menuitem:hover,
-menu menuitem:selected,
-.menu menuitem:hover,
-.xfce4-panel menu menuitem:hover {
-    background-color: #9E2A2B;
-    background-image: none;
-    color: #ffffff;
-}
-
-menu menuitem:hover label,
-menu menuitem:hover accelerator,
-menu menuitem:selected label,
-.menu menuitem:hover label,
-.xfce4-panel menu menuitem:hover label {
-    color: #ffffff;
-    text-shadow: none;
-}
-
-/* Disabled items: gray text with white emboss, no highlight on hover */
-menu menuitem:disabled,
-menu menuitem:disabled:hover,
-.menu menuitem:disabled {
-    background-color: transparent;
-    color: #808080;
-}
-
-menu menuitem:disabled label,
-menu menuitem:disabled:hover label,
-.menu menuitem:disabled label {
-    color: #808080;
-    text-shadow: 1px 1px #ffffff;
-}
-
-/* Separators: etched line (gray over white) */
-menu separator,
-.menu separator,
-.xfce4-panel menu separator {
-    background-color: transparent;
-    border-style: solid;
-    border-width: 1px 0 1px 0;
-    border-color: #808080 transparent #ffffff transparent;
-    min-height: 0px;
-    margin: 3px 2px;
-}
-
-/* Submenu arrows, check and radio indicators follow the text color */
-menu menuitem arrow,
-menu menuitem check,
-menu menuitem radio,
-.xfce4-panel menu menuitem arrow {
-    color: #000000;
-    min-height: 10px;
-    min-width: 10px;
-}
-
-menu menuitem:hover arrow,
-menu menuitem:hover check,
-menu menuitem:hover radio,
-.xfce4-panel menu menuitem:hover arrow {
-    color: #ffffff;
-}
-
-/* Scroll arrows on long menus */
-menu > arrow,
-.menu > arrow {
-    background-color: #c0c0c0;
-    border: none;
-    color: #000000;
+decoration {
+    background-color: #2F2F2F;
 }
 
 /* --------------------------------------------------------------------------
-   Window contents (applies on top of whatever GTK theme is active)
-   Bevels:  raised = white/black outer, #dfdfdf/#808080 inner
-            sunken = the same, mirrored
-            field  = #808080/white outer, black/#dfdfdf inner (entries, lists)
+   General buttons: raised 3D face, proper hover / active / disabled states
    -------------------------------------------------------------------------- */
 
-window.background,
-dialog.background,
-.background {
-    background-color: #c0c0c0;
-    background-image: none;
-    color: #000000;
-}
-
-/* Client-side decorated apps: square corners, 1px black edge, no soft shadow */
-decoration,
-decoration:backdrop {
-    border-radius: 0px;
-    box-shadow: 0 0 0 1px #000000;
-}
-
-/* CSD title bars get the red Win98 caption */
-headerbar,
-.titlebar {
-    background-color: #9E2A2B;
-    background-image: none;
-    border: none;
-    border-radius: 0px;
-    box-shadow: none;
-    color: #ffffff;
-    min-height: 22px;
-    padding: 2px 3px;
-}
-
-headerbar:backdrop,
-.titlebar:backdrop {
-    background-color: #808080;
-    color: #c0c0c0;
-}
-
-headerbar .title,
-.titlebar .title {
-    color: inherit;
-    font-weight: bold;
-}
-
-headerbar .subtitle,
-.titlebar .subtitle {
-    color: inherit;
-}
-
-/* Push buttons: raised, pressed = sunken */
 button {
-    background-color: #c0c0c0;
+    background-color: #2F2F2F;
     background-image: none;
-    color: #000000;
-    text-shadow: none;
-    -gtk-icon-shadow: none;
     border-style: solid;
     border-width: 1px;
-    border-color: #ffffff #000000 #000000 #ffffff;
+    border-color: #555555 #000000 #000000 #555555;
     border-radius: 0px;
-    box-shadow: inset 1px 1px #dfdfdf, inset -1px -1px #808080;
-    outline-color: #000000;
-    outline-style: dotted;
-    outline-width: 1px;
-    outline-offset: -4px;
-    -gtk-outline-radius: 0px;
+    box-shadow: inset 1px 1px #3C3C3C, inset -1px -1px #1E1E1E;
+    color: #FFFFFF;
+    text-shadow: none;
+}
+
+button:hover {
+    background-color: #3C3C3C;
+    background-image: none;
 }
 
 button:active,
 button:checked {
-    background-color: #c0c0c0;
-    border-color: #000000 #ffffff #ffffff #000000;
-    box-shadow: inset 1px 1px #808080, inset -1px -1px #dfdfdf;
+    background-color: #242424;
+    border-color: #000000 #555555 #555555 #000000;
+    box-shadow: inset 1px 1px #1E1E1E, inset -1px -1px #3C3C3C;
 }
 
-button:checked {
-    background-color: #dfdfdf;
-}
-
-button:disabled,
-button:disabled label {
-    color: #808080;
-    text-shadow: 1px 1px #ffffff;
-}
-
-/* Toolbar and other flat buttons only show the bevel on hover */
-button.flat {
-    background-color: transparent;
-    border-color: transparent;
+button:disabled {
+    background-color: #2F2F2F;
+    color: #707070;
     box-shadow: none;
 }
 
-button.flat:hover {
-    border-color: #ffffff #808080 #808080 #ffffff;
+button label {
+    color: #FFFFFF;
 }
 
-button.flat:active,
-button.flat:checked {
-    border-color: #808080 #ffffff #ffffff #808080;
+button:disabled label {
+    color: #707070;
 }
 
-/* Text fields, spin buttons and lists: white sunken well */
+/* --------------------------------------------------------------------------
+   Text entries, spin buttons, combo boxes
+   -------------------------------------------------------------------------- */
+
 entry,
-spinbutton:not(.vertical),
-textview text,
-treeview.view,
-list,
-iconview {
-    background-color: #ffffff;
+spinbutton {
+    background-color: #242424;
     background-image: none;
-    color: #000000;
-    border-radius: 0px;
-}
-
-entry,
-spinbutton:not(.vertical) {
     border-style: solid;
     border-width: 1px;
-    border-color: #808080 #ffffff #ffffff #808080;
-    box-shadow: inset 1px 1px #000000, inset -1px -1px #dfdfdf;
-}
-
-entry:focus,
-spinbutton:focus {
-    border-color: #808080 #ffffff #ffffff #808080;
-    box-shadow: inset 1px 1px #000000, inset -1px -1px #dfdfdf;
-}
-
-entry:disabled {
-    background-color: #c0c0c0;
-    color: #808080;
-}
-
-scrolledwindow.frame {
-    border-style: solid;
-    border-width: 1px;
-    border-color: #808080 #ffffff #ffffff #808080;
+    border-color: #1E1E1E #555555 #555555 #1E1E1E;
     border-radius: 0px;
-    box-shadow: inset 1px 1px #000000, inset -1px -1px #dfdfdf;
+    box-shadow: inset 1px 1px #000000;
+    color: #FFFFFF;
 }
 
-/* Group boxes: etched line */
-frame > border {
-    border-style: solid;
-    border-width: 1px;
-    border-color: #808080 #ffffff #ffffff #808080;
-    border-radius: 0px;
-    box-shadow: inset 1px 1px #ffffff, inset -1px -1px #808080;
+entry:disabled,
+spinbutton:disabled {
+    background-color: #2F2F2F;
+    color: #707070;
 }
 
-/* Selection: red with white text everywhere */
-*:selected,
-selection,
-treeview.view:selected,
-row:selected,
-iconview:selected,
 entry selection,
-textview text selection,
-label selection {
+textview text selection {
     background-color: #9E2A2B;
-    color: #ffffff;
+    color: #FFFFFF;
 }
 
-row:selected label {
-    color: #ffffff;
-}
-
-/* Scrollbars: dithered trough, raised thumb */
-scrollbar {
-    background-color: #dfdfdf;
+combobox button,
+combobox button.combo {
+    background-color: #2F2F2F;
     background-image: none;
-    border: none;
+    border-color: #555555 #000000 #000000 #555555;
+    box-shadow: inset 1px 1px #3C3C3C, inset -1px -1px #1E1E1E;
+    color: #FFFFFF;
+}
+
+combobox button:hover,
+combobox button.combo:hover {
+    background-color: #3C3C3C;
+}
+
+combobox cellview {
+    color: #FFFFFF;
+}
+
+/* --------------------------------------------------------------------------
+   Menus and popovers (application dropdown, right-click, combo dropdowns)
+   -------------------------------------------------------------------------- */
+
+menu,
+.menu,
+.context-menu,
+popover,
+popover.background {
+    background-color: #2F2F2F;
+    background-image: none;
+    border: 1px solid #000000;
+    border-radius: 0px;
+    box-shadow: 2px 2px 0px rgba(0, 0, 0, 0.5);
+    color: #FFFFFF;
+}
+
+menuitem,
+modelbutton {
+    color: #FFFFFF;
+    background-color: transparent;
+    border-radius: 0px;
+}
+
+menuitem:hover,
+modelbutton:hover,
+menuitem:focus,
+modelbutton:focus {
+    background-color: #9E2A2B;
+    color: #FFFFFF;
+}
+
+menuitem:hover label,
+modelbutton:hover label {
+    color: #FFFFFF;
+}
+
+menuitem:disabled,
+modelbutton:disabled {
+    color: #707070;
+}
+
+menuitem:disabled label,
+modelbutton:disabled label {
+    color: #707070;
+}
+
+menuitem accelerator {
+    color: #707070;
+}
+
+menuitem separator,
+menu separator {
+    background-color: #1E1E1E;
+    border-top: 1px solid #555555;
+    margin: 2px 0;
+}
+
+/* --------------------------------------------------------------------------
+   Scrollbars
+   -------------------------------------------------------------------------- */
+
+scrollbar {
+    background-color: #242424;
+    border-color: #1E1E1E;
 }
 
 scrollbar slider {
-    background-color: #c0c0c0;
-    border-style: solid;
-    border-width: 1px;
-    border-color: #ffffff #000000 #000000 #ffffff;
+    background-color: #2F2F2F;
+    border: 1px solid #555555;
     border-radius: 0px;
-    box-shadow: inset 1px 1px #dfdfdf, inset -1px -1px #808080;
     min-width: 12px;
     min-height: 12px;
-    margin: 0px;
 }
 
-/* Tabs (Windows 95 property-sheet style): raised tabs with softened top
-   corners; the selected tab is taller and sits on the page's top edge.
-   No accent underline. */
+scrollbar slider:hover {
+    background-color: #3C3C3C;
+}
+
+scrollbar slider:active {
+    background-color: #555555;
+}
+
+scrollbar button {
+    background-color: #2F2F2F;
+    border-color: #555555 #000000 #000000 #555555;
+    box-shadow: inset 1px 1px #3C3C3C, inset -1px -1px #1E1E1E;
+    color: #FFFFFF;
+}
+
+/* --------------------------------------------------------------------------
+   Tree views, list boxes, icon views, sidebars
+   -------------------------------------------------------------------------- */
+
+treeview,
+.view,
+iconview,
+textview,
+textview text,
+list,
+listbox,
+.sidebar,
+placessidebar {
+    background-color: #242424;
+    color: #FFFFFF;
+}
+
+treeview:selected,
+.view:selected,
+iconview:selected,
+list row:selected,
+listbox row:selected,
+.sidebar row:selected,
+placessidebar row:selected {
+    background-color: #9E2A2B;
+    color: #FFFFFF;
+}
+
+treeview:hover,
+list row:hover,
+listbox row:hover,
+.sidebar row:hover,
+placessidebar row:hover {
+    background-color: #3C3C3C;
+    color: #FFFFFF;
+}
+
+treeview header button {
+    background-color: #2F2F2F;
+    background-image: none;
+    border-color: #555555 #000000 #000000 #555555;
+    color: #FFFFFF;
+}
+
+/* --------------------------------------------------------------------------
+   Frames, separators, paned handles
+   -------------------------------------------------------------------------- */
+
+frame,
+frame > border {
+    border-color: #555555;
+}
+
+separator {
+    background-color: #1E1E1E;
+}
+
+paned > separator {
+    background-color: #2F2F2F;
+    border-color: #555555;
+}
+
+/* --------------------------------------------------------------------------
+   Status bars, info labels
+   -------------------------------------------------------------------------- */
+
+statusbar,
+statusbar label {
+    background-color: #2F2F2F;
+    color: #FFFFFF;
+}
+
+label,
+label.dim-label {
+    color: #FFFFFF;
+}
+
+label:disabled {
+    color: #707070;
+}
+
+/* --------------------------------------------------------------------------
+   Notebook (tabbed panes): sunken content area, flat tabs, raised active tab
+   -------------------------------------------------------------------------- */
+
+/* Tab strip (header area) */
 notebook > header {
-    background-color: #c0c0c0;
-    background-image: none;
-    border: none;
-    box-shadow: inset 0 -1px #ffffff;
-    padding: 2px 2px 0px 2px;
+    background-color: #2F2F2F;
+    border-color: #000000;
 }
 
-notebook > header.bottom {
-    box-shadow: inset 0 1px #000000;
-    padding: 0px 2px 2px 2px;
-}
-
+/* Individual tabs: flat, blending into the surface */
 notebook > header tab {
-    background-color: #c0c0c0;
+    background-color: #2F2F2F;
     background-image: none;
-    color: #000000;
     border-style: solid;
-    border-width: 1px 1px 0 1px;
-    border-color: #ffffff #000000 transparent #ffffff;
-    border-radius: 3px 3px 0 0;
-    box-shadow: inset 1px 1px #dfdfdf, inset -1px 0 #808080;
-    outline: none;
-    min-height: 16px;
-    padding: 2px 8px 2px 8px;
-    margin: 2px 0px 1px 0px;
+    border-width: 1px;
+    border-color: #555555 #000000 #000000 #555555;
+    box-shadow: inset 1px 1px #3C3C3C, inset -1px -1px #1E1E1E;
+    border-radius: 0px;
+    padding: 2px 8px;
+    color: #FFFFFF;
 }
 
-notebook > header.bottom tab {
-    border-width: 0 1px 1px 1px;
-    border-color: transparent #000000 #000000 #ffffff;
-    border-radius: 0 0 3px 3px;
-    box-shadow: inset 1px 0 #dfdfdf, inset -1px -1px #808080;
-    margin: 1px 0px 2px 0px;
-}
-
-notebook > header tab:hover {
-    background-color: #c0c0c0;
-    box-shadow: inset 1px 1px #dfdfdf, inset -1px 0 #808080;
-}
-
-notebook > header tab:checked,
-notebook > header tab:checked:hover {
-    background-color: #c0c0c0;
-    box-shadow: inset 1px 1px #dfdfdf, inset -1px 0 #808080;
-    padding: 3px 10px 4px 10px;
-    margin: 0px -1px 0px -1px;
-}
-
-notebook > header tab label,
-notebook > header tab:checked label,
-notebook > header tab:backdrop label {
-    color: #000000;
+/* Active tab pops up (reversed bevel = raised) */
+notebook > header tab:checked {
+    background-color: #2F2F2F;
+    border-color: #555555 #000000 #2F2F2F #555555;
+    box-shadow: inset 1px 1px #3C3C3C;
+    color: #FFFFFF;
     font-weight: normal;
     text-shadow: none;
 }
@@ -412,19 +335,19 @@ notebook > header tab button.flat {
     min-width: 14px;
     padding: 0px;
     margin: 0px 0px 0px 6px;
-    color: #000000;
+    color: #FFFFFF;
 }
 
 notebook > header tab button:active {
-    border-color: #808080 #ffffff #ffffff #808080;
+    border-color: #1E1E1E #555555 #555555 #1E1E1E;
 }
 
 notebook > stack:not(:only-child) {
-    background-color: #c0c0c0;
+    background-color: #2F2F2F;
     border-style: solid;
     border-width: 1px;
-    border-color: #ffffff #000000 #000000 #ffffff;
-    box-shadow: inset -1px -1px #808080;
+    border-color: #555555 #000000 #000000 #555555;
+    box-shadow: inset -1px -1px #1E1E1E;
 }
 
 /* Tooltips: pale yellow with a thin black border */
@@ -443,18 +366,18 @@ tooltip label {
 }
 
 /* --------------------------------------------------------------------------
-   Accent controls: replace the base theme's blue with the red ramp
+   Accent controls: red ramp
    -------------------------------------------------------------------------- */
 
-/* Check boxes and radio buttons: sunken white well, red mark */
+/* Check boxes and radio buttons: sunken dark well, red mark */
 check,
 radio {
-    background-color: #ffffff;
+    background-color: #242424;
     background-image: none;
     border-style: solid;
     border-width: 1px;
-    border-color: #808080 #ffffff #ffffff #808080;
-    box-shadow: inset 1px 1px #000000, inset -1px -1px #dfdfdf;
+    border-color: #1E1E1E #555555 #555555 #1E1E1E;
+    box-shadow: inset 1px 1px #000000, inset -1px -1px #3C3C3C;
     color: #9E2A2B;
     -gtk-icon-shadow: none;
 }
@@ -471,49 +394,49 @@ check:checked,
 check:indeterminate,
 radio:checked,
 radio:indeterminate {
-    background-color: #ffffff;
+    background-color: #242424;
     background-image: none;
     color: #9E2A2B;
 }
 
 check:disabled,
 radio:disabled {
-    background-color: #c0c0c0;
-    color: #808080;
+    background-color: #2F2F2F;
+    color: #707070;
 }
 
 /* Switches */
 switch {
-    background-color: #dfdfdf;
+    background-color: #3C3C3C;
     background-image: none;
-    border-color: #808080 #ffffff #ffffff #808080;
+    border-color: #1E1E1E #555555 #555555 #1E1E1E;
     border-radius: 0px;
 }
 
 switch:checked {
     background-color: #9E2A2B;
-    color: #ffffff;
+    color: #FFFFFF;
 }
 
 switch slider {
-    background-color: #c0c0c0;
+    background-color: #2F2F2F;
     background-image: none;
     border-style: solid;
     border-width: 1px;
-    border-color: #ffffff #000000 #000000 #ffffff;
+    border-color: #555555 #000000 #000000 #555555;
     border-radius: 0px;
-    box-shadow: inset 1px 1px #dfdfdf, inset -1px -1px #808080;
+    box-shadow: inset 1px 1px #3C3C3C, inset -1px -1px #1E1E1E;
 }
 
 /* Progress bars, level bars and slider fills */
 progressbar trough,
 levelbar trough,
 scale trough {
-    background-color: #ffffff;
+    background-color: #242424;
     background-image: none;
     border-style: solid;
     border-width: 1px;
-    border-color: #808080 #ffffff #ffffff #808080;
+    border-color: #1E1E1E #555555 #555555 #1E1E1E;
     border-radius: 0px;
 }
 
@@ -537,13 +460,13 @@ levelbar block.filled.full {
 }
 
 scale slider {
-    background-color: #c0c0c0;
+    background-color: #2F2F2F;
     background-image: none;
     border-style: solid;
     border-width: 1px;
-    border-color: #ffffff #000000 #000000 #ffffff;
+    border-color: #555555 #000000 #000000 #555555;
     border-radius: 0px;
-    box-shadow: inset 1px 1px #dfdfdf, inset -1px -1px #808080;
+    box-shadow: inset 1px 1px #3C3C3C, inset -1px -1px #1E1E1E;
 }
 
 /* Links */
@@ -567,13 +490,13 @@ button:visited label {
 /* Default ("suggested") action buttons */
 button.suggested-action {
     background-color: #9E2A2B;
-    color: #ffffff;
-    border-color: #ffffff #000000 #000000 #ffffff;
+    color: #FFFFFF;
+    border-color: #555555 #000000 #000000 #555555;
     box-shadow: inset 1px 1px #c45455, inset -1px -1px #541617;
 }
 
 button.suggested-action label {
-    color: #ffffff;
+    color: #FFFFFF;
 }
 
 button.suggested-action:hover {
@@ -583,7 +506,7 @@ button.suggested-action:hover {
 button.suggested-action:active,
 button.suggested-action:checked {
     background-color: #801E1F;
-    border-color: #000000 #ffffff #ffffff #000000;
+    border-color: #000000 #555555 #555555 #000000;
     box-shadow: inset 1px 1px #541617, inset -1px -1px #c45455;
 }
 
@@ -591,24 +514,24 @@ button.suggested-action:checked {
 menubar > menuitem:hover,
 .menubar > menuitem:hover {
     background-color: #9E2A2B;
-    color: #ffffff;
+    color: #FFFFFF;
     box-shadow: none;
 }
 
 menubar > menuitem:hover label {
-    color: #ffffff;
+    color: #FFFFFF;
 }
 
 /* Info bars, selection-mode header bars, drag-and-drop and rubberband */
 infobar.info > revealer > box,
 infobar.question > revealer > box {
     background-color: #9E2A2B;
-    color: #ffffff;
+    color: #FFFFFF;
 }
 
 headerbar.selection-mode {
     background-color: #801E1F;
-    color: #ffffff;
+    color: #FFFFFF;
 }
 
 *:drop(active),
@@ -627,19 +550,19 @@ rubberband,
 /* Text cursor */
 entry,
 textview text {
-    caret-color: #000000;
+    caret-color: #FFFFFF;
 }
 
 /* --------------------------------------------------------------------------
-   Top panel (Win98 taskbar). Plugin ids are pinned by the deployer:
+   Top panel (Win95 taskbar). Plugin ids are pinned by the deployer:
    1 applicationsmenu, 2 tasklist, 4 pager, 6 systray, 8 clock, 10 actions
    -------------------------------------------------------------------------- */
 
 .xfce4-panel.background,
 .xfce4-panel {
-    background-color: #c0c0c0;
+    background-color: #2F2F2F;
     background-image: none;
-    color: #000000;
+    color: #FFFFFF;
     font-family: "MS Sans Serif", "Microsoft Sans Serif", "Tahoma", "DejaVu Sans", sans-serif;
     font-size: 11px;
 }
@@ -647,31 +570,66 @@ textview text {
 /* Raised edge facing the desktop (the panel sits at the top of the screen) */
 .xfce4-panel.background {
     border: none;
-    box-shadow: inset 0 1px #dfdfdf, inset 0 -1px #000000, inset 0 -2px #808080;
+    box-shadow: inset 0 1px #3C3C3C, inset 0 -1px #000000, inset 0 -2px #1E1E1E;
 }
 
 .xfce4-panel button {
     margin: 2px 1px 3px 1px;
     padding: 0px 4px;
+    background-color: #2F2F2F;
+    background-image: none;
+    border-color: #555555 #000000 #000000 #555555;
+    box-shadow: inset 1px 1px #3C3C3C, inset -1px -1px #1E1E1E;
+}
+
+.xfce4-panel button:hover {
+    background-color: #3C3C3C;
+}
+
+.xfce4-panel button:active,
+.xfce4-panel button:checked {
+    background-color: #242424;
+    border-color: #000000 #555555 #555555 #000000;
+    box-shadow: inset 1px 1px #1E1E1E, inset -1px -1px #3C3C3C;
 }
 
 .xfce4-panel button label {
-    color: #000000;
+    color: #FFFFFF;
     text-shadow: none;
+}
+
+/* Application menu popup window */
+#applicationsmenu-1 menu,
+.xfce4-popup-applicationsmenu,
+.xfce4-popup-applicationsmenu .background {
+    background-color: #2F2F2F;
+    color: #FFFFFF;
+    border: 1px solid #000000;
+}
+
+#applicationsmenu-1 menuitem,
+.xfce4-popup-applicationsmenu menuitem {
+    color: #FFFFFF;
+}
+
+#applicationsmenu-1 menuitem:hover,
+.xfce4-popup-applicationsmenu menuitem:hover {
+    background-color: #9E2A2B;
+    color: #FFFFFF;
 }
 
 /* "Start" button */
 #applicationsmenu-1 button {
     padding: 0px 5px 0px 3px;
-    background-color: #c0c0c0;
-    border-color: #ffffff #000000 #000000 #ffffff;
-    box-shadow: inset 1px 1px #dfdfdf, inset -1px -1px #808080;
+    background-color: #2F2F2F;
+    border-color: #555555 #000000 #000000 #555555;
+    box-shadow: inset 1px 1px #3C3C3C, inset -1px -1px #1E1E1E;
 }
 
 #applicationsmenu-1 button:checked,
 #applicationsmenu-1 button:active {
-    border-color: #000000 #ffffff #ffffff #000000;
-    box-shadow: inset 1px 1px #808080, inset -1px -1px #dfdfdf;
+    border-color: #000000 #555555 #555555 #000000;
+    box-shadow: inset 1px 1px #1E1E1E, inset -1px -1px #3C3C3C;
 }
 
 #applicationsmenu-1 button label {
@@ -684,9 +642,9 @@ textview text {
 }
 
 #tasklist-2 button:checked {
-    background-color: #dfdfdf;
-    border-color: #000000 #ffffff #ffffff #000000;
-    box-shadow: inset 1px 1px #808080, inset -1px -1px #dfdfdf;
+    background-color: #3C3C3C;
+    border-color: #000000 #555555 #555555 #000000;
+    box-shadow: inset 1px 1px #1E1E1E, inset -1px -1px #3C3C3C;
 }
 
 #tasklist-2 button:checked label {
@@ -695,9 +653,9 @@ textview text {
 
 /* Workspace pager: sunken wells */
 #pager-4 button {
-    border-color: #808080 #ffffff #ffffff #808080;
+    border-color: #1E1E1E #555555 #555555 #1E1E1E;
     box-shadow: none;
-    background-color: #c0c0c0;
+    background-color: #2F2F2F;
 }
 
 #pager-4 button:checked {
@@ -709,7 +667,7 @@ textview text {
 #clock-8 {
     margin: 2px 0px 3px 0px;
     border-style: solid;
-    border-color: #808080 #ffffff #ffffff #808080;
+    border-color: #1E1E1E #555555 #555555 #1E1E1E;
 }
 
 #systray-6 {
@@ -738,6 +696,6 @@ textview text {
     background-color: transparent;
     border-style: solid;
     border-width: 0 1px 0 1px;
-    border-color: transparent #ffffff transparent #808080;
+    border-color: transparent #555555 transparent #1E1E1E;
     margin: 3px 2px;
 }

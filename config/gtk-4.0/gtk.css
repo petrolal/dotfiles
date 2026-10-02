@@ -1,23 +1,32 @@
 /* ==========================================================================
-   RED ACCENT FOR GTK4 / LIBADWAITA APPS
+   IMP95 DARK PALETTE — GTK4 / LIBADWAITA OVERRIDES
    Same ramp as config/gtk-3.0/gtk.css: #9E2A2B primary, #b83a3b hover,
    #c45455 light, #801E1F dark, #541617 darkest.
+   Dark surfaces: #242424 bg, #2F2F2F surface.
    ========================================================================== */
 
 /* libadwaita < 1.6 and plain GTK4 Adwaita: named colors */
 @define-color accent_color #9E2A2B;
 @define-color accent_bg_color #9E2A2B;
-@define-color accent_fg_color #ffffff;
+@define-color accent_fg_color #FFFFFF;
 @define-color theme_selected_bg_color #9E2A2B;
-@define-color theme_selected_fg_color #ffffff;
+@define-color theme_selected_fg_color #FFFFFF;
 @define-color theme_unfocused_selected_bg_color #801E1F;
-@define-color theme_unfocused_selected_fg_color #ffffff;
+@define-color theme_unfocused_selected_fg_color #FFFFFF;
+
+/* Dark mode surface colors */
+@define-color theme_bg_color #242424;
+@define-color theme_fg_color #FFFFFF;
+@define-color theme_base_color #2F2F2F;
+@define-color theme_text_color #FFFFFF;
+@define-color insensitive_fg_color #707070;
+@define-color borders #555555;
 
 /* libadwaita >= 1.6: CSS variables */
 :root {
     --accent-color: #9E2A2B;
     --accent-bg-color: #9E2A2B;
-    --accent-fg-color: #ffffff;
+    --accent-fg-color: #FFFFFF;
 }
 
 /* Links follow the same ramp */

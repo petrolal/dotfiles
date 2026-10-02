@@ -1,4 +1,4 @@
-# imp98 --- Windows 98 style frame for xfwm4.
+# imp95 --- Dark Win95 style frame for xfwm4.
 # Frame pixmaps come from the "Redmond" theme (xfwm4-themes); every color
 # symbol they use is pinned here, so the look does not depend on the GTK theme.
 
@@ -15,18 +15,18 @@ show_app_icon=true
 title_shadow_active=false
 title_shadow_inactive=false
 
-# Title bar: red when focused, gray when not
+# Title bar: red accent when focused, dark gray when not
 active_color_1=#9E2A2B
-inactive_color_1=#808080
-active_text_color=#ffffff
-inactive_text_color=#c0c0c0
+inactive_color_1=#404040
+active_text_color=#FFFFFF
+inactive_text_color=#808080
 
-# 3D frame and buttons: classic gray face with white/gray bevels
-active_color_2=#c0c0c0
-inactive_color_2=#c0c0c0
-active_hilight_2=#ffffff
-inactive_hilight_2=#ffffff
-active_shadow_2=#808080
-inactive_shadow_2=#808080
+# 3D frame and buttons: dark surface with appropriate bevels
+active_color_2=#2F2F2F
+inactive_color_2=#2F2F2F
+active_hilight_2=#555555
+inactive_hilight_2=#3C3C3C
+active_shadow_2=#1E1E1E
+inactive_shadow_2=#1E1E1E
 active_border_color=#000000
 inactive_border_color=#000000
