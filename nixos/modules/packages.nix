@@ -21,5 +21,10 @@
     pciutils
     htop
     fastfetch
+    xclip
+    claude-code
+
+    # Utils and good tools
+    shotcut
   ];
 }

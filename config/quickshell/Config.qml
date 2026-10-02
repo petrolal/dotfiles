@@ -12,6 +12,17 @@ Singleton {
     // own color schemes, they will automatically show up in the theme picker.
     property var colors: themes[themes[settings.currentTheme] == null ? 'default' : settings.currentTheme]
     property var themes: {
+        "abyssal": {
+            "base": "#D6CBBB",
+            "shadow": "#766E63",
+            "highlight": "#E3DAC9",
+            "urgent": "#9E2A2B",
+            "accent": "#9E2A2B",
+            "text": "#332E28",
+            "outline": "#4A3B3A",
+            "outlineGradientFade": "#766E63",
+            "defaultWallpaperPath": ""
+        },
         "default": {
             "base": "#d8d8d8",
             "shadow": "#9b9b9b",
@@ -39,7 +50,7 @@ Singleton {
             "shadow": "#c7a4cc",
             "highlight": "#f9d0f7",
             "urgent": "#ff936c",
-            "accent": "#c950bb",
+            "accent": "#9E2A2B",
             "text": "#321d32",
             "outline": "#20091d",
             "outlineGradientFade": "#3e233e",

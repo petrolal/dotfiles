@@ -9,4 +9,4 @@ GtkTheme=Mac OS 9 Classic
 MetacityTheme=Mac OS 9 Classic
 IconTheme=RetroismIcons
 CursorTheme=
-ButtonLayout=close,minimize,maximize:
+ButtonLayout=close:maximize

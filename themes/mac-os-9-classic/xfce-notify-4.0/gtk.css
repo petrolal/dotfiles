@@ -1,0 +1,103 @@
+/* ==========================================================================
+   ABYSSAL BIOPUNK / MAC OS 9 PLATINUM - XFCE4-NOTIFYD STYLESHEET
+   Strict 0px corners, aged bone chassis, arterial red accent, retro bevels
+   ========================================================================== */
+
+#XfceNotifyWindow,
+#XfceNotifyWindow.osd,
+.xfce4-notifyd,
+.app-notification {
+    background-color: #D6CBBB;
+    background-image: none;
+    border: 1px solid #4A3B3A;
+    border-radius: 0px;
+    box-shadow: 2px 2px 0px rgba(0, 0, 0, 0.95);
+    color: #332E28;
+    padding: 10px 14px;
+}
+
+#XfceNotifyWindow:hover,
+#XfceNotifyWindow.osd:hover {
+    background-color: #D6CBBB;
+    border-color: #9E2A2B;
+}
+
+#XfceNotifyWindow label,
+#XfceNotifyWindow.osd label,
+.app-notification label {
+    color: #332E28;
+}
+
+#XfceNotifyWindow label#summary,
+#XfceNotifyWindow.osd label#summary,
+.app-notification label.heading {
+    color: #9E2A2B;
+    font-weight: bold;
+    font-size: 1.05em;
+}
+
+#XfceNotifyWindow label#body,
+#XfceNotifyWindow.osd label#body,
+.app-notification label.body {
+    color: #332E28;
+}
+
+#XfceNotifyWindow image,
+#XfceNotifyWindow.osd image {
+    margin-right: 6px;
+}
+
+#XfceNotifyWindow button,
+#XfceNotifyWindow.osd button,
+.app-notification button {
+    background-color: #D6CBBB;
+    background-image: none;
+    border: 1px solid #4A3B3A;
+    border-radius: 0px;
+    box-shadow: inset 1px 1px 0px #E3DAC9, inset -1px -1px 0px #766E63;
+    color: #332E28;
+    padding: 3px 8px;
+    margin: 2px;
+}
+
+#XfceNotifyWindow button:hover,
+#XfceNotifyWindow.osd button:hover,
+.app-notification button:hover {
+    background-color: #E3DAC9;
+    border-color: #4A3B3A;
+    box-shadow: inset 1px 1px 0px #FFFFFF, inset -1px -1px 0px #766E63;
+    color: #1E1615;
+}
+
+#XfceNotifyWindow button:active,
+#XfceNotifyWindow button:checked,
+#XfceNotifyWindow.osd button:active,
+#XfceNotifyWindow.osd button:checked,
+.app-notification button:active {
+    background-color: #9E2A2B;
+    border-color: #9E2A2B;
+    box-shadow: inset 1px 1px 0px #4A3B3A, inset -1px -1px 0px #E3DAC9;
+    color: #FFFFFF;
+}
+
+#XfceNotifyWindow progressbar,
+#XfceNotifyWindow.osd progressbar {
+    min-height: 8px;
+    border-radius: 0px;
+}
+
+#XfceNotifyWindow progressbar trough,
+#XfceNotifyWindow.osd progressbar trough {
+    background-color: #C4B8A6;
+    border: 1px solid #766E63;
+    border-radius: 0px;
+    box-shadow: inset 1px 1px 0px #766E63, inset -1px -1px 0px #E3DAC9;
+}
+
+#XfceNotifyWindow progressbar progress,
+#XfceNotifyWindow.osd progressbar progress {
+    background-color: #9E2A2B;
+    background-image: none;
+    border: none;
+    border-radius: 0px;
+}
