@@ -23,6 +23,9 @@
     fastfetch
     xclip
     claude-code
+    unzip
+    zip
+    appimage-run
 
     # Utils and good tools
     shotcut

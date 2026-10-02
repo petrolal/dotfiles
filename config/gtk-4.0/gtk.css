@@ -1,0 +1,35 @@
+/* ==========================================================================
+   RED ACCENT FOR GTK4 / LIBADWAITA APPS
+   Same ramp as config/gtk-3.0/gtk.css: #9E2A2B primary, #b83a3b hover,
+   #c45455 light, #801E1F dark, #541617 darkest.
+   ========================================================================== */
+
+/* libadwaita < 1.6 and plain GTK4 Adwaita: named colors */
+@define-color accent_color #9E2A2B;
+@define-color accent_bg_color #9E2A2B;
+@define-color accent_fg_color #ffffff;
+@define-color theme_selected_bg_color #9E2A2B;
+@define-color theme_selected_fg_color #ffffff;
+@define-color theme_unfocused_selected_bg_color #801E1F;
+@define-color theme_unfocused_selected_fg_color #ffffff;
+
+/* libadwaita >= 1.6: CSS variables */
+:root {
+    --accent-color: #9E2A2B;
+    --accent-bg-color: #9E2A2B;
+    --accent-fg-color: #ffffff;
+}
+
+/* Links follow the same ramp */
+link,
+*:link {
+    color: #9E2A2B;
+}
+
+*:link:hover {
+    color: #b83a3b;
+}
+
+*:visited {
+    color: #801E1F;
+}
