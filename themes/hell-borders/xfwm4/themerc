@@ -1,25 +1,19 @@
-full_width_title=false
-title_alignment=center
-button_spacing=1
+full_width_margins=true
+title_vertical_offset_active=2
+title_vertical_offset_inactive=2
 button_offset=2
-button_layout=C|MS
+button_spacing=1
 
-active_text_color=#332E28
-inactive_text_color=#766E63
+active_text_color=#ff5f1f
+inactive_text_color=#5c323c
 
-active_border_color=#9E2A2B
-inactive_border_color=#766E63
+active_border_color=#e01a3c
+inactive_border_color=#2d0e16
 
-active_color_1=#D6CBBB
-inactive_color_1=#D6CBBB
-
-active_color_2=#D6CBBB
-active_hilight_2=#E3DAC9
-active_shadow_2=#C4B8A6
-
-inactive_color_2=#D6CBBB
-inactive_hilight_2=#E3DAC9
-inactive_shadow_2=#C4B8A6
+active_color_1=#070406
+inactive_color_1=#070406
+active_color_2=#070406
+inactive_color_2=#070406
 
 title_shadow_active=false
 title_shadow_inactive=false

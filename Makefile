@@ -1,63 +1,156 @@
-SHELL         := /usr/bin/env bash
-DOTFILES_DIR  ?= $(CURDIR)
-SBCL          ?= sbcl
-RM            ?= rm -f
-LN            ?= ln -sfn
-MKDIR         ?= mkdir -p
-GIT           ?= git
-SUDO          ?= sudo
-NIXOS_REBUILD ?= nixos-rebuild
+# Makefile --- Build and deploy the Abyssal Biopunk dotfiles
+# License: GPL-3.0-or-later
+#
+# Follows the GNU Coding Standards, "Makefile Conventions":
+#   https://www.gnu.org/prep/standards/html_node/Makefile-Conventions.html
+#
+# Every variable below can be overridden on the command line, e.g.
+#   make deploy DEPLOY_FLAGS=--dry-run
+#   make check SBCL=/opt/sbcl/bin/sbcl
 
-BIN_DIR       := $(DOTFILES_DIR)/bin
-SRC_DIR       := $(DOTFILES_DIR)/src
-BIN           := $(BIN_DIR)/invoker
-DEPLOY_LISP   := $(BIN_DIR)/deploy.lisp
-BUILD_SRC     := $(SRC_DIR)/build.lisp
-DEPLOYER_SRC  := $(SRC_DIR)/deployer.lisp
+SHELL = /bin/sh
 
-.PHONY: all help build deploy quick-deploy dry-run install nix-link nix-switch clean
+# Clear built-in suffix rules; nothing here uses them.
+.SUFFIXES:
 
-all: build
+# Remove a half-written target (e.g. a truncated invoker) if its recipe fails.
+.DELETE_ON_ERROR:
+
+# ---------------------------------------------------------------------------
+# Programs
+# ---------------------------------------------------------------------------
+SBCL          = sbcl
+SBCL_FLAGS    = --noinform --non-interactive
+GIT           = git
+LN_S          = ln -sfn
+MKDIR_P       = mkdir -p
+RM            = rm -f
+SUDO          = sudo
+NIXOS_REBUILD = nixos-rebuild
+
+# Extra flags passed to the deployer (see `bin/invoker --help`).
+DEPLOY_FLAGS  =
+
+# ---------------------------------------------------------------------------
+# Directories and files
+# ---------------------------------------------------------------------------
+srcdir        = .
+bindir        = $(srcdir)/bin
+nixosdir      = $(srcdir)/nixos
+sysconfdir    = /etc/nixos
+
+INVOKER       = $(bindir)/invoker
+DEPLOY_SCRIPT = $(bindir)/deploy.lisp
+BUILD_SRC     = $(srcdir)/src/build.lisp
+DEPLOYER_SRC  = $(srcdir)/src/deployer.lisp
+
+# ---------------------------------------------------------------------------
+# Phony targets
+# ---------------------------------------------------------------------------
+.PHONY: all help check install uninstall installcheck \
+        deploy quick-deploy dry-run scale \
+        nix-link nix-switch system-install \
+        mostlyclean clean distclean maintainer-clean
+
+# Default goal: build everything, change nothing on the system.
+all: $(INVOKER)
 
 help:
-	@echo "Available targets:"
-	@echo "  build         Compile native SBCL invoker executable"
-	@echo "  deploy        Execute compiled invoker to link dotfiles and apply theme"
-	@echo "  quick-deploy  Deploy dotfiles directly via SBCL script mode without compiling"
-	@echo "  dry-run       Simulate deployment without modifying the filesystem"
-	@echo "  nix-link      Symlink NixOS configuration and flake to /etc/nixos"
-	@echo "  nix-switch    Rebuild NixOS system via flake and switch to new configuration"
-	@echo "  install       Rebuild NixOS system and deploy dotfiles (nix-switch + deploy)"
-	@echo "  clean         Remove compiled binaries and build artifacts"
+	@echo 'Usage: make [TARGET] [VARIABLE=value]...'
+	@echo ''
+	@echo 'Build:'
+	@echo '  all             Compile the native SBCL invoker (default)'
+	@echo '  check           Compile-check the deployer and run a dry-run deploy'
+	@echo ''
+	@echo 'Deploy (user session, no root):'
+	@echo '  install         Link dotfiles and apply the XFCE theme (= deploy)'
+	@echo '  deploy          Same as install'
+	@echo '  dry-run         Show what deploy would do without changing anything'
+	@echo '  scale           Reset panel height (26px) and WM margins, reload XFCE'
+	@echo '  quick-deploy    Deploy via SBCL script mode, without compiling'
+	@echo '  installcheck    Verify the installed invoker runs'
+	@echo ''
+	@echo 'NixOS (requires sudo):'
+	@echo '  nix-link        Symlink configuration.nix and flake.nix into $(sysconfdir)'
+	@echo '  nix-switch      Rebuild NixOS from the flake and switch to it'
+	@echo '  system-install  nix-switch, then install'
+	@echo ''
+	@echo 'Cleaning:'
+	@echo '  mostlyclean     Remove compiled .fasl files'
+	@echo '  clean           mostlyclean + remove the invoker'
+	@echo '  distclean       clean + remove Nix result links'
+	@echo ''
+	@echo 'Variables: SBCL, SUDO, NIXOS_REBUILD, DEPLOY_FLAGS (e.g. --no-reload)'
 
-build: $(BIN)
+# ---------------------------------------------------------------------------
+# Build
+# ---------------------------------------------------------------------------
+$(INVOKER): $(DEPLOYER_SRC) $(BUILD_SRC)
+	@echo '==> Compiling native invoker via SBCL...'
+	$(MKDIR_P) $(bindir)
+	$(SBCL) --script $(BUILD_SRC)
 
-$(BIN): $(DEPLOYER_SRC) $(BUILD_SRC)
-	@echo "==> Compiling native invoker via SBCL..."
-	@$(MKDIR) $(BIN_DIR)
-	@$(SBCL) --script $(BUILD_SRC)
+# Compile the deployer with warnings promoted to errors, then dry-run it.
+check: $(INVOKER)
+	$(SBCL) $(SBCL_FLAGS) \
+	  --eval '(require :uiop)' \
+	  --eval '(handler-bind ((warning (lambda (c) (error c)))) (load "$(DEPLOYER_SRC)"))'
+	$(INVOKER) --dry-run --no-reload
 
-deploy: $(BIN)
-	@$(BIN)
+# ---------------------------------------------------------------------------
+# Deploy
+# ---------------------------------------------------------------------------
+install: deploy
+
+deploy: $(INVOKER)
+	$(INVOKER) $(DEPLOY_FLAGS)
+
+dry-run: $(INVOKER)
+	$(INVOKER) --dry-run $(DEPLOY_FLAGS)
+
+scale: $(INVOKER)
+	$(INVOKER) --scale $(DEPLOY_FLAGS)
 
 quick-deploy:
-	@$(SBCL) --script $(DEPLOY_LISP)
+	$(SBCL) --script $(DEPLOY_SCRIPT) $(DEPLOY_FLAGS)
 
-dry-run: $(BIN)
-	@$(BIN) --dry-run
+installcheck: $(INVOKER)
+	$(INVOKER) --version
 
-install: nix-switch deploy
+# The deployer only creates symlinks; there is no automated undo yet.
+uninstall:
+	@echo 'uninstall: not implemented; remove the symlinks listed by `make dry-run`.' >&2
+	@exit 1
 
+# ---------------------------------------------------------------------------
+# NixOS
+# ---------------------------------------------------------------------------
+# Flakes only see files git knows about; `add -N` registers new files
+# without staging their contents.
 nix-link:
-	@$(GIT) add -N . 2>/dev/null || true
-	$(SUDO) $(LN) $(DOTFILES_DIR)/nixos/configuration.nix /etc/nixos/configuration.nix
-	$(SUDO) $(LN) $(DOTFILES_DIR)/nixos/flake.nix /etc/nixos/flake.nix
+	-$(GIT) add -N .
+	$(SUDO) $(LN_S) $(abspath $(nixosdir))/configuration.nix $(sysconfdir)/configuration.nix
+	$(SUDO) $(LN_S) $(abspath $(nixosdir))/flake.nix $(sysconfdir)/flake.nix
 
 nix-switch: nix-link
-	$(SUDO) $(NIXOS_REBUILD) build --flake $(DOTFILES_DIR)/nixos --impure
+	$(SUDO) $(NIXOS_REBUILD) build --flake $(nixosdir) --impure
 	$(SUDO) ./result/bin/switch-to-configuration switch
 
-clean:
-	$(RM) $(BIN)
-	$(RM) -r result result-*
-	@find . -type f -name "*.fasl" -delete
+system-install: nix-switch
+	$(MAKE) install
+
+# ---------------------------------------------------------------------------
+# Cleaning (GNU levels: mostlyclean < clean < distclean < maintainer-clean)
+# ---------------------------------------------------------------------------
+mostlyclean:
+	find $(srcdir) -name '*.fasl' -type f -exec $(RM) {} +
+
+clean: mostlyclean
+	$(RM) $(INVOKER)
+
+distclean: clean
+	$(RM) result result-*
+
+maintainer-clean: distclean
+	@echo 'This command is intended for maintainers to use;'
+	@echo 'it deletes files that may need special tools to rebuild.'

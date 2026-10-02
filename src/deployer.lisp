@@ -16,7 +16,6 @@
            #:parse-display-resolution
            #:detect-display-resolutions
            #:determine-primary-resolution
-           #:compute-display-scaling
            #:apply-dynamic-resolution-scaling
            #:generate-terminalrc-content
            #:generate-picom-conf-content
@@ -40,7 +39,6 @@
 (defparameter *mappings*
   '(("config/gtk-3.0/gtk.css"           . ".config/gtk-3.0/gtk.css")
     ("config/gtk-3.0/settings.ini"      . ".config/gtk-3.0/settings.ini")
-    ("config/gtk-4.0/gtk.css"           . ".config/gtk-4.0/gtk.css")
     ("config/gtk-4.0/settings.ini"      . ".config/gtk-4.0/settings.ini")
     ("config/gtk-2.0/gtkrc"             . ".gtkrc-2.0")
     ("config/xfce4/terminal/terminalrc"  . ".config/xfce4/terminal/terminalrc")
@@ -56,15 +54,13 @@
     ("xsettings"                "/Net/ThemeName"                          "string" "Mac OS 9 Classic")
     ("xsettings"                "/Net/IconThemeName"                      "string" "RetroismIcons")
     ("xsettings"                "/Gtk/CursorThemeSize"                    "int"    "24")
-    ("xsettings"                "/Gtk/DecorationLayout"                   "string" "close:maximize")
 
-    ;; Notification Daemon Styling (xfce4-notifyd: Mac OS 9 Classic, 100% solid opacity)
-    ("xfce4-notifyd"            "/theme"                                  "string" "Mac OS 9 Classic")
+    ;; Notification Daemon Styling (xfce4-notifyd: 100% solid opacity)
     ("xfce4-notifyd"            "/initial-opacity"                        "double" "1.0")
     ("xfce4-notifyd"            "/notify-location"                        "int"    "2")
 
-    ;; Window Manager Theme & Behavior (Infernal Retro / Hell Borders)
-    ("xfwm4"                    "/general/theme"                          "string" "hell-borders")
+    ;; Window Manager Theme & Behavior (Platinum)
+    ("xfwm4"                    "/general/theme"                          "string" "Platinum")
     ("xfwm4"                    "/general/button_layout"                  "string" "C|MS")
     ("xfwm4"                    "/general/button_spacing"                 "int"    "1")
     ("xfwm4"                    "/general/button_offset"                  "int"    "2")
@@ -99,6 +95,9 @@
     ("xfce4-panel"              "/panels/panel-1/position"                "string" "p=6;x=0;y=0")
     ("xfce4-panel"              "/panels/panel-1/position-locked"         "bool"   "true")
     ("xfce4-panel"              "/panels/panel-1/background-style"        "int"    "0")
+    ;; Native XFCE defaults (etc/xdg/xfce4/panel/default.xml): 26px bar, 16px icons
+    ("xfce4-panel"              "/panels/panel-1/size"                    "uint"   "26")
+    ("xfce4-panel"              "/panels/panel-1/icon-size"               "uint"   "16")
     ;; NOTE: plugin-ids is an xfconf array — set via set-panel-plugin-ids, not here.
     ("xfce4-panel"              "/plugins/plugin-2/flat-buttons"          "bool"   "false")
     ;; Clock plugin (plugin-8): Digital mode, single-line date+time, no 2-line wrap
@@ -225,21 +224,6 @@ or defaults to 1920x1080 if undetectable."
              (let ((max-d (first (sort (copy-list displays) #'> :key (lambda (d) (getf d :height))))))
                (values (getf max-d :width) (getf max-d :height) (getf max-d :output)))))))))
 
-(defun compute-display-scaling (height)
-  "Compute panel height reflecting classic Mac OS 9 proportions:
-- <= 1080p: height 28px
-- >= 1440p: height 34px
-- >= 4K (2160p): height 44px
-Margins are kept strictly at 0px across all resolutions to prevent layout breaks.
-Returns (values panel-height margin)."
-  (cond
-    ((>= height 2160)
-     (values 44 0))
-    ((>= height 1440)
-     (values 34 0))
-    (t
-     (values 28 0))))
-
 (defun set-xfconf (channel property type value &key dry-run)
   (if dry-run
       (format t "[DRY-RUN] xfconf-query -c ~A -p ~A -t ~A -s ~A~%" channel property type value)
@@ -266,18 +250,20 @@ Uses xfconf-query -a with repeated -t int -s N flags."
           (uiop:run-program cmd :ignore-error-status t)))))
 
 (defun apply-dynamic-resolution-scaling (&key dry-run verbose)
-  "Detect current display resolution and apply dynamic panel and margin scaling via xfconf."
+  "Detect current display resolution, reset the panel to the native XFCE default
+height (26px) and enforce 0px window manager margins via xfconf."
   (multiple-value-bind (w h output) (determine-primary-resolution)
-    (multiple-value-bind (panel-height margin) (compute-display-scaling h)
-      (when verbose
-        (format t "Display detection: ~Ax~A~@[ (~A)~] -> Panel: ~Apx, Margins: ~Apx~%"
-                w h output panel-height margin))
-      (set-xfconf "xfce4-panel" "/panels/panel-1/size" "int" (write-to-string panel-height) :dry-run dry-run)
-      (set-xfconf "xfwm4" "/general/margin_bottom" "int" (write-to-string margin) :dry-run dry-run)
-      (set-xfconf "xfwm4" "/general/margin_left" "int" (write-to-string margin) :dry-run dry-run)
-      (set-xfconf "xfwm4" "/general/margin_right" "int" (write-to-string margin) :dry-run dry-run)
-      (set-xfconf "xfwm4" "/general/margin_top" "int" "0" :dry-run dry-run)
-      (values panel-height margin))))
+    (when verbose
+      (format t "Display detection: ~Ax~A~@[ (~A)~] -> Panel: 26px (XFCE default), WM margins: 0px~%"
+              w h output))
+    ;; Overwrite any stale scaled height (28/34/44px) left by older deploys.
+    (set-xfconf "xfce4-panel" "/panels/panel-1/size" "uint" "26" :dry-run dry-run)
+    ;; Strictly 0px margins on all sides — prevents gaps/borders around tiled/maximized windows.
+    (set-xfconf "xfwm4" "/general/margin_bottom" "int" "0" :dry-run dry-run)
+    (set-xfconf "xfwm4" "/general/margin_left"   "int" "0" :dry-run dry-run)
+    (set-xfconf "xfwm4" "/general/margin_right"  "int" "0" :dry-run dry-run)
+    (set-xfconf "xfwm4" "/general/margin_top"    "int" "0" :dry-run dry-run)
+    (values h output)))
 
 (defun generate-terminalrc-content ()
   "[Configuration]
@@ -479,10 +465,10 @@ log-level = \"warn\";
   (format t "Deploy Abyssal Biopunk dotfiles symlinks and configure desktop settings.~%~%")
   (format t "Commands:~%")
   (format t "  deploy            perform full deployment (generate, link, configure, reload) [default]~%")
-  (format t "  scale             query display resolution and apply dynamic panel/margin scaling~%")
+  (format t "  scale             query display resolution and reset panel height and WM margins~%")
   (format t "  generate          generate and verify templated configuration assets~%~%")
   (format t "Options:~%")
-  (format t "  -s, --scale       detect resolution and apply dynamic panel and margin scaling~%")
+  (format t "  -s, --scale       detect resolution and reset panel height and WM margins~%")
   (format t "  -g, --generate    generate/ensure templated configuration assets~%")
   (format t "  -n, --dry-run     simulate actions without modifying filesystem or xfconf~%")
   (format t "  -q, --quiet       suppress non-error output~%")
