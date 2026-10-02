@@ -49,7 +49,7 @@
     ("config/applications/xfce-display-settings.desktop"
      . ".local/share/applications/xfce-display-settings.desktop")
     ("themes/hell-borders/xfwm4"        . ".local/share/themes/hell-borders/xfwm4")
-    ("themes/win98/xfwm4"               . ".local/share/themes/Win98/xfwm4")
+    ("themes/imp98/xfwm4"               . ".local/share/themes/imp98/xfwm4")
     ("themes/mac-os-9-classic"          . ".local/share/themes/Mac OS 9 Classic")
     ("themes/icons"                     . ".local/share/icons/RetroismIcons")
     ("themes/icons"                     . ".icons/RetroismIcons")))
@@ -65,7 +65,7 @@
     ("xfce4-notifyd"            "/notify-location"                        "int"    "2")
 
     ;; Window Manager Theme & Behavior (Windows 98)
-    ("xfwm4"                    "/general/theme"                          "string" "Win98")
+    ("xfwm4"                    "/general/theme"                          "string" "imp98")
     ("xfwm4"                    "/general/button_layout"                  "string" "O|HMC")
     ("xfwm4"                    "/general/button_spacing"                 "int"    "1")
     ("xfwm4"                    "/general/button_offset"                  "int"    "2")
