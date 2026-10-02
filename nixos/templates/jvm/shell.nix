@@ -7,6 +7,7 @@
 
 { pkgs ? import <nixpkgs> { }
 , java ? "21"
+, ...
 }:
 
 let
@@ -25,9 +26,10 @@ pkgs.mkShell {
     # (pkgs.sbt.override { jre = jdk; })
   ];
 
-  JAVA_HOME = jdk.home;
-
+  # Exported from the hook (not as an attribute) so it survives when this shell
+  # is merged into templates/full via inputsFrom.
   shellHook = ''
+    export JAVA_HOME="${jdk.home}"
     echo "☕ JDK ${jdk.version} loaded (JAVA_HOME=$JAVA_HOME)"
   '';
 }
