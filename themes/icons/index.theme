@@ -1,6 +1,6 @@
 [Icon Theme]
-Name=RetroismIcons
-Comment=Icon theme for the Retroism linux desktop.
+Name=imp98
+Comment=Icon theme for the imp98 linux desktop.
 Inherits=Adwaita,hicolor
 Directories=actions/24,apps/16,apps/24,apps/32,apps/48,apps/128,apps/256,categories/16,categories/32,devices/16,devices/32,mimes/16,mimes/32,places/16,places/32
 

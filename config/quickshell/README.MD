@@ -1,4 +1,4 @@
-# Linux Retroism | Quickshell Frontend
+# Linux imp98 | Quickshell Frontend
 
 Before going into details:
 

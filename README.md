@@ -80,7 +80,7 @@ dotfiles/
 │
 ├── themes/
 │   ├── imp95-palette.css           # Canonical color palette
-│   ├── icons/                      # RetroismIcons icon theme
+│   ├── icons/                      # imp98 icon theme
 │   └── imp98/xfwm4/               # Window manager border theme
 │
 └── docs/

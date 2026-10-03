@@ -4,8 +4,8 @@
 //@ pragma Env QT_QUICK_FLICKABLE_WHEEL_DECELERATION=10000
 
 /* NOTE: CHANGE THESE IF YOU WANT TO USE A DIFFERENT ICON THEME:*/
-//@ pragma IconTheme RetroismIcons
-//@ pragma Env QS_ICON_THEME=RetroismIcons
+//@ pragma IconTheme imp98
+//@ pragma Env QS_ICON_THEME=imp98
 
 import QtQuick
 import Quickshell
@@ -31,8 +31,8 @@ Scope {
 
     FloatingWindow {
         id: settingsWindow
-        title: "RetroismSettingsWindow"
-        reloadableId: "RetroismSettingsWindow"
+        title: "imp98SettingsWindow"
+        reloadableId: "imp98SettingsWindow"
         visible: Config.openSettingsWindow
         Popups.PopupWindowFrame {
             id: settingsWindowFrame
@@ -62,7 +62,7 @@ Scope {
                         verticalAlignment: Text.AlignVCenter
                         font.family: fontMonaco.name
                         font.pixelSize: 28
-                        text: "Linux Retroism " + Config.settings.version
+                        text: "Linux imp98 " + Config.settings.version
                     }
                     Text {
                         anchors.fill: parent

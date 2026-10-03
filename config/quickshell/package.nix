@@ -13,17 +13,17 @@
   ];
 in
   symlinkJoin {
-    pname = "retroism";
+    pname = "imp98";
     inherit (quickshell) version;
 
     paths = [quickshell];
     nativeBuildInputs = [makeWrapper];
 
     postBuild = ''
-      makeWrapper $out/bin/quickshell $out/bin/retroism \
+      makeWrapper $out/bin/quickshell $out/bin/imp98 \
         --set QML2_IMPORT_PATH "${qmlPath}" \
         --add-flags '-p ${configPath}'
     '';
 
-    meta.mainProgram = "retroism";
+    meta.mainProgram = "imp98";
   }

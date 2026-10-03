@@ -19,8 +19,8 @@
     ("themes/hell-borders/xfwm4"        . ".local/share/themes/hell-borders/xfwm4")
     ("themes/imp98/xfwm4"               . ".local/share/themes/imp98/xfwm4")
     ("themes/mac-os-9-classic"          . ".local/share/themes/Mac OS 9 Classic")
-    ("themes/icons"                     . ".local/share/icons/RetroismIcons")
-    ("themes/icons"                     . ".icons/RetroismIcons")))
+    ("themes/icons"                     . ".local/share/icons/imp98")
+    ("themes/icons"                     . ".icons/imp98")))
 
 (defun link-file (source-rel target-rel root home &key dry-run verbose)
   (let ((src  (merge-pathnames source-rel root))

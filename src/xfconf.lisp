@@ -4,9 +4,9 @@
 (in-package :dotfiles.deployer)
 
 (defparameter *xfce-settings*
-  '(;; GTK and Theme Configuration (Mac OS 9 Platinum / Retroism)
+  '(;; GTK and Theme Configuration (Mac OS 9 Platinum / imp98)
     ("xsettings"                "/Net/ThemeName"                          "string" "Mac OS 9 Classic")
-    ("xsettings"                "/Net/IconThemeName"                      "string" "RetroismIcons")
+    ("xsettings"                "/Net/IconThemeName"                      "string" "imp98")
     ("xsettings"                "/Gtk/CursorThemeSize"                    "int"    "24")
 
     ;; Notification Daemon Styling (xfce4-notifyd: 100% solid opacity)
@@ -134,11 +134,11 @@ height (28px) and enforce 0px window manager margins via xfconf."
       (format t "Syncing GSettings for GNOME/GTK apps...~%"))
     (if dry-run
         (progn
-          (format t "[DRY-RUN] gsettings set org.gnome.desktop.interface icon-theme 'RetroismIcons'~%")
+          (format t "[DRY-RUN] gsettings set org.gnome.desktop.interface icon-theme 'imp98'~%")
           (format t "[DRY-RUN] gsettings set org.gnome.desktop.interface gtk-theme 'Mac OS 9 Classic'~%")
           (format t "[DRY-RUN] gsettings set org.gnome.desktop.wm.preferences button-layout 'close:maximize'~%"))
         (progn
-          (uiop:run-program '("gsettings" "set" "org.gnome.desktop.interface" "icon-theme" "RetroismIcons")
+          (uiop:run-program '("gsettings" "set" "org.gnome.desktop.interface" "icon-theme" "imp98")
                             :ignore-error-status t)
           (uiop:run-program '("gsettings" "set" "org.gnome.desktop.interface" "gtk-theme" "Mac OS 9 Classic")
                             :ignore-error-status t)
