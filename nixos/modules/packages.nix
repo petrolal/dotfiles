@@ -2,10 +2,13 @@
 
 {
   environment.systemPackages = with pkgs; [
+
     # Build & Orchestration
     gnumake
-    sbcl
     git
+    sbcl
+    libx11
+    libGL
 
     # Video Wallpaper & Wallpapers
     mpv
