@@ -24,7 +24,7 @@
       nixosConfigurations = {
         ${hostname} = nixpkgs.lib.nixosSystem {
           modules = [
-            { nixpkgs.hostPlatform = stdenv.hostPlatform.system; }
+            { nixpkgs.hostPlatform = system; }
             ./configuration.nix
 
             ({ pkgs, ... }: {
