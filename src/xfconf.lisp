@@ -4,10 +4,11 @@
 (in-package :dotfiles.deployer)
 
 (defparameter *xfce-settings*
-  '(;; GTK and Theme Configuration (Mac OS 9 Platinum / imp98)
-    ("xsettings"                "/Net/ThemeName"                          "string" "Mac OS 9 Classic")
+  '(;; GTK and Theme Configuration (Adwaita-dark / imp98)
+    ("xsettings"                "/Net/ThemeName"                          "string" "Adwaita-dark")
     ("xsettings"                "/Net/IconThemeName"                      "string" "imp98")
     ("xsettings"                "/Gtk/CursorThemeSize"                    "int"    "24")
+    ("xsettings"                "/Gtk/ApplicationPreferDarkTheme"         "bool"   "true")
 
     ;; Notification Daemon Styling (xfce4-notifyd: 100% solid opacity)
     ("xfce4-notifyd"            "/initial-opacity"                        "double" "1.0")
@@ -135,12 +136,15 @@ height (28px) and enforce 0px window manager margins via xfconf."
     (if dry-run
         (progn
           (format t "[DRY-RUN] gsettings set org.gnome.desktop.interface icon-theme 'imp98'~%")
-          (format t "[DRY-RUN] gsettings set org.gnome.desktop.interface gtk-theme 'Mac OS 9 Classic'~%")
+          (format t "[DRY-RUN] gsettings set org.gnome.desktop.interface gtk-theme 'Adwaita-dark'~%")
+          (format t "[DRY-RUN] gsettings set org.gnome.desktop.interface color-scheme 'prefer-dark'~%")
           (format t "[DRY-RUN] gsettings set org.gnome.desktop.wm.preferences button-layout 'close:maximize'~%"))
         (progn
           (uiop:run-program '("gsettings" "set" "org.gnome.desktop.interface" "icon-theme" "imp98")
                             :ignore-error-status t)
-          (uiop:run-program '("gsettings" "set" "org.gnome.desktop.interface" "gtk-theme" "Mac OS 9 Classic")
+          (uiop:run-program '("gsettings" "set" "org.gnome.desktop.interface" "gtk-theme" "Adwaita-dark")
+                            :ignore-error-status t)
+          (uiop:run-program '("gsettings" "set" "org.gnome.desktop.interface" "color-scheme" "prefer-dark")
                             :ignore-error-status t)
           (uiop:run-program '("gsettings" "set" "org.gnome.desktop.wm.preferences" "button-layout" "close:maximize")
                             :ignore-error-status t)))))

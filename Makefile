@@ -43,6 +43,7 @@ INVOKER       = $(bindir)/invoker
 DEPLOY_SCRIPT = $(bindir)/deploy.lisp
 BUILD_SRC     = $(srcdir)/src/build.lisp
 DEPLOYER_SRC  = $(srcdir)/src/deployer.lisp
+ALL_SRC       = $(wildcard $(srcdir)/src/*.lisp)
 
 # ---------------------------------------------------------------------------
 # Phony targets
@@ -86,7 +87,7 @@ help:
 # ---------------------------------------------------------------------------
 # Build
 # ---------------------------------------------------------------------------
-$(INVOKER): $(DEPLOYER_SRC) $(BUILD_SRC)
+$(INVOKER): $(ALL_SRC) $(BUILD_SRC)
 	@echo '==> Compiling native invoker via SBCL...'
 	$(MKDIR_P) $(bindir)
 	$(SBCL) --script $(BUILD_SRC)

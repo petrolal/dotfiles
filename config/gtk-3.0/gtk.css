@@ -2,8 +2,8 @@
    IMP95 DARK PALETTE — GTK3 OVERRIDES
    Panel, tabs, controls, accent: dark Win95 aesthetic with red (#9E2A2B).
 
-   These rules override the "Mac OS 9 Classic" GTK theme's light surfaces
-   so every widget renders against the imp95 dark palette.
+   These rules theme GTK3 controls and surfaces to render against
+   the imp95 dark palette.
    ========================================================================== */
 
 @define-color imp95_bg #242424;
@@ -635,7 +635,20 @@ button.suggested-action:checked {
     box-shadow: inset 1px 1px @imp95_accent_darkest, inset -1px -1px @imp95_accent_light;
 }
 
-/* Menubar items (File, Edit, ...) */
+/* Menubar and menubar items (File, Edit, ...) */
+menubar,
+.menubar {
+    background-color: @imp95_surface;
+    color: @imp95_text;
+}
+
+menubar > menuitem,
+.menubar > menuitem,
+menubar > menuitem label,
+.menubar > menuitem label {
+    color: @imp95_text;
+}
+
 menubar > menuitem:hover,
 .menubar > menuitem:hover {
     background-color: @imp95_accent;
@@ -644,6 +657,39 @@ menubar > menuitem:hover,
 }
 
 menubar > menuitem:hover label {
+    color: @imp95_text;
+}
+
+/* --------------------------------------------------------------------------
+   Thunar File Manager
+   -------------------------------------------------------------------------- */
+
+thunar,
+.thunar,
+ThunarWindow {
+    background-color: @imp95_surface;
+    color: @imp95_text;
+}
+
+ThunarWindow .view,
+ThunarWindow .view:not(:selected),
+ThunarWindow treeview,
+ThunarWindow iconview,
+ThunarWindow .sidebar,
+ThunarWindow placessidebar,
+ThunarWindow scrolledwindow viewport {
+    background-color: @imp95_bg;
+    color: @imp95_text;
+}
+
+ThunarWindow .location-bar,
+ThunarWindow .path-bar {
+    background-color: @imp95_surface;
+    color: @imp95_text;
+}
+
+ThunarWindow statusbar {
+    background-color: @imp95_surface;
     color: @imp95_text;
 }
 

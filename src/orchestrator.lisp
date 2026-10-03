@@ -13,7 +13,8 @@
   (dolist (cmd '("xfsettingsd --replace"
                  "xfce4-panel -r"
                  "xfwm4 --replace"
-                 "pkill -f xfce4-notifyd"))
+                 "pkill -f xfce4-notifyd"
+                 "thunar -q"))
     (if dry-run
         (format t "[DRY-RUN] Would execute: ~A~%" cmd)
         (ignore-errors
