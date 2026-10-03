@@ -5,7 +5,7 @@ let
     gnumake
     git
     sbcl
-    xorg.libX11
+    libx11
     libGL
   ];
 
