@@ -42,3 +42,25 @@ link,
 *:visited {
     color: #801E1F;
 }
+
+/* Eliminate white focus outline and card borders */
+*,
+*:focus {
+    outline: none;
+    outline-width: 0;
+}
+
+card,
+.card,
+.boxed-list,
+list.boxed-list {
+    background-color: @theme_base_color;
+    border: 1px solid @borders;
+    border-radius: 0px;
+    box-shadow: 1px 1px 0px #000000;
+}
+
+button {
+    border-radius: 0px;
+    outline: none;
+}

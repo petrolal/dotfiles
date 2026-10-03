@@ -18,7 +18,26 @@
 
   # X11 & XFCE
   services.xserver.enable = true;
-  services.xserver.displayManager.lightdm.enable = true;
+  services.xserver.displayManager.lightdm = {
+    enable = true;
+    greeters.gtk = {
+      theme = {
+        name = "Adwaita-dark";
+        package = pkgs.gnome-themes-extra;
+      };
+      iconTheme = {
+        name = "Adwaita";
+        package = pkgs.adwaita-icon-theme;
+      };
+      cursorTheme = {
+        name = "Adwaita";
+        size = 24;
+      };
+      extraConfig = ''
+        user-background = false
+      '';
+    };
+  };
   services.xserver.desktopManager.xfce.enable = true;
   services.xserver.desktopManager.xterm.enable = false;
   services.xserver.excludePackages = [ pkgs.xterm ];
@@ -40,11 +59,14 @@
     pulse.enable = true;
   };
 
-  # Global Theme & Toolkit Overrides (Light base for System 7 / Platinum look)
+  # Global Theme & Toolkit Overrides (Dark base for IMP95 palette)
   environment.variables = {
-    GTK_THEME = "Adwaita";
-    QT_STYLE_OVERRIDE = "Adwaita";
+    GTK_THEME = "Adwaita:dark";
+    QT_STYLE_OVERRIDE = "Adwaita-Dark";
   };
+
+  # System-wide GTK3 CSS so LightDM and system dialogs share the dark retro styling
+  environment.etc."xdg/gtk-3.0/gtk.css".text = builtins.readFile ../lightdm-gtk-greeter.css;
 
   environment.systemPackages = with pkgs; [
     adwaita-icon-theme

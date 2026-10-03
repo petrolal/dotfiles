@@ -5,6 +5,7 @@
 
 (defparameter *mappings*
   '(("config/gtk-3.0/gtk.css"           . ".config/gtk-3.0/gtk.css")
+    ("config/gtk-3.0/assets"            . ".config/gtk-3.0/assets")
     ("config/gtk-3.0/settings.ini"      . ".config/gtk-3.0/settings.ini")
     ("config/gtk-4.0/settings.ini"      . ".config/gtk-4.0/settings.ini")
     ("config/gtk-4.0/gtk.css"           . ".config/gtk-4.0/gtk.css")

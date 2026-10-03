@@ -53,17 +53,18 @@ decoration {
     margin: 0;
 }
 
-/* Kill the white focus outline GTK3 draws by default on every focusable widget */
+/* Eliminate white focus outline GTK3 draws by default on focusable widgets */
+*,
 *:focus,
 *:focus-within {
-    outline-color: @imp95_light;
+    outline-color: transparent;
     outline-style: none;
     outline-width: 0;
     outline-offset: 0;
     -gtk-outline-radius: 0;
 }
 
-/* Explicit outline reset for buttons, entries and containers */
+/* Explicit outline reset for buttons, entries, cards, and containers */
 button:focus,
 entry:focus,
 spinbutton:focus,
@@ -71,9 +72,11 @@ combobox:focus,
 notebook > header tab:focus,
 row:focus,
 flowboxchild:focus,
-switch:focus {
+switch:focus,
+treeview:focus {
     outline-style: none;
     outline-width: 0;
+    outline-color: transparent;
     box-shadow: inset 1px 1px @imp95_hover, inset -1px -1px @imp95_shadow;
 }
 
@@ -91,11 +94,14 @@ button {
     box-shadow: inset 1px 1px @imp95_hover, inset -1px -1px @imp95_shadow;
     color: @imp95_text;
     text-shadow: none;
+    outline: none;
 }
 
 button:hover {
     background-color: @imp95_hover;
     background-image: none;
+    border-color: @imp95_light @imp95_dark @imp95_dark @imp95_light;
+    box-shadow: inset 1px 1px @imp95_hover, inset -1px -1px @imp95_shadow;
 }
 
 button:active,
@@ -105,10 +111,47 @@ button:checked {
     box-shadow: inset 1px 1px @imp95_shadow, inset -1px -1px @imp95_hover;
 }
 
+button:focus,
+button:focus:hover {
+    outline: none;
+    outline-width: 0;
+    outline-color: transparent;
+}
+
 button:disabled {
     background-color: @imp95_surface;
     color: @imp95_disabled;
+    border-color: @imp95_light @imp95_dark @imp95_dark @imp95_light;
     box-shadow: none;
+}
+
+button.flat {
+    background-color: transparent;
+    background-image: none;
+    border-color: transparent;
+    box-shadow: none;
+    border-radius: 0px;
+    outline: none;
+}
+
+button.flat:hover {
+    background-color: @imp95_hover;
+    border-color: @imp95_light @imp95_dark @imp95_dark @imp95_light;
+    box-shadow: inset 1px 1px @imp95_hover, inset -1px -1px @imp95_shadow;
+}
+
+button.flat:active,
+button.flat:checked {
+    background-color: @imp95_bg;
+    border-color: @imp95_dark @imp95_light @imp95_light @imp95_dark;
+    box-shadow: inset 1px 1px @imp95_shadow, inset -1px -1px @imp95_hover;
+}
+
+.linked > button,
+.linked > button:focus,
+.linked > button:hover {
+    outline: none;
+    border-radius: 0px;
 }
 
 button label {
@@ -300,12 +343,50 @@ treeview header button {
 }
 
 /* --------------------------------------------------------------------------
-   Frames, separators, paned handles
+   Cards, Boxes, Frames & Containers
    -------------------------------------------------------------------------- */
 
+card,
+.card,
+box.card,
+.view.card,
+.boxed-list,
+list.boxed-list {
+    background-color: @imp95_surface;
+    border-style: solid;
+    border-width: 1px;
+    border-color: @imp95_light @imp95_dark @imp95_dark @imp95_light;
+    border-radius: 0px;
+    box-shadow: 1px 1px 0px @imp95_dark;
+    outline: none;
+}
+
+card.sunken,
+.card.sunken,
+box.card.sunken {
+    background-color: @imp95_bg;
+    border-color: @imp95_shadow @imp95_light @imp95_light @imp95_shadow;
+    box-shadow: inset 1px 1px @imp95_dark;
+}
+
 frame,
-frame > border {
-    border-color: @imp95_light;
+frame > border,
+.frame {
+    border-style: solid;
+    border-width: 1px;
+    border-color: @imp95_shadow @imp95_light @imp95_light @imp95_shadow;
+    border-radius: 0px;
+    box-shadow: none;
+    outline: none;
+    margin: 0;
+}
+
+scrolledwindow.frame,
+scrolledwindow viewport.frame {
+    border-style: solid;
+    border-width: 1px;
+    border-color: @imp95_shadow @imp95_light @imp95_light @imp95_shadow;
+    border-radius: 0px;
 }
 
 separator {
@@ -743,3 +824,303 @@ textview text {
     border-color: transparent @imp95_light transparent @imp95_shadow;
     margin: 3px 2px;
 }
+
+/* --------------------------------------------------------------------------
+   Notification Daemon (Windows 95 Alert Dialog Box Style)
+   -------------------------------------------------------------------------- */
+
+#XfceNotifyWindow,
+window#XfceNotifyWindow,
+.xfce4-notifyd,
+.xfce4-notifyd-container,
+notify-window {
+    -XfceNotifyWindow-padding: 2px;
+    background-color: #C0C0C0;
+    background-image: none;
+    border-style: solid;
+    border-width: 2px;
+    border-color: #FFFFFF #000000 #000000 #FFFFFF;
+    border-radius: 0px;
+    box-shadow: inset 1px 1px #DFDFDF,
+                inset -1px -1px #808080,
+                2px 2px 0px #000000;
+    padding: 0px;
+    color: #000000;
+    outline: none;
+}
+
+#XfceNotifyWindow:hover,
+window#XfceNotifyWindow:hover,
+.xfce4-notifyd:hover,
+.xfce4-notifyd-container:hover {
+    border-color: #FFFFFF #000000 #000000 #FFFFFF;
+}
+
+#XfceNotifyWindow box,
+#XfceNotifyWindow grid {
+    background-color: transparent;
+    border: none;
+    box-shadow: none;
+    outline: none;
+}
+
+/* Collapse default GtkImage and icon container so text box spans 100% full width */
+#XfceNotifyWindow image {
+    min-width: 0px;
+    min-height: 0px;
+    margin-right: -52px;
+    margin-left: 0px;
+    margin-top: 0px;
+    margin-bottom: 0px;
+    padding: 0px;
+    opacity: 0;
+    -gtk-icon-source: none;
+}
+
+#XfceNotifyWindow > box > box > box:first-child {
+    margin: 0px;
+    padding: 0px;
+    min-width: 0px;
+    min-height: 0px;
+}
+
+/* Windows 95 Active Titlebar Header ("Alert!" with [X] close button on right) */
+#XfceNotifyWindow label#summary {
+    background-color: #800000;
+    background-image: url("assets/win95-close.png");
+    background-repeat: no-repeat;
+    background-position: calc(100% - 2px) center;
+    color: #FFFFFF;
+    font-family: "MS Sans Serif", "Microsoft Sans Serif", "Tahoma", "Liberation Sans", "DejaVu Sans", sans-serif;
+    font-weight: bold;
+    font-size: 11px;
+    padding: 3px 22px 3px 6px;
+    min-height: 18px;
+    min-width: 180px;
+    margin: 0px 0px 2px 0px;
+    border-style: solid;
+    border-width: 1px;
+    border-color: #A00000 #500000 #500000 #A00000;
+    text-shadow: none;
+}
+
+/* Content Area with retro 32x32 pixelated yellow warning triangle icon */
+#XfceNotifyWindow label#body {
+    background-color: transparent;
+    background-image: url("assets/win95-warning.png");
+    background-repeat: no-repeat;
+    background-position: 16px center;
+    color: #000000;
+    font-family: "MS Sans Serif", "Microsoft Sans Serif", "Tahoma", "Liberation Sans", "DejaVu Sans", sans-serif;
+    font-size: 11px;
+    font-weight: normal;
+    padding: 14px 18px 14px 60px;
+    min-height: 32px;
+    margin: 0px;
+}
+
+/* Windows 95 Dialog Push-Buttons */
+#XfceNotifyWindow button {
+    background-color: #C0C0C0;
+    background-image: none;
+    border-style: solid;
+    border-width: 1px;
+    border-color: #000000;
+    border-radius: 0px;
+    box-shadow: inset 1px 1px #FFFFFF,
+                inset -1px -1px #808080,
+                inset 2px 2px #DFDFDF,
+                inset -2px -2px #808080;
+    color: #000000;
+    font-family: "MS Sans Serif", "Microsoft Sans Serif", "Tahoma", "Liberation Sans", "DejaVu Sans", sans-serif;
+    font-size: 11px;
+    font-weight: normal;
+    padding: 3px 14px;
+    min-width: 75px;
+    min-height: 23px;
+    margin: 8px 4px 4px 4px;
+    outline: none;
+}
+
+#XfceNotifyWindow button:hover {
+    background-color: #D4D0C8;
+    box-shadow: inset 1px 1px #FFFFFF,
+                inset -1px -1px #808080,
+                inset 2px 2px #DFDFDF,
+                inset -2px -2px #808080;
+}
+
+#XfceNotifyWindow button:active,
+#XfceNotifyWindow button:checked {
+    background-color: #C0C0C0;
+    box-shadow: inset 1px 1px #808080,
+                inset -1px -1px #FFFFFF,
+                inset 2px 2px #000000,
+                inset -2px -2px #DFDFDF;
+}
+
+#XfceNotifyWindow button:focus {
+    outline: 1px dotted #000000;
+    outline-offset: -4px;
+}
+
+/* Default / Suggested Action Button (bold black border in Win95) */
+#XfceNotifyWindow button.default,
+#XfceNotifyWindow button.suggested-action {
+    border-width: 2px;
+    border-color: #000000;
+}
+
+/* Windows 95 Progress Bar */
+#XfceNotifyWindow progressbar {
+    min-height: 14px;
+    border-radius: 0px;
+    margin-top: 8px;
+    padding: 0px;
+}
+
+#XfceNotifyWindow progressbar trough {
+    background-color: #FFFFFF;
+    border-style: solid;
+    border-width: 1px;
+    border-color: #808080 #FFFFFF #FFFFFF #808080;
+    box-shadow: inset 1px 1px #000000;
+    border-radius: 0px;
+    padding: 2px;
+}
+
+#XfceNotifyWindow progressbar progress {
+    background-color: #800000;
+    border-radius: 0px;
+    border: none;
+}
+
+/* --------------------------------------------------------------------------
+   LightDM GTK Greeter (Login Window, Cards, and Controls)
+   -------------------------------------------------------------------------- */
+
+.lightdm-gtk-greeter,
+#panel_window,
+#login_window,
+#restart_dialog,
+#shutdown_dialog {
+    background-color: @imp95_surface;
+    color: @imp95_text;
+}
+
+#login_window,
+#restart_dialog,
+#shutdown_dialog {
+    border-style: solid;
+    border-width: 1px;
+    border-color: @imp95_light @imp95_dark @imp95_dark @imp95_light;
+    border-radius: 0px;
+    box-shadow: 2px 2px 0px @imp95_dark;
+    outline: none;
+}
+
+#content_frame,
+#buttonbox_frame {
+    background-color: @imp95_surface;
+    border: none;
+    border-radius: 0px;
+    box-shadow: none;
+}
+
+#login_window .entry {
+    background-color: @imp95_bg;
+    border-style: solid;
+    border-width: 1px;
+    border-color: @imp95_shadow @imp95_light @imp95_light @imp95_shadow;
+    border-radius: 0px;
+    box-shadow: inset 1px 1px @imp95_dark;
+    color: @imp95_text;
+    padding: 4px 6px;
+}
+
+#login_window .entry:focus {
+    border-color: @imp95_shadow @imp95_light @imp95_light @imp95_shadow;
+    box-shadow: inset 1px 1px @imp95_dark;
+    outline: none;
+}
+
+#login_window .button,
+#restart_dialog .button,
+#shutdown_dialog .button {
+    background-color: @imp95_surface;
+    background-image: none;
+    border-style: solid;
+    border-width: 1px;
+    border-color: @imp95_light @imp95_dark @imp95_dark @imp95_light;
+    border-radius: 0px;
+    box-shadow: inset 1px 1px @imp95_hover, inset -1px -1px @imp95_shadow;
+    color: @imp95_text;
+    outline: none;
+}
+
+#login_window .button:hover,
+#restart_dialog .button:hover,
+#shutdown_dialog .button:hover {
+    background-color: @imp95_hover;
+    border-color: @imp95_light @imp95_dark @imp95_dark @imp95_light;
+}
+
+#login_window .button:active,
+#login_window .button:checked,
+#restart_dialog .button:active,
+#shutdown_dialog .button:active {
+    background-color: @imp95_bg;
+    border-color: @imp95_dark @imp95_light @imp95_light @imp95_dark;
+    box-shadow: inset 1px 1px @imp95_shadow, inset -1px -1px @imp95_hover;
+}
+
+#login_window .button:focus,
+#restart_dialog .button:focus,
+#shutdown_dialog .button:focus {
+    outline: none;
+}
+
+#login_window .button.default {
+    background-color: @imp95_accent;
+    color: @imp95_text;
+    border-color: @imp95_light @imp95_dark @imp95_dark @imp95_light;
+    box-shadow: inset 1px 1px @imp95_accent_light, inset -1px -1px @imp95_accent_darkest;
+}
+
+#login_window .button.default:hover {
+    background-color: @imp95_accent_hover;
+}
+
+#login_window .button.default:active {
+    background-color: @imp95_accent_dark;
+    border-color: @imp95_dark @imp95_light @imp95_light @imp95_dark;
+    box-shadow: inset 1px 1px @imp95_accent_darkest, inset -1px -1px @imp95_accent_light;
+}
+
+#panel_window {
+    background-color: @imp95_surface;
+    border-bottom: 1px solid @imp95_dark;
+    box-shadow: inset 0 -1px @imp95_shadow;
+    color: @imp95_text;
+}
+
+#panel_window .menubar,
+#panel_window .menubar > .menuitem {
+    background-color: transparent;
+    border: none;
+    color: @imp95_text;
+}
+
+#panel_window .menubar > .menuitem:hover {
+    background-color: @imp95_accent;
+    color: @imp95_text;
+}
+
+#user_image_border,
+#user_image {
+    border-radius: 0px;
+    border: 1px solid @imp95_dark;
+    box-shadow: none;
+    background-color: @imp95_surface;
+}
+
