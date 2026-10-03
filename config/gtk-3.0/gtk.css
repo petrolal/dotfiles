@@ -694,9 +694,51 @@ ThunarWindow statusbar {
 }
 
 /* Info bars, selection-mode header bars, drag-and-drop and rubberband */
+infobar,
+infobar.info,
+infobar.warning,
+infobar.question,
+infobar.error,
+infobar > revealer > box,
 infobar.info > revealer > box,
-infobar.question > revealer > box {
+infobar.warning > revealer > box,
+infobar.question > revealer > box,
+infobar.error > revealer > box {
     background-color: @imp95_accent;
+    color: @imp95_text;
+}
+
+infobar label,
+infobar.info label,
+infobar.warning label,
+infobar.question label,
+infobar.error label {
+    color: @imp95_text;
+}
+
+/* --------------------------------------------------------------------------
+   Xfce Titled Dialog & Terminal Dialogs (e.g. Unsafe Paste)
+   -------------------------------------------------------------------------- */
+
+XfceTitledDialog,
+XfceTitledDialog dialog,
+XfceTitledDialog .dialog,
+XfceTitledDialog > box,
+XfceTitledDialog .dialog-vbox,
+XfceTitledDialog .dialog-action-area {
+    background-color: @imp95_surface;
+    color: @imp95_text;
+}
+
+dialog scrolledwindow,
+dialog scrolledwindow viewport,
+dialog textview,
+dialog textview text,
+XfceTitledDialog scrolledwindow,
+XfceTitledDialog scrolledwindow viewport,
+XfceTitledDialog textview,
+XfceTitledDialog textview text {
+    background-color: @imp95_bg;
     color: @imp95_text;
 }
 

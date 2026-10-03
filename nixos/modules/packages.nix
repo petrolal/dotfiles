@@ -1,25 +1,26 @@
-{ config, pkgs, ... }:
+{ pkgs, ... }:
 
-{
-  environment.systemPackages = with pkgs; [
-
-    # Build & Orchestration
+let
+  buildTools = with pkgs; [
     gnumake
     git
     sbcl
-    libx11
+    xorg.libX11
     libGL
+  ];
 
-    # Video Wallpaper & Wallpapers
+  wallpaperTools = with pkgs; [
     mpv
     xwinwrap
     feh
+  ];
 
-    # Development
+  devTools = with pkgs; [
     emacs
     claude-code
+  ];
 
-    # System & Terminal Utilities
+  systemTools = with pkgs; [
     pciutils
     htop
     fastfetch
@@ -30,9 +31,19 @@
     unzip
     which
     less
+    rlwrap
+  ];
 
-    # Utils and good tools
+  mediaUtils = with pkgs; [
     shotcut
     appimage-run
   ];
+
+in {
+  environment.systemPackages =
+    buildTools
+    ++ wallpaperTools
+    ++ devTools
+    ++ systemTools
+    ++ mediaUtils;
 }
