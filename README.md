@@ -84,6 +84,9 @@ dotfiles/
 │   ├── icons/                      # imp98 icon theme
 │   └── imp98/xfwm4/               # Window manager border theme
 │
+├── fonts/
+│   └── w95fa.otf                   # Windows 95 font (W95FA)
+│
 └── docs/
     └── dev-environments.md         # Per-project dev environment guide
 ```

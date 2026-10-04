@@ -16,7 +16,6 @@
     ;; Open Display standalone: embedded in the Settings Manager it renders blank.
     ("config/applications/xfce-display-settings.desktop"
      . ".local/share/applications/xfce-display-settings.desktop")
-    ("themes/hell-borders/xfwm4"        . ".local/share/themes/hell-borders/xfwm4")
     ("themes/imp98/xfwm4"               . ".local/share/themes/imp98/xfwm4")
     ("themes/icons"                     . ".local/share/icons/imp98")
     ("themes/icons"                     . ".icons/imp98")
