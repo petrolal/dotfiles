@@ -221,29 +221,7 @@ combobox cellview {
    Menus and popovers (application dropdown, right-click, combo dropdowns)
    -------------------------------------------------------------------------- */
 
-menu {
-    background-color: @imp95_surface;
-    background-image: url("assets/imp98-sidebar.png");
-    background-repeat: no-repeat;
-    background-position: left bottom;
-    border-style: solid;
-    border-width: 2px;
-    border-color: @imp95_light @imp95_dark @imp95_dark @imp95_light;
-    border-radius: 0px;
-    box-shadow: inset 1px 1px @imp95_hover,
-                inset -1px -1px @imp95_shadow,
-                2px 2px 0px @imp95_dark;
-    color: @imp95_text;
-    padding: 2px 2px 2px 28px;
-}
-
-/* Submenus and context menus: clean 3D bevels without sidebar */
-menu menu,
-.xfce4-panel menu,
-.xfce4-desktop-menu,
-XfdesktopIconView menu,
-window.xfce4-terminal menu,
-window.thunar menu,
+menu,
 .context-menu,
 popover,
 popover.background {
@@ -257,6 +235,21 @@ popover.background {
                 inset -1px -1px @imp95_shadow,
                 2px 2px 0px @imp95_dark;
     color: @imp95_text;
+    padding: 2px;
+}
+
+/* ONLY the Applications (Start) Menu gets the vertical Win98 sidebar banner */
+GarconGtkMenu {
+    background-image: url("assets/imp98-sidebar.png");
+    background-repeat: no-repeat;
+    background-position: left bottom;
+    padding: 2px 2px 2px 28px;
+}
+
+/* Submenus inside the Applications Menu should NOT have the sidebar */
+GarconGtkMenu menu,
+GarconGtkMenu GarconGtkMenu {
+    background-image: none;
     padding: 2px;
 }
 
@@ -754,9 +747,27 @@ infobar.error label {
 }
 
 /* --------------------------------------------------------------------------
-   Xfce Titled Dialog & Terminal Dialogs (e.g. Unsafe Paste)
+   Xfce Titled Dialog, GTK Dialogs & Terminal Prompt Alerts
    -------------------------------------------------------------------------- */
 
+dialog,
+messagedialog,
+window.dialog,
+window.messagedialog,
+dialog.background,
+messagedialog.background,
+dialog.csd,
+messagedialog.csd,
+dialog > box,
+messagedialog > box,
+.dialog-vbox,
+.dialog-content-area,
+.dialog-action-area,
+.dialog-action-box,
+dialog box,
+messagedialog box,
+dialog grid,
+messagedialog grid,
 XfceTitledDialog,
 XfceTitledDialog dialog,
 XfceTitledDialog .dialog,
@@ -765,6 +776,46 @@ XfceTitledDialog .dialog-vbox,
 XfceTitledDialog .dialog-action-area {
     background-color: @imp95_surface;
     color: @imp95_text;
+}
+
+dialog label,
+messagedialog label,
+.dialog-content-area label,
+.dialog-action-area label,
+XfceTitledDialog label {
+    color: @imp95_text;
+}
+
+dialog button,
+messagedialog button,
+.dialog-action-area button,
+.dialog-action-box button,
+XfceTitledDialog button {
+    background-color: @imp95_surface;
+    color: @imp95_text;
+    border-style: solid;
+    border-width: 1px;
+    border-color: @imp95_light @imp95_dark @imp95_dark @imp95_light;
+    box-shadow: inset 1px 1px @imp95_hover, inset -1px -1px @imp95_shadow;
+    border-radius: 0px;
+    padding: 3px 12px;
+}
+
+dialog button:hover,
+messagedialog button:hover,
+.dialog-action-area button:hover,
+XfceTitledDialog button:hover {
+    background-color: @imp95_hover;
+    color: @imp95_text;
+}
+
+dialog button:active,
+messagedialog button:active,
+.dialog-action-area button:active,
+XfceTitledDialog button:active {
+    background-color: @imp95_surface;
+    border-color: @imp95_dark @imp95_light @imp95_light @imp95_dark;
+    box-shadow: inset 1px 1px #000000;
 }
 
 dialog scrolledwindow,
@@ -972,9 +1023,9 @@ calendar {
                 inset -1px -1px @imp95_shadow,
                 2px 2px 0px @imp95_dark;
     border-radius: 0px;
-    padding: 4px;
+    padding: 8px;
     font-family: "W95FA", "MS Sans Serif", "Microsoft Sans Serif", "Tahoma", sans-serif;
-    font-size: 11px;
+    font-size: 16px;
 }
 
 /* Header container: Month & Year navigation */
@@ -982,7 +1033,8 @@ calendar.header {
     background-color: @imp95_surface;
     color: @imp95_text;
     border-bottom: 1px solid @imp95_shadow;
-    padding: 3px 2px 4px 2px;
+    padding: 6px 4px 8px 4px;
+    font-size: 16px;
     font-weight: bold;
 }
 
@@ -995,9 +1047,9 @@ calendar.button {
     border-color: @imp95_light @imp95_dark @imp95_dark @imp95_light;
     box-shadow: inset 1px 1px @imp95_hover, inset -1px -1px @imp95_shadow;
     border-radius: 0px;
-    min-width: 16px;
-    min-height: 16px;
-    padding: 1px 4px;
+    min-width: 24px;
+    min-height: 24px;
+    padding: 2px 8px;
 }
 
 calendar.button:hover {
@@ -1014,10 +1066,11 @@ calendar.button:active {
 calendar.highlight {
     background-color: #383838;
     color: @imp95_text;
+    font-size: 14px;
     font-weight: bold;
     border-top: 1px solid @imp95_dark;
     border-bottom: 1px solid @imp95_dark;
-    padding: 2px 0;
+    padding: 4px 0;
 }
 
 /* Day grid area: authentic Windows 98 sunken well in dark mode */
@@ -1029,7 +1082,8 @@ calendar view {
     border-width: 2px;
     border-color: @imp95_shadow @imp95_light @imp95_light @imp95_shadow;
     box-shadow: inset 1px 1px #000000, inset -1px -1px @imp95_hover;
-    padding: 2px;
+    padding: 6px;
+    font-size: 16px;
 }
 
 /* Selected day: accent block with classic Windows dotted focus rectangle */
@@ -1050,11 +1104,13 @@ calendar:indeterminate {
 }
 
 /* Week numbers column */
-calendar:week-number,
+
 calendar.week-number {
     background-color: #242424;
     color: @imp95_disabled;
     border-right: 1px solid @imp95_shadow;
+    padding: 0 6px;
+    font-size: 13px;
 }
 
 /* --------------------------------------------------------------------------
@@ -1067,17 +1123,17 @@ window#XfceNotifyWindow,
 .xfce4-notifyd-container,
 notify-window {
     -XfceNotifyWindow-padding: 2px;
-    background-color: #C0C0C0;
+    background-color: @imp95_surface;
     background-image: none;
     border-style: solid;
     border-width: 2px;
-    border-color: #FFFFFF #000000 #000000 #FFFFFF;
+    border-color: @imp95_light @imp95_dark @imp95_dark @imp95_light;
     border-radius: 0px;
-    box-shadow: inset 1px 1px #DFDFDF,
-                inset -1px -1px #808080,
-                2px 2px 0px #000000;
+    box-shadow: inset 1px 1px @imp95_hover,
+                inset -1px -1px @imp95_shadow,
+                2px 2px 0px @imp95_dark;
     padding: 0px;
-    color: #000000;
+    color: @imp95_text;
     outline: none;
 }
 
@@ -1085,7 +1141,7 @@ notify-window {
 window#XfceNotifyWindow:hover,
 .xfce4-notifyd:hover,
 .xfce4-notifyd-container:hover {
-    border-color: #FFFFFF #000000 #000000 #FFFFFF;
+    border-color: @imp95_light @imp95_dark @imp95_dark @imp95_light;
 }
 
 #XfceNotifyWindow box,
@@ -1123,7 +1179,7 @@ window#XfceNotifyWindow:hover,
     background-repeat: no-repeat;
     background-position: calc(100% - 2px) center;
     color: #FFFFFF;
-    font-family: "MS Sans Serif", "Microsoft Sans Serif", "Tahoma", "Liberation Sans", "DejaVu Sans", sans-serif;
+    font-family: "W95FA", "MS Sans Serif", "Microsoft Sans Serif", "Tahoma", sans-serif;
     font-weight: bold;
     font-size: 11px;
     padding: 3px 22px 3px 6px;
@@ -1142,9 +1198,9 @@ window#XfceNotifyWindow:hover,
     background-image: url("assets/win95-warning.png");
     background-repeat: no-repeat;
     background-position: 16px center;
-    color: #000000;
-    font-family: "MS Sans Serif", "Microsoft Sans Serif", "Tahoma", "Liberation Sans", "DejaVu Sans", sans-serif;
-    font-size: 11px;
+    color: @imp95_text;
+    font-family: "W95FA", "MS Sans Serif", "Microsoft Sans Serif", "Tahoma", sans-serif;
+    font-size: 12px;
     font-weight: normal;
     padding: 14px 18px 14px 60px;
     min-height: 32px;
@@ -1153,19 +1209,16 @@ window#XfceNotifyWindow:hover,
 
 /* Windows 95 Dialog Push-Buttons */
 #XfceNotifyWindow button {
-    background-color: #C0C0C0;
+    background-color: @imp95_surface;
     background-image: none;
     border-style: solid;
     border-width: 1px;
-    border-color: #000000;
+    border-color: @imp95_light @imp95_dark @imp95_dark @imp95_light;
     border-radius: 0px;
-    box-shadow: inset 1px 1px #FFFFFF,
-                inset -1px -1px #808080,
-                inset 2px 2px #DFDFDF,
-                inset -2px -2px #808080;
-    color: #000000;
-    font-family: "MS Sans Serif", "Microsoft Sans Serif", "Tahoma", "Liberation Sans", "DejaVu Sans", sans-serif;
-    font-size: 11px;
+    box-shadow: inset 1px 1px @imp95_hover, inset -1px -1px @imp95_shadow;
+    color: @imp95_text;
+    font-family: "W95FA", "MS Sans Serif", "Microsoft Sans Serif", "Tahoma", sans-serif;
+    font-size: 12px;
     font-weight: normal;
     padding: 3px 14px;
     min-width: 75px;
@@ -1175,24 +1228,19 @@ window#XfceNotifyWindow:hover,
 }
 
 #XfceNotifyWindow button:hover {
-    background-color: #D4D0C8;
-    box-shadow: inset 1px 1px #FFFFFF,
-                inset -1px -1px #808080,
-                inset 2px 2px #DFDFDF,
-                inset -2px -2px #808080;
+    background-color: @imp95_hover;
+    border-color: @imp95_light @imp95_dark @imp95_dark @imp95_light;
 }
 
 #XfceNotifyWindow button:active,
 #XfceNotifyWindow button:checked {
-    background-color: #C0C0C0;
-    box-shadow: inset 1px 1px #808080,
-                inset -1px -1px #FFFFFF,
-                inset 2px 2px #000000,
-                inset -2px -2px #DFDFDF;
+    background-color: @imp95_surface;
+    border-color: @imp95_dark @imp95_light @imp95_light @imp95_dark;
+    box-shadow: inset 1px 1px #000000;
 }
 
 #XfceNotifyWindow button:focus {
-    outline: 1px dotted #000000;
+    outline: 1px dotted #FFFFFF;
     outline-offset: -4px;
 }
 
