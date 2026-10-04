@@ -67,7 +67,7 @@ help:
 	@echo '  install         Link dotfiles and apply the XFCE theme (= deploy)'
 	@echo '  deploy          Same as install'
 	@echo '  dry-run         Show what deploy would do without changing anything'
-	@echo '  scale           Reset panel height (40px) and WM margins, reload XFCE'
+	@echo '  scale           Reset panel height (44px) and WM margins, reload XFCE'
 	@echo '  quick-deploy    Deploy via SBCL script mode, without compiling'
 	@echo '  uninstall       Remove all dotfiles symlinks managed by deploy'
 	@echo '  installcheck    Verify the installed invoker runs'

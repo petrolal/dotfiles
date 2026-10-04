@@ -19,7 +19,8 @@
     ("themes/hell-borders/xfwm4"        . ".local/share/themes/hell-borders/xfwm4")
     ("themes/imp98/xfwm4"               . ".local/share/themes/imp98/xfwm4")
     ("themes/icons"                     . ".local/share/icons/imp98")
-    ("themes/icons"                     . ".icons/imp98")))
+    ("themes/icons"                     . ".icons/imp98")
+    ("fonts/w95fa.otf"                  . ".local/share/fonts/w95fa.otf")))
 
 (defun link-file (source-rel target-rel root home &key dry-run verbose)
   "Symlink SOURCE-REL under ROOT to TARGET-REL under HOME.

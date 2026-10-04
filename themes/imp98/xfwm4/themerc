@@ -3,8 +3,8 @@
 # symbol they use is pinned here, so the look does not depend on the GTK theme.
 
 button_layout=O|HMC
-button_offset=2
-button_spacing=0
+button_offset=3
+button_spacing=2
 full_width_title=true
 title_alignment=left
 title_horizontal_offset=2

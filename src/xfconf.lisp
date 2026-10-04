@@ -8,6 +8,7 @@
     ("xsettings"                "/Net/ThemeName"                          "string" "Adwaita-dark")
     ("xsettings"                "/Net/IconThemeName"                      "string" "imp98")
     ("xsettings"                "/Gtk/CursorThemeSize"                    "int"    "24")
+    ("xsettings"                "/Gtk/FontName"                           "string" "W95FA 10")
     ("xsettings"                "/Gtk/ApplicationPreferDarkTheme"         "bool"   "true")
 
     ;; Notification Daemon Styling (xfce4-notifyd: 100% solid opacity)
@@ -16,9 +17,10 @@
 
     ;; Window Manager Theme & Behavior (Windows 98)
     ("xfwm4"                    "/general/theme"                          "string" "imp98")
+    ("xfwm4"                    "/general/title_font"                     "string" "W95FA Bold 10")
     ("xfwm4"                    "/general/button_layout"                  "string" "O|HMC")
-    ("xfwm4"                    "/general/button_spacing"                 "int"    "1")
-    ("xfwm4"                    "/general/button_offset"                  "int"    "2")
+    ("xfwm4"                    "/general/button_spacing"                 "int"    "2")
+    ("xfwm4"                    "/general/button_offset"                  "int"    "3")
     ("xfwm4"                    "/general/title_alignment"                "string" "left")
     ("xfwm4"                    "/general/full_width_title"               "bool"   "true")
     ("xfwm4"                    "/general/borderless_maximize"            "bool"   "true")
@@ -50,9 +52,9 @@
     ("xfce4-panel"              "/panels/panel-1/position"                "string" "p=6;x=0;y=0")
     ("xfce4-panel"              "/panels/panel-1/position-locked"         "bool"   "true")
     ("xfce4-panel"              "/panels/panel-1/background-style"        "int"    "0")
-    ;; Windows 98 taskbar: 40px tall. XFCE adds a 1px border to
-    ;; this value, so 39 renders as exactly 40px.
-    ("xfce4-panel"              "/panels/panel-1/size"                    "uint"   "39")
+    ;; Windows 98 taskbar: 44px tall. XFCE adds a 1px border to
+    ;; this value, so 43 renders as exactly 44px.
+    ("xfce4-panel"              "/panels/panel-1/size"                    "uint"   "43")
     ("xfce4-panel"              "/panels/panel-1/icon-size"               "uint"   "16")
     ;; NOTE: plugin-ids is an xfconf array — set via set-panel-plugin-ids, not here.
     ("xfce4-panel"              "/plugins/plugin-2/flat-buttons"          "bool"   "false")
@@ -104,14 +106,14 @@ Uses xfconf-query -a with repeated -t int -s N flags."
           (uiop:run-program cmd :ignore-error-status t)))))
 
 (defun apply-dynamic-resolution-scaling (&key dry-run verbose)
-  "Detect current display resolution, set the panel to 40px height
+  "Detect current display resolution, set the panel to 44px height
 and enforce 0px window manager margins via xfconf."
   (multiple-value-bind (w h output) (determine-primary-resolution)
     (when verbose
-      (format t "Display detection: ~Ax~A~@[ (~A)~] -> Panel: 40px, WM margins: 0px~%"
+      (format t "Display detection: ~Ax~A~@[ (~A)~] -> Panel: 44px, WM margins: 0px~%"
               w h output))
-    ;; 39 renders as exactly 40px.
-    (set-xfconf "xfce4-panel" "/panels/panel-1/size" "uint" "39" :dry-run dry-run)
+    ;; 43 renders as exactly 44px.
+    (set-xfconf "xfce4-panel" "/panels/panel-1/size" "uint" "43" :dry-run dry-run)
     ;; Strictly 0px margins on all sides — prevents gaps/borders around tiled/maximized windows.
     (set-xfconf "xfwm4" "/general/margin_bottom" "int" "0" :dry-run dry-run)
     (set-xfconf "xfwm4" "/general/margin_left"   "int" "0" :dry-run dry-run)
@@ -138,14 +140,20 @@ and enforce 0px window manager margins via xfconf."
         (progn
           (format t "[DRY-RUN] gsettings set org.gnome.desktop.interface icon-theme 'imp98'~%")
           (format t "[DRY-RUN] gsettings set org.gnome.desktop.interface gtk-theme 'Adwaita-dark'~%")
+          (format t "[DRY-RUN] gsettings set org.gnome.desktop.interface font-name 'W95FA 10'~%")
           (format t "[DRY-RUN] gsettings set org.gnome.desktop.interface color-scheme 'prefer-dark'~%")
+          (format t "[DRY-RUN] gsettings set org.gnome.desktop.wm.preferences titlebar-font 'W95FA Bold 10'~%")
           (format t "[DRY-RUN] gsettings set org.gnome.desktop.wm.preferences button-layout 'close:maximize'~%"))
         (progn
           (uiop:run-program '("gsettings" "set" "org.gnome.desktop.interface" "icon-theme" "imp98")
                             :ignore-error-status t)
           (uiop:run-program '("gsettings" "set" "org.gnome.desktop.interface" "gtk-theme" "Adwaita-dark")
                             :ignore-error-status t)
+          (uiop:run-program '("gsettings" "set" "org.gnome.desktop.interface" "font-name" "W95FA 10")
+                            :ignore-error-status t)
           (uiop:run-program '("gsettings" "set" "org.gnome.desktop.interface" "color-scheme" "prefer-dark")
+                            :ignore-error-status t)
+          (uiop:run-program '("gsettings" "set" "org.gnome.desktop.wm.preferences" "titlebar-font" "W95FA Bold 10")
                             :ignore-error-status t)
           (uiop:run-program '("gsettings" "set" "org.gnome.desktop.wm.preferences" "button-layout" "close:maximize")
                             :ignore-error-status t)))))

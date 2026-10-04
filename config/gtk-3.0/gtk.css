@@ -22,6 +22,10 @@
 @define-color imp95_tooltip_bg #ffffe1;
 @define-color imp95_tooltip_fg #000000;
 
+* {
+    font-family: "W95FA", "MS Sans Serif", "Microsoft Sans Serif", "Tahoma", sans-serif;
+}
+
 /* --------------------------------------------------------------------------
    Base surfaces: windows, dialogs, headerbars, toolbars
    -------------------------------------------------------------------------- */
@@ -32,6 +36,11 @@ messagedialog,
 .background {
     background-color: @imp95_surface;
     color: @imp95_text;
+}
+
+headerbar,
+.titlebar {
+    min-height: 31px;
 }
 
 headerbar,
@@ -212,17 +221,43 @@ combobox cellview {
    Menus and popovers (application dropdown, right-click, combo dropdowns)
    -------------------------------------------------------------------------- */
 
-menu,
-.menu,
+menu {
+    background-color: @imp95_surface;
+    background-image: url("assets/imp98-sidebar.png");
+    background-repeat: no-repeat;
+    background-position: left bottom;
+    border-style: solid;
+    border-width: 2px;
+    border-color: @imp95_light @imp95_dark @imp95_dark @imp95_light;
+    border-radius: 0px;
+    box-shadow: inset 1px 1px @imp95_hover,
+                inset -1px -1px @imp95_shadow,
+                2px 2px 0px @imp95_dark;
+    color: @imp95_text;
+    padding: 2px 2px 2px 28px;
+}
+
+/* Submenus and context menus: clean 3D bevels without sidebar */
+menu menu,
+.xfce4-panel menu,
+.xfce4-desktop-menu,
+XfdesktopIconView menu,
+window.xfce4-terminal menu,
+window.thunar menu,
 .context-menu,
 popover,
 popover.background {
     background-color: @imp95_surface;
     background-image: none;
-    border: 1px solid @imp95_dark;
+    border-style: solid;
+    border-width: 2px;
+    border-color: @imp95_light @imp95_dark @imp95_dark @imp95_light;
     border-radius: 0px;
-    box-shadow: 2px 2px 0px rgba(0, 0, 0, 0.5);
+    box-shadow: inset 1px 1px @imp95_hover,
+                inset -1px -1px @imp95_shadow,
+                2px 2px 0px @imp95_dark;
     color: @imp95_text;
+    padding: 2px;
 }
 
 menuitem,
@@ -230,6 +265,8 @@ modelbutton {
     color: @imp95_text;
     background-color: transparent;
     border-radius: 0px;
+    padding: 4px 8px;
+    min-height: 22px;
 }
 
 menuitem:hover,
@@ -776,8 +813,8 @@ textview text {
     background-color: @imp95_surface;
     background-image: none;
     color: @imp95_text;
-    font-family: "MS Sans Serif", "Microsoft Sans Serif", "Tahoma", "DejaVu Sans", sans-serif;
-    font-size: 11px;
+    font-family: "W95FA", "MS Sans Serif", "Microsoft Sans Serif", "Tahoma", "DejaVu Sans", sans-serif;
+    font-size: 13px;
 }
 
 /* Raised edge facing the desktop (the panel sits at the top of the screen) */
@@ -817,12 +854,19 @@ textview text {
 .xfce4-popup-applicationsmenu .background {
     background-color: @imp95_surface;
     color: @imp95_text;
-    border: 1px solid @imp95_dark;
+    border-style: solid;
+    border-width: 2px;
+    border-color: @imp95_light @imp95_dark @imp95_dark @imp95_light;
+    box-shadow: inset 1px 1px @imp95_hover,
+                inset -1px -1px @imp95_shadow,
+                2px 2px 0px @imp95_dark;
+    font-size: 13px;
 }
 
 #applicationsmenu-1 menuitem,
 .xfce4-popup-applicationsmenu menuitem {
     color: @imp95_text;
+    padding: 4px 8px;
 }
 
 #applicationsmenu-1 menuitem:hover,
@@ -911,6 +955,89 @@ textview text {
     border-width: 0 1px 0 1px;
     border-color: transparent @imp95_light transparent @imp95_shadow;
     margin: 3px 2px;
+}
+
+/* --------------------------------------------------------------------------
+   Calendar Popup (Clock Plugin GtkCalendar Windows 95 Style)
+   -------------------------------------------------------------------------- */
+
+.xfce4-panel-popup,
+calendar {
+    background-color: #C0C0C0;
+    color: #000000;
+    border-style: solid;
+    border-width: 2px;
+    border-color: #FFFFFF #808080 #808080 #FFFFFF;
+    box-shadow: inset 1px 1px #DFDFDF, inset -1px -1px #000000;
+    border-radius: 0px;
+    padding: 4px;
+    font-family: "W95FA", "MS Sans Serif", "Microsoft Sans Serif", "Tahoma", sans-serif;
+    font-size: 12px;
+}
+
+calendar.header {
+    background-color: #C0C0C0;
+    color: #000000;
+    border-bottom: 1px solid #808080;
+    padding: 4px;
+    font-weight: bold;
+}
+
+calendar.button {
+    background-color: #C0C0C0;
+    color: #000000;
+    border-style: solid;
+    border-width: 1px;
+    border-color: #FFFFFF #808080 #808080 #FFFFFF;
+    box-shadow: inset 1px 1px #DFDFDF, inset -1px -1px #000000;
+    border-radius: 0px;
+    min-width: 16px;
+    min-height: 16px;
+    padding: 1px 4px;
+}
+
+calendar.button:hover {
+    background-color: #DFDFDF;
+}
+
+calendar.button:active {
+    background-color: #C0C0C0;
+    border-color: #808080 #FFFFFF #FFFFFF #808080;
+    box-shadow: inset 1px 1px #000000;
+}
+
+/* Day names row: classic gray header with bottom groove */
+calendar.highlight {
+    background-color: #C0C0C0;
+    color: #000000;
+    font-weight: bold;
+    border-bottom: 1px solid #808080;
+}
+
+/* Day grid area: authentic Windows 95 sunken white well */
+calendar.view,
+calendar view {
+    background-color: #FFFFFF;
+    color: #000000;
+    border-style: solid;
+    border-width: 2px;
+    border-color: #808080 #FFFFFF #FFFFFF #808080;
+    box-shadow: inset 1px 1px #000000;
+    padding: 2px;
+}
+
+/* Selected day: sharp rectangular accent block with bold white text */
+calendar:selected,
+calendar.view:selected {
+    background-color: @imp95_accent;
+    color: #FFFFFF;
+    border-radius: 0px;
+    font-weight: bold;
+}
+
+/* Previous/next month dates: dimmed text */
+calendar:indeterminate {
+    color: #808080;
 }
 
 /* --------------------------------------------------------------------------
