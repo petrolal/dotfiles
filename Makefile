@@ -140,7 +140,7 @@ nix-link:
 # `switch` (not `build` + switch-to-configuration) registers the new system
 # profile generation and installs the boot entry, so it survives a reboot.
 nix-switch: nix-link
-	$(SUDO) $(NIXOS_REBUILD) switch --flake $(nixosdir) --impure
+	$(SUDO) $(NIXOS_REBUILD) switch --flake $(nixosdir)
 
 system-install: nix-switch
 	$(MAKE) install

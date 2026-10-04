@@ -20,7 +20,10 @@
   (format t "  -g, --generate    generate/ensure templated configuration assets~%")
   (format t "  -n, --dry-run     simulate actions without modifying filesystem or xfconf~%")
   (format t "  -q, --quiet       suppress non-error output~%")
-  (format t "      --no-reload   do not reload XFCE services~%")
+  (format t "      --links-only  only symlink dotfiles (implies --no-xfconf --no-reload)~%")
+  (format t "      --no-xfconf   do not apply XFCE desktop settings via xfconf~%")
+  (format t "      --no-generate do not generate templated configuration assets~%")
+  (format t "      --no-reload   do not reload XFCE desktop services~%")
   (format t "  -h, --help        display this help text and exit~%")
   (format t "  -v, --version     display version information and exit~%"))
 
@@ -34,6 +37,8 @@
   (let ((dry-run nil)
         (verbose t)
         (reload t)
+        (apply-settings t)
+        (generate-configs t)
         (action :deploy))
     (dolist (arg argv)
       (cond
@@ -47,6 +52,13 @@
          (setf dry-run t))
         ((member arg '("-q" "--quiet") :test #'string=)
          (setf verbose nil))
+        ((string= arg "--links-only")
+         (setf apply-settings nil
+               reload nil))
+        ((string= arg "--no-xfconf")
+         (setf apply-settings nil))
+        ((string= arg "--no-generate")
+         (setf generate-configs nil))
         ((string= arg "--no-reload")
          (setf reload nil))
         ((member arg '("-u" "--uninstall" "uninstall") :test #'string=)
@@ -63,13 +75,26 @@
          (uiop:quit 1))))
     (case action
       (:uninstall
-       (uninstall :dry-run dry-run :verbose verbose))
+       (multiple-value-bind (ok failures removed)
+           (uninstall :dry-run dry-run :verbose verbose)
+         (declare (ignore removed))
+         (unless ok
+           (uiop:quit (if (plusp failures) 1 0)))))
       (:scale
        (apply-dynamic-resolution-scaling :dry-run dry-run :verbose verbose)
        (when reload
          (reload-desktop-services :dry-run dry-run :verbose verbose)))
       (:generate
-       (generate-all-configs :dry-run dry-run :verbose verbose))
+       (unless (generate-all-configs :dry-run dry-run :verbose verbose)
+         (uiop:quit 1)))
       (:deploy
-       (deploy :dry-run dry-run :verbose verbose :reload reload)))
+       (multiple-value-bind (ok failures successes)
+           (deploy :dry-run dry-run
+                   :verbose verbose
+                   :reload reload
+                   :apply-settings apply-settings
+                   :generate-configs generate-configs)
+         (declare (ignore successes))
+         (unless ok
+           (uiop:quit (if (plusp failures) 1 0))))))
     (uiop:quit 0)))

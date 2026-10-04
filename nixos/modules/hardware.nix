@@ -1,8 +1,12 @@
-{ config, pkgs, ... }:
+{ config, pkgs, lib, ... }:
 
+let
+  localHardware = ../hardware-configuration.nix;
+  etcHardware = /etc/nixos/hardware-configuration.nix;
+in
 {
   imports = [
-    /etc/nixos/hardware-configuration.nix
+    (if builtins.pathExists localHardware then localHardware else etcHardware)
   ];
 
   boot.loader.systemd-boot.enable = true;

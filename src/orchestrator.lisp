@@ -28,42 +28,61 @@
            (uiop:run-program (format nil "nohup ~A >/dev/null 2>&1 &" cmd)
                              :force-shell t)))))))
 
-(defun deploy (&key dry-run (verbose t) (reload t))
+(defun deploy (&key dry-run (verbose t) (reload t) (apply-settings t) (generate-configs t))
+  "Deploy dotfiles, generate configs, apply settings, and reload services.
+Returns (values SUCCESS-P FAILURES SUCCESSES)."
   (when verbose
     (format t "=== Deploying Abyssal Biopunk / Infernal Retro Dotfiles ===~%"))
   (let ((root (find-dotfiles-root))
-        (home (user-home-directory)))
+        (home (user-home-directory))
+        (failures 0)
+        (successes 0))
     (when verbose
       (format t "Root:   ~A~%" root)
       (format t "Target: ~A~%" home))
     ;; Step 1: Ensure templated assets
-    (generate-all-configs :root root :dry-run dry-run :verbose verbose)
+    (when generate-configs
+      (if (generate-all-configs :root root :dry-run dry-run :verbose verbose)
+          (incf successes)
+          (incf failures)))
     ;; Step 2: Symlink all mapped configs
     (dolist (mapping *mappings*)
-      (link-file (car mapping) (cdr mapping) root home :dry-run dry-run :verbose verbose))
+      (if (link-file (car mapping) (cdr mapping) root home :dry-run dry-run :verbose verbose)
+          (incf successes)
+          (incf failures)))
     ;; Step 3: Apply XFCE / xfconf settings and dynamic resolution scaling
-    (apply-xfce-settings :dry-run dry-run :verbose verbose)
+    (when apply-settings
+      (apply-xfce-settings :dry-run dry-run :verbose verbose))
     ;; Step 4: Reload desktop services if appropriate
-    (when reload
-      (reload-desktop-services :dry-run dry-run :verbose verbose)))
-  (when verbose
-    (format t "Deployment finished.~%")))
+    (when (and reload apply-settings)
+      (reload-desktop-services :dry-run dry-run :verbose verbose))
+    (when verbose
+      (if (zerop failures)
+          (format t "Deployment finished successfully.~%")
+          (format *error-output* "Deployment finished with ~D failure(s).~%" failures)))
+    (values (zerop failures) failures successes)))
 
 (defun uninstall (&key dry-run (verbose t))
-  "Remove all symlinks installed by deploy."
+  "Remove all symlinks installed by deploy.
+Returns (values SUCCESS-P FAILURES REMOVED-COUNT)."
   (when verbose
     (format t "=== Removing Abyssal Biopunk / Infernal Retro Dotfiles Symlinks ===~%"))
   (let ((root (find-dotfiles-root))
         (home (user-home-directory))
+        (failures 0)
         (removed-count 0))
     (when verbose
       (format t "Target: ~A~%" home))
     (dolist (mapping *mappings*)
-      (when (unlink-file (car mapping) (cdr mapping) root home
-                         :dry-run dry-run :verbose verbose)
-        (incf removed-count)))
+      (let ((result (unlink-file (car mapping) (cdr mapping) root home
+                                 :dry-run dry-run :verbose verbose)))
+        (cond
+          ((null result) nil)
+          ((eq result t) (incf removed-count))
+          (t (incf failures)))))
     (when verbose
       (if dry-run
           (format t "Dry-run complete. ~D symlink(s) would be removed.~%" removed-count)
-          (format t "Uninstallation complete. ~D symlink(s) removed.~%" removed-count)))
-    removed-count))
+          (format t "Uninstallation complete. ~D symlink(s) removed~@[, ~D failure(s)~].~%"
+                  removed-count (and (plusp failures) failures))))
+    (values (zerop failures) failures removed-count)))

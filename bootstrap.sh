@@ -66,7 +66,7 @@ sudo ln -sfn "${NIXOS_DIR}/flake.nix"         "${SYSCONFDIR}/flake.nix"
 # Step 3: Rebuild NixOS (installs gnumake, sbcl, fonts, everything)
 # ---------------------------------------------------------------------------
 info "Rebuilding NixOS (this may take a while on first run)..."
-sudo nixos-rebuild switch --flake "${NIXOS_DIR}" --impure
+sudo nixos-rebuild switch --flake "${NIXOS_DIR}"
 
 # ---------------------------------------------------------------------------
 # Step 4: Build the native invoker and deploy dotfiles

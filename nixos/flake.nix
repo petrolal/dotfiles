@@ -9,18 +9,9 @@
 
   outputs = { self, nixpkgs, antigravity-nix, ... }:
     let
-      system = builtins.currentSystem;
+      system = "x86_64-linux";
 
-      hostname =
-        let
-          hostnamePath = /etc/hostname;
-        in
-        if builtins.pathExists hostnamePath then
-          nixpkgs.lib.removeSuffix "\n" (builtins.readFile hostnamePath)
-        else
-          "default";
-
-      mkConfig = host:
+      mkConfig = { hostname ? "default", user ? "petrolal", extraModules ? [] }:
         nixpkgs.lib.nixosSystem {
           modules = [
             { nixpkgs.hostPlatform = system; }
@@ -28,19 +19,29 @@
 
             ({ pkgs, ... }: {
               nixpkgs.config.allowUnfree = true;
-              networking.hostName = host;
+              networking.hostName = hostname;
+              dotfiles.username = user;
 
               environment.systemPackages = [
                 antigravity-nix.packages.${pkgs.stdenv.hostPlatform.system}.google-antigravity-cli
               ];
             })
-          ];
+          ] ++ extraModules;
         };
     in
     {
       nixosConfigurations = {
-        ${hostname} = mkConfig hostname;
-        default = mkConfig "default";
+        # Primary workstation host
+        "abatedouro-de-anoes-PC" = mkConfig {
+          hostname = "abatedouro-de-anoes-PC";
+          user = "petrolal";
+        };
+
+        # Generic / portable fallback host
+        default = mkConfig {
+          hostname = "default";
+          user = "petrolal";
+        };
       };
     };
 }

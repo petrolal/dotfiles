@@ -1,16 +1,34 @@
-{ config, pkgs, ... }:
+{ config, pkgs, lib, ... }:
 
+let
+  username = config.dotfiles.username;
+  userDesc = config.dotfiles.userDescription;
+in
 {
-  # User petrolal
-  users.users."petrolal" = {
-    isNormalUser = true;
-    description = "Petrola Lucas";
-    extraGroups = [ "networkmanager" "wheel" ];
-    packages = with pkgs; [
-      thunderbird
-      google-chrome
-    ];
+  options.dotfiles = {
+    username = lib.mkOption {
+      type = lib.types.str;
+      default = "petrolal";
+      description = "Primary user account name.";
+    };
+    userDescription = lib.mkOption {
+      type = lib.types.str;
+      default = "Petrola Lucas";
+      description = "Full user description.";
+    };
   };
 
-  programs.firefox.enable = false;
+  config = {
+    users.users.${username} = {
+      isNormalUser = true;
+      description = userDesc;
+      extraGroups = [ "networkmanager" "wheel" ];
+      packages = with pkgs; [
+        thunderbird
+        google-chrome
+      ];
+    };
+
+    programs.firefox.enable = false;
+  };
 }
