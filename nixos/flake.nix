@@ -19,24 +19,28 @@
           nixpkgs.lib.removeSuffix "\n" (builtins.readFile hostnamePath)
         else
           "default";
-    in
-    {
-      nixosConfigurations = {
-        ${hostname} = nixpkgs.lib.nixosSystem {
+
+      mkConfig = host:
+        nixpkgs.lib.nixosSystem {
           modules = [
             { nixpkgs.hostPlatform = system; }
             ./configuration.nix
 
             ({ pkgs, ... }: {
               nixpkgs.config.allowUnfree = true;
-              networking.hostName = hostname;
+              networking.hostName = host;
 
               environment.systemPackages = [
-                antigravity-nix.packages.${pkgs.system}.google-antigravity-cli
+                antigravity-nix.packages.${pkgs.stdenv.hostPlatform.system}.google-antigravity-cli
               ];
             })
           ];
         };
+    in
+    {
+      nixosConfigurations = {
+        ${hostname} = mkConfig hostname;
+        default = mkConfig "default";
       };
     };
 }

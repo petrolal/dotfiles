@@ -78,11 +78,12 @@
     ("xfce4-keyboard-shortcuts" "/xfwm4/custom/<Shift><Super>4"           "string" "move_window_workspace_4_key")))
 
 (defun set-xfconf (channel property type value &key dry-run)
-  (if dry-run
-      (format t "[DRY-RUN] xfconf-query -c ~A -p ~A -t ~A -s ~A~%" channel property type value)
-      (uiop:run-program
-       (list "xfconf-query" "-c" channel "-p" property "-s" value "--create" "-t" type)
-       :ignore-error-status t)))
+  (let ((val-str (princ-to-string value)))
+    (if dry-run
+        (format t "[DRY-RUN] xfconf-query -c ~A -p ~A -t ~A -s ~A~%" channel property type val-str)
+        (uiop:run-program
+         (list "xfconf-query" "-c" channel "-p" property "-s" val-str "--create" "-t" type)
+         :ignore-error-status t))))
 
 (defun set-panel-plugin-ids (ids &key dry-run verbose)
   "Set /panels/panel-1/plugin-ids to the given list of integer IDs as an xfconf array.

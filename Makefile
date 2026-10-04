@@ -69,6 +69,7 @@ help:
 	@echo '  dry-run         Show what deploy would do without changing anything'
 	@echo '  scale           Reset panel height (28px) and WM margins, reload XFCE'
 	@echo '  quick-deploy    Deploy via SBCL script mode, without compiling'
+	@echo '  uninstall       Remove all dotfiles symlinks managed by deploy'
 	@echo '  installcheck    Verify the installed invoker runs'
 	@echo ''
 	@echo 'NixOS (requires sudo):'
@@ -119,10 +120,8 @@ quick-deploy:
 installcheck: $(INVOKER)
 	$(INVOKER) --version
 
-# The deployer only creates symlinks; there is no automated undo yet.
-uninstall:
-	@echo 'uninstall: not implemented; remove the symlinks listed by `make dry-run`.' >&2
-	@exit 1
+uninstall: $(INVOKER)
+	$(INVOKER) uninstall $(DEPLOY_FLAGS)
 
 # ---------------------------------------------------------------------------
 # NixOS
@@ -150,7 +149,7 @@ system-install: nix-switch
 # Cleaning (GNU levels: mostlyclean < clean < distclean < maintainer-clean)
 # ---------------------------------------------------------------------------
 mostlyclean:
-	find $(srcdir) -name '*.fasl' -type f -exec $(RM) {} +
+	find $(srcdir) \( -name '*.fasl' -o -name '*~' -o -name '#*#' \) -type f -exec $(RM) {} +
 
 clean: mostlyclean
 	$(RM) $(INVOKER)

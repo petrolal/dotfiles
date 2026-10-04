@@ -4,6 +4,7 @@
 (in-package :dotfiles.deployer)
 
 (defun reload-desktop-services (&key dry-run verbose)
+  "Reload active XFCE desktop components if running in an X11 session."
   (unless (uiop:getenv "DISPLAY")
     (when verbose
       (format t "[SKIP] No DISPLAY available, skipping desktop reload.~%"))
@@ -15,11 +16,17 @@
                  "xfwm4 --replace"
                  "pkill -f xfce4-notifyd"
                  "thunar -q"))
-    (if dry-run
-        (format t "[DRY-RUN] Would execute: ~A~%" cmd)
-        (ignore-errors
-          (uiop:run-program (format nil "nohup ~A >/dev/null 2>&1 &" cmd)
-                            :force-shell t)))))
+    (let ((binary (first (uiop:split-string cmd :separator " "))))
+      (cond
+        ((not (command-exists-p binary))
+         (when verbose
+           (format t "[SKIP] ~A not found, skipping.~%" binary)))
+        (dry-run
+         (format t "[DRY-RUN] Would execute: ~A~%" cmd))
+        (t
+         (ignore-errors
+           (uiop:run-program (format nil "nohup ~A >/dev/null 2>&1 &" cmd)
+                             :force-shell t)))))))
 
 (defun deploy (&key dry-run (verbose t) (reload t))
   (when verbose
@@ -41,3 +48,22 @@
       (reload-desktop-services :dry-run dry-run :verbose verbose)))
   (when verbose
     (format t "Deployment finished.~%")))
+
+(defun uninstall (&key dry-run (verbose t))
+  "Remove all symlinks installed by deploy."
+  (when verbose
+    (format t "=== Removing Abyssal Biopunk / Infernal Retro Dotfiles Symlinks ===~%"))
+  (let ((root (find-dotfiles-root))
+        (home (user-home-directory))
+        (removed-count 0))
+    (when verbose
+      (format t "Target: ~A~%" home))
+    (dolist (mapping *mappings*)
+      (when (unlink-file (car mapping) (cdr mapping) root home
+                         :dry-run dry-run :verbose verbose)
+        (incf removed-count)))
+    (when verbose
+      (if dry-run
+          (format t "Dry-run complete. ~D symlink(s) would be removed.~%" removed-count)
+          (format t "Uninstallation complete. ~D symlink(s) removed.~%" removed-count)))
+    removed-count))

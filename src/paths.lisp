@@ -30,4 +30,17 @@
              (uiop:ensure-directory-pathname (uiop:getcwd))))))))
 
 (defun command-exists-p (cmd)
-  (zerop (nth-value 2 (uiop:run-program (list "which" cmd) :ignore-error-status t))))
+  "Check whether CMD is an executable command available in PATH or at specified path."
+  (when (and (stringp cmd) (plusp (length cmd)))
+    (if (find #\/ cmd)
+        (let ((probe (probe-file cmd)))
+          (and probe (not (uiop:directory-pathname-p probe))))
+        (let ((path-env (uiop:getenv "PATH")))
+          (when path-env
+            (dolist (dir (uiop:split-string path-env :separator ":"))
+              (when (plusp (length dir))
+                (let ((candidate (merge-pathnames cmd (uiop:ensure-directory-pathname dir))))
+                  (when (and (probe-file candidate)
+                             (not (uiop:directory-pathname-p candidate)))
+                    (return-from command-exists-p t))))))
+          nil))))

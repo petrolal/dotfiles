@@ -11,9 +11,11 @@
   (format t "Deploy Abyssal Biopunk dotfiles symlinks and configure desktop settings.~%~%")
   (format t "Commands:~%")
   (format t "  deploy            perform full deployment (generate, link, configure, reload) [default]~%")
+  (format t "  uninstall         remove all deployed dotfile symlinks safely~%")
   (format t "  scale             query display resolution and reset panel height and WM margins~%")
   (format t "  generate          generate and verify templated configuration assets~%~%")
   (format t "Options:~%")
+  (format t "  -u, --uninstall   remove all deployed dotfile symlinks safely~%")
   (format t "  -s, --scale       detect resolution and reset panel height and WM margins~%")
   (format t "  -g, --generate    generate/ensure templated configuration assets~%")
   (format t "  -n, --dry-run     simulate actions without modifying filesystem or xfconf~%")
@@ -47,6 +49,8 @@
          (setf verbose nil))
         ((string= arg "--no-reload")
          (setf reload nil))
+        ((member arg '("-u" "--uninstall" "uninstall") :test #'string=)
+         (setf action :uninstall))
         ((member arg '("-s" "--scale" "scale") :test #'string=)
          (setf action :scale))
         ((member arg '("-g" "--generate" "generate") :test #'string=)
@@ -58,6 +62,8 @@
          (format *error-output* "Try '~A --help' for more information.~%" *program-name*)
          (uiop:quit 1))))
     (case action
+      (:uninstall
+       (uninstall :dry-run dry-run :verbose verbose))
       (:scale
        (apply-dynamic-resolution-scaling :dry-run dry-run :verbose verbose)
        (when reload

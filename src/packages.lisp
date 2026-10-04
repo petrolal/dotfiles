@@ -12,15 +12,15 @@
            #:find-dotfiles-root
            #:user-home-directory
            #:command-exists-p
+           #:symlink-p
            #:link-file
+           #:unlink-file
            #:parse-display-resolution
            #:detect-display-resolutions
            #:determine-primary-resolution
            #:apply-dynamic-resolution-scaling
            #:generate-terminalrc-content
-           #:generate-picom-conf-content
            #:ensure-terminalrc
-           #:ensure-picom-conf
            #:generate-all-configs
            #:set-xfconf
            #:set-panel-plugin-ids
@@ -29,4 +29,5 @@
            #:apply-gnome-settings
            #:reload-desktop-services
            #:deploy
+           #:uninstall
            #:main))

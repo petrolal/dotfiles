@@ -34,6 +34,7 @@ After the initial bootstrap, use Make:
 | `make nix-switch` | Rebuild NixOS after editing `.nix` modules |
 | `make system-install` | Rebuild NixOS + redeploy (full update) |
 | `make dry-run` | Preview what deploy would change |
+| `make uninstall` | Safely remove all deployed dotfiles symlinks |
 | `make scale` | Reset panel height and WM margins for current display |
 | `make help` | Show all available targets |
 

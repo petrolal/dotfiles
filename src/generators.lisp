@@ -39,14 +39,20 @@ TitleMode=TERMINAL_TITLE_REPLACE
 ")
 
 (defun ensure-file-content (target-pathname content &key dry-run verbose)
+  "Ensure TARGET-PATHNAME exists and has CONTENT. Avoids rewriting if content is unchanged."
   (if dry-run
       (format t "[DRY-RUN] Would generate ~A~%" target-pathname)
-      (progn
-        (ensure-directories-exist target-pathname)
-        (with-open-file (out target-pathname :direction :output :if-exists :supersede :if-does-not-exist :create)
-          (write-string content out))
-        (when verbose
-          (format t "[GEN] Generated: ~A~%" target-pathname)))))
+      (let ((existing-content (and (probe-file target-pathname)
+                                   (ignore-errors (uiop:read-file-string target-pathname)))))
+        (if (and existing-content (string= existing-content content))
+            (when verbose
+              (format t "[UP-TO-DATE] Generated config unchanged: ~A~%" target-pathname))
+            (progn
+              (ensure-directories-exist target-pathname)
+              (with-open-file (out target-pathname :direction :output :if-exists :supersede :if-does-not-exist :create)
+                (write-string content out))
+              (when verbose
+                (format t "[GEN] Generated: ~A~%" target-pathname)))))))
 
 (defun ensure-terminalrc (root &key dry-run verbose)
   (let ((target (merge-pathnames "config/xfce4/terminal/terminalrc" root)))

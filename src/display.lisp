@@ -54,5 +54,7 @@ or defaults to 1920x1080 if undetectable."
        (let ((prim (find-if (lambda (d) (getf d :primary)) displays)))
          (if prim
              (values (getf prim :width) (getf prim :height) (getf prim :output))
-             (let ((max-d (first (sort (copy-list displays) #'> :key (lambda (d) (getf d :height))))))
+             (let ((max-d (first (sort (copy-list displays) #'>
+                                       :key (lambda (d)
+                                              (* (getf d :width 0) (getf d :height 0)))))))
                (values (getf max-d :width) (getf max-d :height) (getf max-d :output)))))))))
