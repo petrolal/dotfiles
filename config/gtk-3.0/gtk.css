@@ -238,17 +238,19 @@ popover.background {
     padding: 2px;
 }
 
-/* ONLY the Applications (Start) Menu gets the vertical Win98 sidebar banner */
-GarconGtkMenu {
+/* ONLY the Applications (Start) Menu dropdown gets the vertical Win98 sidebar banner */
+#applicationmenu-button menu,
+#applicationsmenu-1 menu {
     background-image: url("assets/imp98-sidebar.png");
     background-repeat: no-repeat;
     background-position: left bottom;
     padding: 2px 2px 2px 28px;
 }
 
-/* Submenus inside the Applications Menu should NOT have the sidebar */
-GarconGtkMenu menu,
-GarconGtkMenu GarconGtkMenu {
+/* Submenus inside the Applications Menu and all other submenus NEVER have the sidebar */
+#applicationmenu-button menu menu,
+#applicationsmenu-1 menu menu,
+menu menu {
     background-image: none;
     padding: 2px;
 }
@@ -900,10 +902,15 @@ textview text {
 }
 
 /* Application menu popup window */
+#applicationmenu-button menu,
 #applicationsmenu-1 menu,
 .xfce4-popup-applicationsmenu,
 .xfce4-popup-applicationsmenu .background {
     background-color: @imp95_surface;
+    background-image: url("assets/imp98-sidebar.png");
+    background-repeat: no-repeat;
+    background-position: left bottom;
+    padding: 2px 2px 2px 28px;
     color: @imp95_text;
     border-style: solid;
     border-width: 2px;
@@ -912,6 +919,14 @@ textview text {
                 inset -1px -1px @imp95_shadow,
                 2px 2px 0px @imp95_dark;
     font-size: 13px;
+}
+
+/* Submenus inside the Application menu NEVER have the sidebar */
+#applicationmenu-button menu menu,
+#applicationsmenu-1 menu menu,
+.xfce4-popup-applicationsmenu menu menu {
+    background-image: none;
+    padding: 2px;
 }
 
 #applicationsmenu-1 menuitem,
