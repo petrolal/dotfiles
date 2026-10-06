@@ -27,7 +27,7 @@
   </property>
   <property name="plugins" type="empty">
     <property name="plugin-1" type="string" value="applicationsmenu">
-      <property name="button-title" type="string" value="Start"/>
+      <property name="button-title" type="string" value="Menu"/>
       <property name="button-icon" type="string" value="~/.local/share/imp98/app-logo.png"/>
       <property name="show-button-icon" type="bool" value="true"/>
     </property>

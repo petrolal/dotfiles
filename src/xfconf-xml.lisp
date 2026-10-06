@@ -10,8 +10,18 @@
 
 (in-package :dotfiles.deployer)
 
+(defun expand-home-tilde (val-str)
+  "Expand a leading ~/ in VAL-STR to $HOME. xfconf-query passes property
+values straight through to the consuming app/library (e.g. gdk_pixbuf
+loading an icon path) with no shell in between, so a literal ~/ is never
+expanded on its own and silently fails to resolve."
+  (if (and (>= (length val-str) 2) (string= (subseq val-str 0 2) "~/"))
+      (concatenate 'string (string-right-trim "/" (namestring (user-home-directory)))
+                   (subseq val-str 1))
+      val-str))
+
 (defun set-xfconf (channel property type value &key dry-run)
-  (let ((val-str (princ-to-string value)))
+  (let ((val-str (expand-home-tilde (princ-to-string value))))
     (if dry-run
         (format t "[DRY-RUN] xfconf-query -c ~A -p ~A -t ~A -s ~A~%" channel property type val-str)
         (uiop:run-program
@@ -23,7 +33,7 @@
 Uses xfconf-query -a with repeated -t TYPE -s VALUE flags."
   (let* ((val-args (loop for v in values
                          collect "-t" collect type
-                         collect "-s" collect (princ-to-string v)))
+                         collect "-s" collect (expand-home-tilde (princ-to-string v))))
          (cmd (append (list "xfconf-query" "-c" channel "-p" property "--create" "-a")
                       val-args)))
     (if dry-run
