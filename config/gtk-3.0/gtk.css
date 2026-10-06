@@ -22,6 +22,30 @@
 @define-color imp95_tooltip_bg #ffffe1;
 @define-color imp95_tooltip_fg #000000;
 
+/* Standard GTK named colors: apps that don't carry their own CSS (e.g.
+   xfce4-screenshooter's region-select overlay) look these up via
+   gtk_style_context_lookup_color() and fall back to transparent/default
+   if undefined, so they must mirror the imp95 palette. */
+@define-color theme_bg_color @imp95_bg;
+@define-color theme_fg_color @imp95_text;
+@define-color theme_base_color @imp95_bg;
+@define-color theme_text_color @imp95_text;
+@define-color theme_selected_bg_color @imp95_accent;
+@define-color theme_selected_fg_color @imp95_text;
+@define-color theme_unfocused_bg_color @imp95_bg;
+@define-color theme_unfocused_fg_color @imp95_text;
+@define-color theme_unfocused_base_color @imp95_bg;
+@define-color theme_unfocused_selected_bg_color @imp95_accent_dark;
+@define-color theme_unfocused_selected_fg_color @imp95_text;
+@define-color insensitive_bg_color @imp95_surface;
+@define-color insensitive_fg_color @imp95_disabled;
+@define-color insensitive_base_color @imp95_bg;
+@define-color borders @imp95_light;
+@define-color unfocused_borders @imp95_shadow;
+@define-color warning_color #c08000;
+@define-color error_color @imp95_accent;
+@define-color success_color #2a9e3a;
+
 * {
     font-family: "W95FA", "MS Sans Serif", "Microsoft Sans Serif", "Tahoma", sans-serif;
     transition: none;
@@ -386,19 +410,48 @@ treeview:selected,
 .view:selected,
 iconview:selected,
 list row:selected,
-listbox row:selected,
-.sidebar row:selected,
-placessidebar row:selected {
+listbox row:selected {
     background-color: @imp95_accent;
     color: @imp95_text;
 }
 
 treeview:hover,
 list row:hover,
-listbox row:hover,
+listbox row:hover {
+    background-color: @imp95_hover;
+    color: @imp95_text;
+}
+
+/* Places sidebar (Open/Save dialogs, file managers): rows styled as
+   raised 3D Win95 buttons to match the rest of the theme's controls. */
+.sidebar row,
+placessidebar row {
+    background-color: @imp95_surface;
+    background-image: none;
+    border-style: solid;
+    border-width: 1px;
+    border-color: @imp95_light @imp95_dark @imp95_dark @imp95_light;
+    box-shadow: inset 1px 1px @imp95_hover, inset -1px -1px @imp95_shadow;
+    border-radius: 0px;
+    color: @imp95_text;
+    margin: 1px 2px;
+}
+
 .sidebar row:hover,
 placessidebar row:hover {
     background-color: @imp95_hover;
+    background-image: none;
+    border-color: @imp95_light @imp95_dark @imp95_dark @imp95_light;
+    box-shadow: inset 1px 1px @imp95_hover, inset -1px -1px @imp95_shadow;
+    color: @imp95_text;
+}
+
+.sidebar row:selected,
+placessidebar row:selected {
+    background-color: @imp95_accent;
+    background-image: none;
+    border-color: @imp95_dark @imp95_light @imp95_light @imp95_dark;
+    box-shadow: inset 1px 1px @imp95_accent_dark, inset -1px -1px @imp95_accent_hover;
     color: @imp95_text;
 }
 

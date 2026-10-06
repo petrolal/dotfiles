@@ -219,3 +219,34 @@ popover.background {
 label {
     color: @theme_fg_color;
 }
+
+/* Places sidebar (Open/Save dialogs): rows styled as raised 3D Win95
+   buttons, matching the GTK3 placessidebar treatment. */
+.sidebar,
+placessidebar {
+    background-color: @theme_bg_color;
+    color: @theme_fg_color;
+}
+
+.sidebar row,
+placessidebar row {
+    background-color: @theme_base_color;
+    background-image: none;
+    border: 1px solid @borders;
+    border-color: @borders #1E1E1E #1E1E1E @borders;
+    border-radius: 0px;
+    color: @theme_fg_color;
+    margin: 1px 2px;
+}
+
+.sidebar row:hover,
+placessidebar row:hover {
+    background-color: #3C3C3C;
+}
+
+.sidebar row:selected,
+placessidebar row:selected {
+    background-color: @accent_color;
+    border-color: #1E1E1E @borders @borders #1E1E1E;
+    color: @theme_fg_color;
+}

@@ -9,6 +9,11 @@ let
     libGL
   ];
 
+  LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath (with pkgs; [
+    libx11
+    libGL
+  ]);
+
   wallpaperTools = with pkgs; [
     mpv
     xwinwrap
@@ -46,4 +51,6 @@ in {
     ++ devTools
     ++ systemTools
     ++ mediaUtils;
+
+  environment.variables.LD_LIBRARY_PATH = LD_LIBRARY_PATH;
 }
