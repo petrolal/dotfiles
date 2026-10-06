@@ -49,7 +49,7 @@ ALL_SRC       = $(wildcard $(srcdir)/src/*.lisp)
 # Phony targets
 # ---------------------------------------------------------------------------
 .PHONY: all help check install uninstall installcheck \
-        deploy quick-deploy dry-run scale \
+        deploy quick-deploy dry-run scale reload reload-panel reload-wm reload-theme \
         bootstrap nix-link nix-switch system-install \
         mostlyclean clean distclean maintainer-clean
 
@@ -68,6 +68,10 @@ help:
 	@echo '  deploy          Same as install'
 	@echo '  dry-run         Show what deploy would do without changing anything'
 	@echo '  scale           Reset panel height (44px) and WM margins, reload XFCE'
+	@echo '  reload          Reload EVERYTHING (panel, xfwm4, xsettingsd, GTK, thunar, notifyd)'
+	@echo '  reload-panel    Restart only xfce4-panel'
+	@echo '  reload-wm       Restart only xfwm4 window manager'
+	@echo '  reload-theme    Trigger instant GTK CSS reload across all windows'
 	@echo '  quick-deploy    Deploy via SBCL script mode, without compiling'
 	@echo '  uninstall       Remove all dotfiles symlinks managed by deploy'
 	@echo '  installcheck    Verify the installed invoker runs'
@@ -113,6 +117,27 @@ dry-run: $(INVOKER)
 
 scale: $(INVOKER)
 	$(INVOKER) --scale $(DEPLOY_FLAGS)
+
+reload:
+	@echo '==> Reloading all restartable desktop components...'
+	-xfce4-panel -r
+	-xfwm4 --replace &
+	-xfsettingsd --replace &
+	-pkill -f xfce4-notifyd 2>/dev/null || true
+	-thunar -q 2>/dev/null || true
+	-xfconf-query -c xsettings -p /Net/ThemeName -s "Adwaita" && xfconf-query -c xsettings -p /Net/ThemeName -s "Adwaita-dark"
+
+reload-panel:
+	@echo '==> Restarting XFCE panel...'
+	xfce4-panel -r
+
+reload-wm:
+	@echo '==> Restarting XFWM4 window manager...'
+	xfwm4 --replace &
+
+reload-theme:
+	@echo '==> Forcing GTK theme stylesheet reload...'
+	-xfconf-query -c xsettings -p /Net/ThemeName -s "Adwaita" && xfconf-query -c xsettings -p /Net/ThemeName -s "Adwaita-dark"
 
 quick-deploy:
 	$(SBCL) --script $(DEPLOY_SCRIPT) $(DEPLOY_FLAGS)
