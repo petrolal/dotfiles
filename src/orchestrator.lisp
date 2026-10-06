@@ -45,14 +45,14 @@ Returns (values SUCCESS-P FAILURES SUCCESSES)."
       (if (generate-all-configs :root root :dry-run dry-run :verbose verbose)
           (incf successes)
           (incf failures)))
-    ;; Step 2: Symlink all mapped configs
-    (dolist (mapping *mappings*)
+    ;; Step 2: Symlink all mapped configs (explicit overrides + auto-discovered files)
+    (dolist (mapping (collect-all-mappings root))
       (if (link-file (car mapping) (cdr mapping) root home :dry-run dry-run :verbose verbose)
           (incf successes)
           (incf failures)))
     ;; Step 3: Apply XFCE / xfconf settings and dynamic resolution scaling
     (when apply-settings
-      (apply-xfce-settings :dry-run dry-run :verbose verbose))
+      (apply-xfce-settings :root root :dry-run dry-run :verbose verbose))
     ;; Step 4: Reload desktop services if appropriate
     (when (and reload apply-settings)
       (reload-desktop-services :dry-run dry-run :verbose verbose))
@@ -73,7 +73,7 @@ Returns (values SUCCESS-P FAILURES REMOVED-COUNT)."
         (removed-count 0))
     (when verbose
       (format t "Target: ~A~%" home))
-    (dolist (mapping *mappings*)
+    (dolist (mapping (collect-all-mappings root))
       (let ((result (unlink-file (car mapping) (cdr mapping) root home
                                  :dry-run dry-run :verbose verbose)))
         (cond

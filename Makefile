@@ -44,27 +44,31 @@ DEPLOY_SCRIPT = $(bindir)/deploy.lisp
 BUILD_SRC     = $(srcdir)/src/build.lisp
 DEPLOYER_SRC  = $(srcdir)/src/deployer.lisp
 ALL_SRC       = $(wildcard $(srcdir)/src/*.lisp)
+WRAPPER_MODULE = $(srcdir)/config/gtk-3.0/libwrapper-menu-fix.so
+WRAPPER_SRC    = $(srcdir)/config/gtk-3.0/wrapper-menu-fix.c
+GTK3_MOD_DIR   = $(HOME)/.local/state/nix/profile/lib/gtk-3.0/modules
 
 # ---------------------------------------------------------------------------
 # Phony targets
 # ---------------------------------------------------------------------------
 .PHONY: all help check install uninstall installcheck \
         deploy quick-deploy dry-run scale reload reload-panel reload-wm reload-theme \
-        bootstrap nix-link nix-switch system-install \
+        modules bootstrap nix-link nix-switch system-install \
         mostlyclean clean distclean maintainer-clean
 
 # Default goal: build everything, change nothing on the system.
-all: $(INVOKER)
+all: $(INVOKER) $(WRAPPER_MODULE)
 
 help:
 	@echo 'Usage: make [TARGET] [VARIABLE=value]...'
 	@echo ''
 	@echo 'Build:'
-	@echo '  all             Compile the native SBCL invoker (default)'
+	@echo '  all             Compile the native SBCL invoker and GTK module (default)'
+	@echo '  modules         Compile and install GTK fix module'
 	@echo '  check           Compile-check the deployer and run a dry-run deploy'
 	@echo ''
 	@echo 'Deploy (user session, no root):'
-	@echo '  install         Link dotfiles and apply the XFCE theme (= deploy)'
+	@echo '  install         Link dotfiles, install GTK module, and apply XFCE theme'
 	@echo '  deploy          Same as install'
 	@echo '  dry-run         Show what deploy would do without changing anything'
 	@echo '  scale           Reset panel height (44px) and WM margins, reload XFCE'
@@ -97,6 +101,16 @@ $(INVOKER): $(ALL_SRC) $(BUILD_SRC)
 	$(MKDIR_P) $(bindir)
 	$(SBCL) --script $(BUILD_SRC)
 
+$(WRAPPER_MODULE): $(WRAPPER_SRC)
+	@echo '==> Compiling GTK module $(WRAPPER_MODULE)...'
+	nix-shell -p gtk3 gcc pkg-config --run 'gcc -shared -fPIC $$(pkg-config --cflags gtk+-3.0) $(WRAPPER_SRC) -o $(WRAPPER_MODULE) $$(pkg-config --libs gtk+-3.0)'
+
+modules: $(WRAPPER_MODULE)
+	@echo '==> Installing GTK module into user profile...'
+	$(MKDIR_P) $(GTK3_MOD_DIR)
+	install -m 755 $(WRAPPER_MODULE) $(GTK3_MOD_DIR)/libwrapper-menu-fix.so
+
+
 # Compile the deployer with warnings promoted to errors, then dry-run it.
 check: $(INVOKER)
 	$(SBCL) $(SBCL_FLAGS) \
@@ -107,7 +121,8 @@ check: $(INVOKER)
 # ---------------------------------------------------------------------------
 # Deploy
 # ---------------------------------------------------------------------------
-install: deploy
+install: deploy modules
+
 
 deploy: $(INVOKER)
 	$(INVOKER) $(DEPLOY_FLAGS)

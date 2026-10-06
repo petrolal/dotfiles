@@ -7,7 +7,9 @@
   (:use :cl)
   (:export #:*version*
            #:*program-name*
-           #:*mappings*
+           #:*root-targets*
+           #:*excludes*
+           #:*overrides*
            #:*xfce-settings*
            #:find-dotfiles-root
            #:user-home-directory
@@ -15,6 +17,7 @@
            #:symlink-p
            #:link-file
            #:unlink-file
+           #:collect-all-mappings
            #:parse-display-resolution
            #:detect-display-resolutions
            #:determine-primary-resolution
@@ -23,7 +26,12 @@
            #:ensure-terminalrc
            #:generate-all-configs
            #:set-xfconf
-           #:set-panel-plugin-ids
+           #:set-xfconf-array
+           #:load-xfconf-xml
+           #:extract-xfconf-settings
+           #:apply-exported-xfconf-file
+           #:find-exported-xfconf-files
+           #:apply-exported-xfconf-files
            #:apply-xfce-settings
            #:remove-panel-dock
            #:apply-gnome-settings

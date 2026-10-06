@@ -24,6 +24,7 @@
 
 * {
     font-family: "W95FA", "MS Sans Serif", "Microsoft Sans Serif", "Tahoma", sans-serif;
+    transition: none;
 }
 
 /* --------------------------------------------------------------------------
@@ -158,10 +159,14 @@ button.flat:checked {
 
 .linked > button,
 .linked > button:focus,
-.linked > button:hover {
+.linked > button:hover,
+.linked > button:active,
+.linked > button:checked {
     outline: none;
     border-radius: 0px;
+    transition: none;
 }
+
 
 button label {
     color: @imp95_text;
@@ -226,6 +231,7 @@ menu {
     background-image: url("assets/imp98-sidebar.png");
     background-repeat: no-repeat;
     background-position: left bottom;
+    background-size: auto 100%;
     border-style: solid;
     border-width: 2px;
     border-color: @imp95_light @imp95_dark @imp95_dark @imp95_light;
@@ -234,7 +240,7 @@ menu {
                 inset -1px -1px @imp95_shadow,
                 2px 2px 0px @imp95_dark;
     color: @imp95_text;
-    padding: 2px 2px 2px 33px;
+    padding: 2px 2px 2px 50px;
     min-width: 245px;
 }
 
@@ -267,8 +273,14 @@ modelbutton {
     color: @imp95_text;
     background-color: transparent;
     border-radius: 0px;
-    padding: 4px 8px;
-    min-height: 22px;
+    padding: 6px 8px;
+    min-height: 30px;
+    font-size: 16px;
+}
+
+menu menuitem image {
+  -gtk-icon-transform: scale(1.5);
+  margin: 16px 8px;
 }
 
 menuitem:hover,
@@ -721,11 +733,89 @@ ThunarWindow scrolledwindow viewport {
     color: @imp95_text;
 }
 
+/* --------------------------------------------------------------------------
+   Location / Path bar (File chooser breadcrumbs, Thunar location bar)
+   -------------------------------------------------------------------------- */
+
+.location-bar,
+.path-bar,
+path-bar,
+box#pathbarbox,
+.path-bar-box,
 ThunarWindow .location-bar,
 ThunarWindow .path-bar {
     background-color: @imp95_surface;
+    background-image: none;
     color: @imp95_text;
 }
+
+.path-bar button,
+.path-bar button:dir(ltr),
+.path-bar button:dir(rtl),
+.path-bar.linked > button,
+.path-bar.linked > button:dir(ltr),
+.path-bar.linked > button:dir(rtl),
+.path-bar.linked > button:first-child,
+.path-bar.linked > button:last-child,
+.path-bar.linked > button:not(:first-child),
+.path-bar.linked > button:not(:last-child),
+path-bar button,
+path-bar.linked > button {
+    background-color: @imp95_surface;
+    background-image: none;
+    border-style: solid;
+    border-width: 1px;
+    border-color: @imp95_light @imp95_dark @imp95_dark @imp95_light;
+    border-radius: 0px;
+    box-shadow: inset 1px 1px @imp95_hover, inset -1px -1px @imp95_shadow;
+    color: @imp95_text;
+    margin: 1px 1px;
+    padding: 3px 8px;
+    transition: none;
+    outline: none;
+}
+
+.path-bar button:hover,
+.path-bar.linked > button:hover,
+path-bar button:hover,
+path-bar.linked > button:hover {
+    background-color: @imp95_hover;
+    background-image: none;
+    border-style: solid;
+    border-width: 1px;
+    border-color: @imp95_light @imp95_dark @imp95_dark @imp95_light;
+    box-shadow: inset 1px 1px @imp95_hover, inset -1px -1px @imp95_shadow;
+    transition: none;
+}
+
+.path-bar button:active,
+.path-bar button:checked,
+.path-bar.linked > button:active,
+.path-bar.linked > button:checked,
+.path-bar.linked > button:checked:not(:first-child),
+.path-bar.linked > button:checked:not(:last-child),
+path-bar button:active,
+path-bar button:checked {
+    background-color: @imp95_bg;
+    background-image: none;
+    border-style: solid;
+    border-width: 1px;
+    border-color: @imp95_dark @imp95_light @imp95_light @imp95_dark;
+    box-shadow: inset 1px 1px @imp95_shadow, inset -1px -1px @imp95_hover;
+    transition: none;
+}
+
+.path-bar button:checked label,
+.path-bar button:active label {
+    font-weight: bold;
+}
+
+.path-bar button.slider-button,
+.path-bar button.slider-button:dir(ltr),
+.path-bar button.slider-button:dir(rtl) {
+    padding: 3px 4px;
+}
+
 
 ThunarWindow statusbar {
     background-color: @imp95_surface;
@@ -912,7 +1002,7 @@ textview text {
 
 /* "Start" button */
 #applicationsmenu-1 button {
-    padding: 0px 5px 0px 3px;
+    padding: 0px 12px 0px 10px;
     background-color: @imp95_surface;
     border-color: @imp95_light @imp95_dark @imp95_dark @imp95_light;
     box-shadow: inset 1px 1px @imp95_hover, inset -1px -1px @imp95_shadow;
@@ -925,7 +1015,8 @@ textview text {
 }
 
 #applicationsmenu-1 button label {
-    font-weight: bold;
+  font-weight: bold;
+  margin-left: 4px;
 }
 
 /* Task buttons: raised; the focused window's button is pushed in */

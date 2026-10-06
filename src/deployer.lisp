@@ -11,6 +11,7 @@
                   "linker"
                   "display"
                   "generators"
+                  "xfconf-xml"
                   "xfconf"
                   "orchestrator"
                   "cli")))

@@ -48,20 +48,11 @@
     ("xfwm4"                    "/general/margin_right"                   "int"    "0")
     ("xfwm4"                    "/general/margin_top"                     "int"    "0")
 
-    ;; Panel Configuration (Single Top Bar pinned flush to top of screen, 0px top margin)
-    ("xfce4-panel"              "/panels/panel-1/position"                "string" "p=6;x=0;y=0")
-    ("xfce4-panel"              "/panels/panel-1/position-locked"         "bool"   "true")
-    ("xfce4-panel"              "/panels/panel-1/background-style"        "int"    "0")
-    ;; Windows 98 taskbar: 44px tall. XFCE adds a 1px border to
-    ;; this value, so 43 renders as exactly 44px.
-    ("xfce4-panel"              "/panels/panel-1/size"                    "uint"   "43")
-    ("xfce4-panel"              "/panels/panel-1/icon-size"               "uint"   "16")
-    ;; NOTE: plugin-ids is an xfconf array — set via set-panel-plugin-ids, not here.
-    ("xfce4-panel"              "/plugins/plugin-2/flat-buttons"          "bool"   "false")
-    ;; Clock plugin (plugin-8): Digital mode, single-line date+time, no 2-line wrap
-    ("xfce4-panel"              "/plugins/plugin-8/mode"                  "int"    "2")
-    ("xfce4-panel"              "/plugins/plugin-8/digital-layout"        "int"    "3")
-    ("xfce4-panel"              "/plugins/plugin-8/digital-time-format"   "string" "%b %d %Y | %H:%M")
+    ;; NOTE: xfce4-panel settings (panel geometry + all plugin-N properties)
+    ;; are no longer listed here — they're auto-applied from the exported
+    ;; config/xfce4/xfconf/xfce-perchannel-xml/xfce4-panel.xml via
+    ;; apply-exported-xfconf-files (see xfconf-xml.lisp). Edit that XML (or
+    ;; just use the XFCE panel UI and re-export it) instead of this list.
 
     ;; Hyprland-adapted Keybindings (Super+Return, Super+Q, Super+F, Workspaces 1-4)
     ("xfce4-keyboard-shortcuts" "/commands/custom/<Super>Return"          "string" "xfce4-terminal")
@@ -78,32 +69,6 @@
     ("xfce4-keyboard-shortcuts" "/xfwm4/custom/<Shift><Super>2"           "string" "move_window_workspace_2_key")
     ("xfce4-keyboard-shortcuts" "/xfwm4/custom/<Shift><Super>3"           "string" "move_window_workspace_3_key")
     ("xfce4-keyboard-shortcuts" "/xfwm4/custom/<Shift><Super>4"           "string" "move_window_workspace_4_key")))
-
-(defun set-xfconf (channel property type value &key dry-run)
-  (let ((val-str (princ-to-string value)))
-    (if dry-run
-        (format t "[DRY-RUN] xfconf-query -c ~A -p ~A -t ~A -s ~A~%" channel property type val-str)
-        (uiop:run-program
-         (list "xfconf-query" "-c" channel "-p" property "-s" val-str "--create" "-t" type)
-         :ignore-error-status t))))
-
-(defun set-panel-plugin-ids (ids &key dry-run verbose)
-  "Set /panels/panel-1/plugin-ids to the given list of integer IDs as an xfconf array.
-IDS is a list of integers e.g. '(1 2 3 4 5 6 8 10).
-Uses xfconf-query -a with repeated -t int -s N flags."
-  (let* ((id-args (loop for id in ids
-                        collect "-t" collect "int"
-                        collect "-s" collect (write-to-string id)))
-         (cmd (append '("xfconf-query" "-c" "xfce4-panel"
-                        "-p" "/panels/panel-1/plugin-ids"
-                        "--create" "-a")
-                      id-args)))
-    (if dry-run
-        (format t "[DRY-RUN] ~{~A ~}~%" cmd)
-        (progn
-          (when verbose
-            (format t "[OK] Setting panel plugin-ids to ~A~%" ids))
-          (uiop:run-program cmd :ignore-error-status t)))))
 
 (defun apply-dynamic-resolution-scaling (&key dry-run verbose)
   "Detect current display resolution, set the panel to 44px height
@@ -158,7 +123,7 @@ and enforce 0px window manager margins via xfconf."
           (uiop:run-program '("gsettings" "set" "org.gnome.desktop.wm.preferences" "button-layout" "close:maximize")
                             :ignore-error-status t)))))
 
-(defun apply-xfce-settings (&key dry-run verbose)
+(defun apply-xfce-settings (&key (root (find-dotfiles-root)) dry-run verbose)
   (unless (command-exists-p "xfconf-query")
     (when verbose
       (format t "[SKIP] xfconf-query not found, skipping desktop theme configuration.~%"))
@@ -169,9 +134,8 @@ and enforce 0px window manager margins via xfconf."
   (dolist (setting *xfce-settings*)
     (destructuring-bind (channel prop type val) setting
       (set-xfconf channel prop type val :dry-run dry-run)))
-  ;; Set panel plugin-ids as an xfconf array: plugins 1-6, 8, 10.
-  ;; Transparent separators 7 and 9 are excluded so systray(6)/clock(8)/actions(10)
-  ;; sit flush together as the right-side darker container group.
-  (set-panel-plugin-ids '(1 2 3 4 5 6 8 10) :dry-run dry-run :verbose verbose)
+  ;; Replay every exported xfce-perchannel-xml file found under config/
+  ;; (e.g. xfce4-panel.xml) — see xfconf-xml.lisp.
+  (apply-exported-xfconf-files root :dry-run dry-run :verbose verbose)
   (apply-dynamic-resolution-scaling :dry-run dry-run :verbose verbose)
   (apply-gnome-settings :dry-run dry-run :verbose verbose))
