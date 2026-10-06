@@ -240,7 +240,7 @@ menu {
                 inset -1px -1px @imp95_shadow,
                 2px 2px 0px @imp95_dark;
     color: @imp95_text;
-    padding: 2px 2px 2px 52px;
+    padding: 2px 2px 2px 53px;
     min-width: 245px;
 }
 
