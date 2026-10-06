@@ -273,6 +273,7 @@ menu menu,
 menu.context-menu,
 .context-menu,
 .xfce4-panel menu,
+#actions-10 menu,
 .xfce4-desktop-menu,
 XfdesktopIconView menu,
 window.xfce4-terminal menu,
@@ -295,7 +296,7 @@ popover.background {
 /* Submenus, text, image */
 menu menuitem menu menuitem {
   padding: 0 10px;
-}
+ }
 
 menu menuitem menu menuitem label {
     font-size: 14px;
@@ -309,7 +310,7 @@ menu menuitem menu menuitem image {
 }
 
 menu menuitem image {
-  -gtk-icon-transform: scale(1.8);
+  -gtk-icon-transform: scale(1.6);
   margin: 18px 8px;
 }
 
@@ -318,8 +319,9 @@ modelbutton {
     color: @imp95_text;
     background-color: transparent;
     border-radius: 0px;
-    padding: 6px 8px;
-    min-height: 30px;
+    padding: 4px 8px;
+    min-height: 26px;
+    min-width: 160px;
     font-size: 16px;
 }
 
@@ -763,7 +765,14 @@ menubar,
 }
 
 menubar > menuitem,
-.menubar > menuitem,
+.menubar > menuitem {
+    color: @imp95_text;
+    padding: 4px 8px;
+    min-height: 0px;
+    min-width: 0px;
+    font-size: initial;
+}
+
 menubar > menuitem label,
 .menubar > menuitem label {
     color: @imp95_text;
