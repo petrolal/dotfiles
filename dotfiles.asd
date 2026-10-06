@@ -14,6 +14,7 @@
                              (:file "linker")
                              (:file "display")
                              (:file "generators")
+                             (:file "xfconf-xml")
                              (:file "xfconf")
                              (:file "orchestrator")
                              (:file "cli"))))

@@ -13,7 +13,7 @@ RowLayout {
     anchors.left: parent.left
     anchors.verticalCenter: parent.verticalCenter
 
-     property bool usingHyprland: Hyprland.workspaces.values.length == 0 ? false : true
+     property bool usingHyprland: Hyprland.workspaces.values.length > 0
 
     // TODO: Improve this functionality
     property var currentWorkspaces: usingHyprland ? Hyprland.workspaces.values.filter(w => w.monitor.name == taskbar.screen.name) : I3.workspaces.values.filter(w => w.monitor.name == taskbar.screen.name)
@@ -24,12 +24,11 @@ RowLayout {
         //model: Hyprland.workspaces.values.filter(w => w.monitor.name == taskbar.screen.name)
         Button {
             id: control
-            anchors.centerIn: parent.centerIn
             contentItem: Text {
                 horizontalAlignment: Text.AlignHCenter
                 verticalAlignment: Text.AlignVCenter
                 text: usingHyprland ? modelData.id : modelData.number
-                font.family: fontMonaco.name
+                font.family: Config.fontMonacoName
                 width: 10
                 height: 10
                 font.pixelSize: Config.settings.bar.fontSize
@@ -65,12 +64,10 @@ RowLayout {
 
                 if (modelData.urgent) {
                     return Config.colors.urgent;
-                } else {
-                    if ((usingHyprland && modelData.id == focusedWindowId) || mouse.hovered) {
-                         return Config.colors.shadow;
-                    }else if ((usingHyprland == false && modelData.number == focusedWindowId) || mouse.hovered) {
-                         return Config.colors.shadow;
-                    }
+                } else if (mouse.hovered
+                           || (usingHyprland && modelData.id == focusedWindowId)
+                           || (!usingHyprland && modelData.number == focusedWindowId)) {
+                    return Config.colors.shadow;
                 }
                 return Config.colors.base;
             }

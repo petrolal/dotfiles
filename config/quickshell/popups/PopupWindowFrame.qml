@@ -57,7 +57,7 @@ Rectangle {
             Text {
                 horizontalAlignment: Text.AlignHCenter
                 verticalAlignment: Text.AlignVCenter
-                font.family: iconFont.name
+                font.family: Config.iconFontName
                 font.pixelSize: 18
                 opacity: 0.8
                 text: root.windowTitleIcon
@@ -66,7 +66,7 @@ Rectangle {
             Text {
                 horizontalAlignment: Text.AlignHCenter
                 verticalAlignment: Text.AlignVCenter
-                font.family: fontCharcoal.name
+                font.family: Config.fontCharcoalName
                 font.pixelSize: 12
                 text: root.windowTitle
                 color: Config.colors.text

@@ -18,7 +18,7 @@
             ./configuration.nix
 
             ({ pkgs, ... }: {
-              nixpkgs.config.allowUnfree = true;
+              # allowUnfree lives in modules/hardware.nix (single source of truth).
               networking.hostName = hostname;
               dotfiles.username = user;
 

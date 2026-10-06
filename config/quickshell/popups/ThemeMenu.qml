@@ -136,7 +136,7 @@ PopupWindow {
                                             }
                                             Text {
                                                 Layout.alignment: Qt.AlignHCenter
-                                                font.family: fontMonaco.name
+                                                font.family: Config.fontMonacoName
                                                 font.pixelSize: 16
                                                 text: modelData
                                             }
@@ -168,12 +168,12 @@ PopupWindow {
                             spacing: 6
 
                             Text {
-                                font.family: fontCharcoal.name
+                                font.family: Config.fontCharcoalName
                                 font.pixelSize: 13
                                 text: "Current Theme:"
                             }
                             Text {
-                                font.family: fontMonaco.name
+                                font.family: Config.fontMonacoName
                                 font.pixelSize: 13
                                 text: Config.settings.currentTheme
                             }
@@ -210,6 +210,5 @@ PopupWindow {
 
     function closeThemeMenu() {
         closeAnimation.start();
-        Config.currentPopup = Config.SystemPopup.None;
     }
 }

@@ -1,6 +1,11 @@
 # imp95 --- Dark Win95 style frame for xfwm4.
 # Frame pixmaps come from the "Redmond" theme (xfwm4-themes); every color
 # symbol they use is pinned here, so the look does not depend on the GTK theme.
+#
+# These color values are hand-duplicated (no shared import across these
+# syntaxes) in themes/imp95-palette.css (human-readable reference) and
+# config/gtk-3.0/gtk.css (@define-color imp95_*). Keep all three in sync
+# by hand.
 
 button_layout=O|HMC
 button_offset=3

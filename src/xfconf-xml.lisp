@@ -43,6 +43,29 @@ Uses xfconf-query -a with repeated -t TYPE -s VALUE flags."
             (format t "[OK] Setting ~A ~A to ~A~%" channel property values))
           (uiop:run-program cmd :ignore-error-status t)))))
 
+(defun %string-replace-all (s old new)
+  (let ((out (make-string-output-stream)) (i 0) (old-len (length old)))
+    (loop
+      (let ((pos (search old s :start2 i)))
+        (unless pos
+          (write-string s out :start i)
+          (return))
+        (write-string s out :start i :end pos)
+        (write-string new out)
+        (setf i (+ pos old-len))))
+    (get-output-stream-string out)))
+
+(defun %xml-decode-entities (s)
+  "Decode the five predefined XML entities in S. xfconf's own exporter
+escapes attribute values on write (e.g. a literal & becomes &amp;), so
+values must be unescaped before being replayed via xfconf-query, or the
+escaped form gets written back verbatim."
+  (let ((out s))
+    (dolist (pair '(("&lt;" . "<") ("&gt;" . ">") ("&quot;" . "\"")
+                    ("&apos;" . "'") ("&amp;" . "&")))
+      (setf out (%string-replace-all out (car pair) (cdr pair))))
+    out))
+
 (defun %xml-skip-ws (s i)
   (loop while (and (< i (length s)) (member (char s i) '(#\Space #\Tab #\Newline #\Return)))
         do (incf i))
@@ -67,7 +90,7 @@ Returns (values ALIST END-POS SELF-CLOSING-P)."
                 (quote-char (char s (1+ eq-pos)))
                 (val-start (+ eq-pos 2))
                 (val-end (position quote-char s :start val-start)))
-           (push (cons name (subseq s val-start val-end)) attrs)
+           (push (cons name (%xml-decode-entities (subseq s val-start val-end))) attrs)
            (setf i (1+ val-end))))))
     (values (nreverse attrs) i self-closing)))
 

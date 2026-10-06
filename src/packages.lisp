@@ -22,8 +22,6 @@
            #:detect-display-resolutions
            #:determine-primary-resolution
            #:apply-dynamic-resolution-scaling
-           #:generate-terminalrc-content
-           #:ensure-terminalrc
            #:generate-all-configs
            #:set-xfconf
            #:set-xfconf-array

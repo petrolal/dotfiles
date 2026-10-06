@@ -21,7 +21,7 @@ Rectangle {
     border.color: borderColor
     border.width: commonBorderWidth
 
-    gradient: borderGradient != null ? borderGradient : null
+    gradient: borderGradient
 
     anchors {
         left: parent.left

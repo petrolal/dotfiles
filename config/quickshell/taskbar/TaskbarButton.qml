@@ -37,7 +37,7 @@ Button {
         radius: 0
 
         Text {
-            font.family: iconFont.name
+            font.family: Config.iconFontName
             horizontalAlignment: Text.AlignHCenter
             anchors.verticalCenter: parent.verticalCenter
             anchors.horizontalCenter: parent.horizontalCenter

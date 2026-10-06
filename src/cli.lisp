@@ -77,9 +77,9 @@
       (:uninstall
        (multiple-value-bind (ok failures removed)
            (uninstall :dry-run dry-run :verbose verbose)
-         (declare (ignore removed))
+         (declare (ignore failures removed))
          (unless ok
-           (uiop:quit (if (plusp failures) 1 0)))))
+           (uiop:quit 1))))
       (:scale
        (apply-dynamic-resolution-scaling :dry-run dry-run :verbose verbose)
        (when reload
@@ -94,7 +94,7 @@
                    :reload reload
                    :apply-settings apply-settings
                    :generate-configs generate-configs)
-         (declare (ignore successes))
+         (declare (ignore failures successes))
          (unless ok
-           (uiop:quit (if (plusp failures) 1 0))))))
+           (uiop:quit 1)))))
     (uiop:quit 0)))

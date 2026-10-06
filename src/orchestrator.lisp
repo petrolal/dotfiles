@@ -11,22 +11,27 @@
     (return-from reload-desktop-services nil))
   (when verbose
     (format t "Reloading XFCE services...~%"))
-  (dolist (cmd '("xfsettingsd --replace"
-                 "xfce4-panel -r"
-                 "xfwm4 --replace"
-                 "pkill -f xfce4-notifyd"
-                 "thunar -q"))
-    (let ((binary (first (uiop:split-string cmd :separator " "))))
+  (dolist (args '(("xfsettingsd" "--replace")
+                  ("xfce4-panel" "-r")
+                  ("xfwm4" "--replace")
+                  ("pkill" "-f" "xfce4-notifyd")
+                  ("thunar" "-q")))
+    (let ((binary (first args)))
       (cond
         ((not (command-exists-p binary))
          (when verbose
            (format t "[SKIP] ~A not found, skipping.~%" binary)))
         (dry-run
-         (format t "[DRY-RUN] Would execute: ~A~%" cmd))
+         (format t "[DRY-RUN] Would execute: ~{~A~^ ~}~%" args))
         (t
+         ;; uiop:run-program's :wait nil does not actually return before the
+         ;; child exits (confirmed empirically on SBCL 2.6.8/uiop) — it would
+         ;; block here for as long as the replaced daemon runs, i.e. forever
+         ;; for xfwm4/xfsettingsd --replace. sb-ext:run-program's :wait nil
+         ;; genuinely detaches.
          (ignore-errors
-           (uiop:run-program (format nil "nohup ~A >/dev/null 2>&1 &" cmd)
-                             :force-shell t)))))))
+           (sb-ext:run-program binary (rest args) :wait nil :search t
+                               :output nil :error nil :input nil)))))))
 
 (defun deploy (&key dry-run (verbose t) (reload t) (apply-settings t) (generate-configs t))
   "Deploy dotfiles, generate configs, apply settings, and reload services.
@@ -77,7 +82,7 @@ Returns (values SUCCESS-P FAILURES REMOVED-COUNT)."
       (let ((result (unlink-file (car mapping) (cdr mapping) root home
                                  :dry-run dry-run :verbose verbose)))
         (cond
-          ((null result) nil)
+          ((eq result :skipped) nil)
           ((eq result t) (incf removed-count))
           (t (incf failures)))))
     (when verbose

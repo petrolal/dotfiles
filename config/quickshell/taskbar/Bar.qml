@@ -68,7 +68,7 @@ Scope {
 
                 /*=== Workspaces & Background for it ===*/
                 Item {
-                    id: test2
+                    id: workspacesBackdrop
                     anchors.verticalCenter: parent.verticalCenter
                     anchors.left: parent.left
                     height: parent.height - 8
@@ -78,18 +78,18 @@ Scope {
                     anchors.leftMargin: 11
                     width: workspaces.width + 5
                     Rectangle {
-                        id: background2
-                        anchors.fill: test2
+                        id: workspacesBackdropFill
+                        anchors.fill: workspacesBackdrop
 
                         anchors.bottomMargin: -2
                         color: "transparent"
                         Rectangle {
-                            anchors.fill: background2
+                            anchors.fill: workspacesBackdropFill
                             border.width: 0
                             color: Config.colors.shadow
                         }
                         Rectangle {
-                            anchors.fill: background2
+                            anchors.fill: workspacesBackdropFill
                             color: "transparent"
                             border.width: 1
                             z: -5
@@ -137,53 +137,41 @@ Scope {
                     root.currentPopup = Config.SystemPopup.None;
                 }
 
+                // Opens `popup` (calling its `openFn`) if nothing is open, otherwise
+                // closes whatever is currently open. Shared by every popup trigger below.
+                function togglePopup(popup, openFn) {
+                    if (root.currentPopup == Config.SystemPopup.None) {
+                        openFn();
+                        root.currentPopup = popup;
+                    } else {
+                        taskbar.closeAllPopups();
+                        root.currentPopup = Config.SystemPopup.None;
+                    }
+                }
+
                 TaskbarButton {
                     id: startmenuButton
-                    isToggled: root.currentPopup == Config.SystemPopup.Startmenu ? true : false
+                    isToggled: root.currentPopup == Config.SystemPopup.Startmenu
                     anchors.left: parent.left
                     anchors.verticalCenter: parent.verticalCenter
                     anchors.leftMargin: workspaces.width + 20 + 4
-                    onClicked: {
-                        if (root.currentPopup == Config.SystemPopup.None) {
-                            startMenu.openStartMenu();
-                            root.currentPopup = Config.SystemPopup.Startmenu;
-                        } else {
-                            taskbar.closeAllPopups();
-                            root.currentPopup = Config.SystemPopup.None;
-                        }
-                    }
+                    onClicked: taskbar.togglePopup(Config.SystemPopup.Startmenu, startMenu.openStartMenu)
                 }
                 TaskbarButton {
                     id: themeMenuButton
-                    isToggled: root.currentPopup == Config.SystemPopup.ThemePicker ? true : false
+                    isToggled: root.currentPopup == Config.SystemPopup.ThemePicker
                     iconFontValue: "\ue3ae"
                     anchors.left: parent.left
                     anchors.verticalCenter: parent.verticalCenter
                     anchors.leftMargin: workspaces.width + 40 + 11
-                    onClicked: {
-                        if (root.currentPopup == Config.SystemPopup.None) {
-                            themeMenu.openThemeMenu();
-                            root.currentPopup = Config.SystemPopup.ThemePicker;
-                        } else {
-                            taskbar.closeAllPopups();
-                            root.currentPopup = Config.SystemPopup.None;
-                        }
-                    }
+                    onClicked: taskbar.togglePopup(Config.SystemPopup.ThemePicker, themeMenu.openThemeMenu)
                 }
                 TaskbarButton {
                     id: appLauncherButton
-                    isToggled: root.currentPopup == Config.SystemPopup.AppLauncher ? true : false
+                    isToggled: root.currentPopup == Config.SystemPopup.AppLauncher
                     iconFontValue: "\ue8b6"
                     anchors.centerIn: parent
-                    onClicked: {
-                        if (root.currentPopup == Config.SystemPopup.None) {
-                            appLauncher.openAppLauncher();
-                            root.currentPopup = Config.SystemPopup.AppLauncher;
-                        } else {
-                            taskbar.closeAllPopups();
-                            root.currentPopup = Config.SystemPopup.None;
-                        }
-                    }
+                    onClicked: taskbar.togglePopup(Config.SystemPopup.AppLauncher, appLauncher.openAppLauncher)
                 }
                 Scope {
                     id: appLauncherIpc
@@ -191,13 +179,7 @@ Scope {
                     IpcHandler {
                         target: "appLauncher_" + appLauncherIpc.screenName
                         function toggleAppLauncher() {
-                            if (root.currentPopup == Config.SystemPopup.None) {
-                                appLauncher.openAppLauncher();
-                                root.currentPopup = Config.SystemPopup.AppLauncher;
-                            } else {
-                                taskbar.closeAllPopups();
-                                root.currentPopup = Config.SystemPopup.None;
-                            }
+                            taskbar.togglePopup(Config.SystemPopup.AppLauncher, appLauncher.openAppLauncher);
                         }
                     }
                 }
@@ -206,25 +188,25 @@ Scope {
 
                 /*=== System Tray & Background for it ===*/
                 Item {
-                    id: test
+                    id: sysTrayBackdrop
                     anchors.verticalCenter: parent.verticalCenter
                     anchors.right: parent.right
                     anchors.rightMargin: 12
                     height: parent.height - 8
                     width: sysTray.width + 18
                     Rectangle {
-                        id: background
-                        anchors.fill: test
+                        id: sysTrayBackdropFill
+                        anchors.fill: sysTrayBackdrop
 
                         anchors.bottomMargin: -2
                         color: "transparent"
                         Rectangle {
-                            anchors.fill: background
+                            anchors.fill: sysTrayBackdropFill
                             border.width: 0
                             color: Config.colors.shadow
                         }
                         Rectangle {
-                            anchors.fill: background
+                            anchors.fill: sysTrayBackdropFill
                             color: "transparent"
                             border.width: 1
                             z: -5
@@ -258,7 +240,7 @@ Scope {
                     right: true
                 }
 
-                visible: root.currentPopup != Config.SystemPopup.None ? true : false
+                visible: root.currentPopup != Config.SystemPopup.None
 
                 exclusionMode: ExclusionMode.Ignore
 
@@ -266,7 +248,7 @@ Scope {
                     id: popupArea
                     width: Screen.width
                     height: Screen.height
-                    visible: root.currentPopup != Config.SystemPopup.None ? true : false
+                    visible: root.currentPopup != Config.SystemPopup.None
                     onClicked: {
                         taskbar.closeAllPopups();
                     }
@@ -274,11 +256,5 @@ Scope {
             }
             /*=== =================== ===*/
         }
-    }
-
-    enum SystemPopups {
-        Startmenu,
-        ThemePicker,
-        None
     }
 }

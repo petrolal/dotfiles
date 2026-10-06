@@ -6,6 +6,26 @@ import Quickshell.Io
 Singleton {
     id: root
 
+    // Loaded once here so every file can reach them via Config.iconFontName /
+    // Config.fontMonacoName / Config.fontCharcoalName — a FontLoader's `id`
+    // doesn't cross file boundaries in QML, so these can't live in shell.qml
+    // despite being referenced from almost every popup/taskbar file.
+    FontLoader {
+        id: iconFontLoader
+        source: "fonts/MaterialSymbolsSharp_Filled_36pt-Regular.ttf"
+    }
+    FontLoader {
+        id: fontMonacoLoader
+        source: "fonts/Monaco.ttf"
+    }
+    FontLoader {
+        id: fontCharcoalLoader
+        source: "fonts/Charcoal.ttf"
+    }
+    property string iconFontName: iconFontLoader.name
+    property string fontMonacoName: fontMonacoLoader.name
+    property string fontCharcoalName: fontCharcoalLoader.name
+
     //*=======================================================================*/
     // READ THIS NOTE:
     // Simply add to this list in order to create your
@@ -20,8 +40,7 @@ Singleton {
             "accent": "#9E2A2B",
             "text": "#332E28",
             "outline": "#4A3B3A",
-            "outlineGradientFade": "#766E63",
-            "defaultWallpaperPath": ""
+            "outlineGradientFade": "#766E63"
         },
         "default": {
             "base": "#d8d8d8",
@@ -31,8 +50,7 @@ Singleton {
             "accent": "#207874",
             "text": "#000000",
             "outline": "#000000",
-            "outlineGradientFade": "#161616",
-            "defaultWallpaperPath": ""
+            "outlineGradientFade": "#161616"
         },
         "yorha": {
             "base": "#d9caba",
@@ -42,8 +60,7 @@ Singleton {
             "accent": "#626335",
             "text": "#3e3d38",
             "outline": "#3d3d39",
-            "outlineGradientFade": "#5b5b45",
-            "defaultWallpaperPath": ""
+            "outlineGradientFade": "#5b5b45"
         },
         "cherry": {
             "base": "#f4c9ef",
@@ -53,8 +70,7 @@ Singleton {
             "accent": "#9E2A2B",
             "text": "#321d32",
             "outline": "#20091d",
-            "outlineGradientFade": "#3e233e",
-            "defaultWallpaperPath": ""
+            "outlineGradientFade": "#3e233e"
         },
         "indigo": {
             "base": "#bac4e6",
@@ -64,8 +80,7 @@ Singleton {
             "accent": "#3e7c99",
             "text": "#0d0d19",
             "outline": "#1a2135",
-            "outlineGradientFade": "#223143",
-            "defaultWallpaperPath": ""
+            "outlineGradientFade": "#223143"
         },
         "gleep": {
             "base": "#bae6c5",
@@ -75,8 +90,7 @@ Singleton {
             "accent": "#3e9949",
             "text": "#0d1913",
             "outline": "#21351a",
-            "outlineGradientFade": "#284223",
-            "defaultWallpaperPath": ""
+            "outlineGradientFade": "#284223"
         },
         "imp95": {
             "base": "#2F2F2F",
@@ -86,8 +100,7 @@ Singleton {
             "accent": "#9E2A2B",
             "text": "#FFFFFF",
             "outline": "#000000",
-            "outlineGradientFade": "#555555",
-            "defaultWallpaperPath": ""
+            "outlineGradientFade": "#555555"
         }
     }
 
@@ -120,7 +133,7 @@ Singleton {
             property JsonObject settings: JsonObject {
                 property string version: "0.1"
                 property bool militaryTimeClockFormat: true
-                property string systemProfileImageSource: "/home/username/Pictures/system_profile_picture.png"
+                property string systemProfileImageSource: Quickshell.env("HOME") + "/Pictures/system_profile_picture.png"
                 property string currentTheme: "default"
                 property bool setWallpaperToThemeWallpaper: true
                 property JsonObject execCommands: JsonObject {
@@ -146,4 +159,40 @@ Singleton {
             }
         }
     }
+
+    // Populate systemDetails from fastfetch once at startup. Falls back to
+    // whatever is already in settings.json if fastfetch is missing or its
+    // output can't be parsed.
+    Process {
+        id: systemDetailsProbe
+        command: ["fastfetch", "--format", "json", "-s", "CPU:GPU:Memory:OS"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try {
+                    const modules = JSON.parse(text);
+                    for (const mod of modules) {
+                        switch (mod.type) {
+                        case "CPU":
+                            root.settings.systemDetails.cpu = mod.result.cpu;
+                            break;
+                        case "GPU":
+                            root.settings.systemDetails.gpu = mod.result[0].name;
+                            break;
+                        case "Memory":
+                            root.settings.systemDetails.ram = (mod.result.total / (1024 * 1024 * 1024)).toFixed(1) + " GB";
+                            break;
+                        case "OS":
+                            root.settings.systemDetails.osName = mod.result.name;
+                            root.settings.systemDetails.osVersion = mod.result.version;
+                            break;
+                        }
+                    }
+                } catch (e) {
+                    console.warn("Config: failed to parse fastfetch output, keeping existing systemDetails", e);
+                }
+            }
+        }
+    }
+
+    Component.onCompleted: systemDetailsProbe.running = true
 }

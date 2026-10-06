@@ -66,7 +66,12 @@ sudo ln -sfn "${NIXOS_DIR}/flake.nix"         "${SYSCONFDIR}/flake.nix"
 # Step 3: Rebuild NixOS (installs gnumake, sbcl, fonts, everything)
 # ---------------------------------------------------------------------------
 info "Rebuilding NixOS (this may take a while on first run)..."
-sudo nixos-rebuild switch --flake "${NIXOS_DIR}"
+# nixos-rebuild resolves a bare --flake path by matching this machine's
+# current hostname against flake.nix's nixosConfigurations; on a fresh
+# install that hostname is whatever the installer set, almost never
+# "abatedouro-de-anoes-PC". #default is the portable fallback config
+# flake.nix defines for exactly this case.
+sudo nixos-rebuild switch --flake "${NIXOS_DIR}#default"
 
 # ---------------------------------------------------------------------------
 # Step 4: Build the native invoker and deploy dotfiles

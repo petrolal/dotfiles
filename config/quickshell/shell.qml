@@ -15,18 +15,6 @@ import "popups" as Popups
 
 Scope {
     id: root
-    FontLoader {
-        id: iconFont
-        source: "fonts/MaterialSymbolsSharp_Filled_36pt-Regular.ttf"
-    }
-    FontLoader {
-        id: fontMonaco
-        source: "fonts/Monaco.ttf"
-    }
-    FontLoader {
-        id: fontCharcoal
-        source: "fonts/Charcoal.ttf"
-    }
     Taskbar.Bar {}
 
     FloatingWindow {
@@ -60,7 +48,7 @@ Scope {
                         anchors.fill: parent
                         horizontalAlignment: Text.AlignHCenter
                         verticalAlignment: Text.AlignVCenter
-                        font.family: fontMonaco.name
+                        font.family: Config.fontMonacoName
                         font.pixelSize: 28
                         text: "Linux imp98 " + Config.settings.version
                     }
@@ -69,9 +57,9 @@ Scope {
                         anchors.bottomMargin: 16
                         horizontalAlignment: Text.AlignHCenter
                         verticalAlignment: Text.AlignBottom
-                        font.family: fontMonaco.name
+                        font.family: Config.fontMonacoName
                         font.pixelSize: 12
-                        text: "Version 0.1 is very early and does not yet have a proper settings menu.\nPlease look forward for future releases on github ~ diinki"
+                        text: "Version " + Config.settings.version + " is very early and does not yet have a proper settings menu.\nPlease look forward for future releases on github ~ diinki"
                     }
                 }
             }

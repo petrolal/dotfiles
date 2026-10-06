@@ -3,41 +3,6 @@
 
 (in-package :dotfiles.deployer)
 
-(defun generate-terminalrc-content ()
-  "[Configuration]
-ColorBackground=#16171d
-ColorForeground=#FFFFFF
-ColorCursor=#FFFFFF
-ColorCursorForeground=#16171d
-ColorSelection=#9E2A2B
-ColorSelectionUseBackground=FALSE
-ColorBold=#FFFFFF
-ColorBoldUseCycle=FALSE
-ColorPalette=#16171d;#9E2A2B;#606C38;#BD7B2A;#6F3646;#913348;#4D7C7A;#D6CBBB;#555555;#C0392B;#829C42;#E09F3E;#8C4F62;#B84A62;#6EA3A0;#F5EBE0
-FontName=JetBrainsMono Nerd Font 10
-ScrollingBar=TERMINAL_SCROLLBAR_NONE
-ScrollingOnOutput=TRUE
-ScrollingUnlimited=TRUE
-MiscAlwaysShowTabs=FALSE
-MiscBell=FALSE
-MiscBordersDefault=TRUE
-MiscCursorBlinks=TRUE
-MiscCursorShape=TERMINAL_CURSOR_SHAPE_BLOCK
-MiscDefaultGeometry=90x28
-MiscInheritGeometry=FALSE
-MiscMenubarDefault=FALSE
-MiscMouseAutohide=TRUE
-MiscToolbarDefault=FALSE
-MiscConfirmClose=TRUE
-MiscCycleTabs=TRUE
-MiscTabCloseButtons=TRUE
-MiscTabCloseMiddleClick=TRUE
-MiscMiddleClickOpensUri=TRUE
-MiscRightClickAction=TERMINAL_RIGHT_CLICK_ACTION_CONTEXT_MENU
-MiscShowUnsafePasteDialog=TRUE
-TitleMode=TERMINAL_TITLE_REPLACE
-")
-
 (defun ensure-file-content (target-pathname content &key dry-run verbose)
   "Ensure TARGET-PATHNAME exists and has CONTENT. Avoids rewriting if content is unchanged.
 Returns T on success, NIL on failure."
@@ -64,12 +29,13 @@ Returns T on success, NIL on failure."
                 (format *error-output* "[FAIL] Failed generating ~A: ~A~%" target-pathname c)
                 nil))))))
 
-(defun ensure-terminalrc (root &key dry-run verbose)
-  (let ((target (merge-pathnames "config/xfce4/terminal/terminalrc" root)))
-    (ensure-file-content target (generate-terminalrc-content) :dry-run dry-run :verbose verbose)))
-
 (defun generate-all-configs (&key (root (find-dotfiles-root)) dry-run verbose)
-  "Ensure all templated configurations are generated. Returns T on success, NIL on failure."
+  "Ensure all templated configurations are generated. Returns T on success, NIL on failure.
+Currently a no-op: every config file under config/ is a plain tracked dotfile
+handled by the symlink mechanism (linker.lisp) rather than generated content.
+This hook exists for a future config that genuinely needs to be derived
+(e.g. from theme colors) rather than duplicated verbatim."
+  (declare (ignore root dry-run))
   (when verbose
-    (format t "Ensuring templated configuration assets...~%"))
-  (ensure-terminalrc root :dry-run dry-run :verbose verbose))
+    (format t "Ensuring templated configuration assets... (none defined)~%"))
+  t)

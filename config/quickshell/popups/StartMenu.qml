@@ -86,13 +86,13 @@ PopupWindow {
                                     RowLayout {
                                         spacing: 8
                                         Text {
-                                            font.family: iconFont.name
+                                            font.family: Config.iconFontName
                                             font.pixelSize: 16
                                             text: "\ue161"
                                             color: Config.colors.text
                                         }
                                         Text {
-                                            font.family: fontMonaco.name
+                                            font.family: Config.fontMonacoName
                                             font.pixelSize: 14
                                             text: Config.settings.systemDetails.osName
                                             color: Config.colors.text
@@ -101,13 +101,13 @@ PopupWindow {
                                     RowLayout {
                                         spacing: 8
                                         Text {
-                                            font.family: iconFont.name
+                                            font.family: Config.iconFontName
                                             font.pixelSize: 16
                                             text: "\ue394"
                                             color: Config.colors.text
                                         }
                                         Text {
-                                            font.family: fontMonaco.name
+                                            font.family: Config.fontMonacoName
                                             font.pixelSize: 14
                                             text: Config.settings.systemDetails.osVersion
                                             color: Config.colors.text
@@ -116,13 +116,13 @@ PopupWindow {
                                     RowLayout {
                                         spacing: 8
                                         Text {
-                                            font.family: iconFont.name
+                                            font.family: Config.iconFontName
                                             font.pixelSize: 16
                                             text: "\uf7a3"
                                             color: Config.colors.text
                                         }
                                         Text {
-                                            font.family: fontMonaco.name
+                                            font.family: Config.fontMonacoName
                                             font.pixelSize: 14
                                             text: Config.settings.systemDetails.ram
                                             color: Config.colors.text
@@ -131,13 +131,13 @@ PopupWindow {
                                     RowLayout {
                                         spacing: 8
                                         Text {
-                                            font.family: iconFont.name
+                                            font.family: Config.iconFontName
                                             font.pixelSize: 16
                                             text: "\ue322"
                                             color: Config.colors.text
                                         }
                                         Text {
-                                            font.family: fontMonaco.name
+                                            font.family: Config.fontMonacoName
                                             font.pixelSize: 14
                                             text: Config.settings.systemDetails.cpu
                                             color: Config.colors.text
@@ -146,14 +146,14 @@ PopupWindow {
                                     RowLayout {
                                         spacing: 8
                                         Text {
-                                            font.family: iconFont.name
+                                            font.family: Config.iconFontName
                                             font.pixelSize: 16
                                             text: "\ue2ac"
                                             color: Config.colors.text
                                         }
 
                                         Text {
-                                            font.family: fontMonaco.name
+                                            font.family: Config.fontMonacoName
                                             font.pixelSize: 14
                                             text: Config.settings.systemDetails.gpu
                                             color: Config.colors.text
@@ -224,7 +224,7 @@ PopupWindow {
                                     }
                                     Text {
                                         anchors.centerIn: parent
-                                        font.family: iconFont.name
+                                        font.family: Config.iconFontName
                                         font.pixelSize: 48
                                         opacity: 0.4
                                         color: Config.colors.text
@@ -275,7 +275,7 @@ PopupWindow {
                                     }
                                     Text {
                                         anchors.centerIn: parent
-                                        font.family: iconFont.name
+                                        font.family: Config.iconFontName
                                         font.pixelSize: 48
                                         opacity: 0.4
                                         color: Config.colors.text
@@ -326,7 +326,7 @@ PopupWindow {
                                     }
                                     Text {
                                         anchors.centerIn: parent
-                                        font.family: iconFont.name
+                                        font.family: Config.iconFontName
                                         font.pixelSize: 48
                                         opacity: 0.4
                                         color: Config.colors.text
@@ -376,7 +376,7 @@ PopupWindow {
                                     }
                                     Text {
                                         anchors.centerIn: parent
-                                        font.family: iconFont.name
+                                        font.family: Config.iconFontName
                                         font.pixelSize: 48
                                         opacity: 0.4
                                         color: Config.colors.text

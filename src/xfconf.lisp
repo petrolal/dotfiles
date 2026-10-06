@@ -97,31 +97,27 @@ and enforce 0px window manager margins via xfconf."
         (uiop:run-program '("xfconf-query" "-c" "xfce4-panel" "-p" "/panels/panel-2" "-r" "-R")
                           :ignore-error-status t))))
 
+(defparameter *gnome-settings*
+  '(("org.gnome.desktop.interface"       "icon-theme"      "imp98")
+    ("org.gnome.desktop.interface"       "gtk-theme"       "Adwaita-dark")
+    ("org.gnome.desktop.interface"       "font-name"       "W95FA 10")
+    ("org.gnome.desktop.interface"       "color-scheme"    "prefer-dark")
+    ("org.gnome.desktop.wm.preferences"  "titlebar-font"   "W95FA Bold 10")
+    ("org.gnome.desktop.wm.preferences"  "button-layout"   "close:maximize")))
+
+(defun run-gsettings (schema key value &key dry-run)
+  (if dry-run
+      (format t "[DRY-RUN] gsettings set ~A ~A '~A'~%" schema key value)
+      (uiop:run-program (list "gsettings" "set" schema key value)
+                        :ignore-error-status t)))
+
 (defun apply-gnome-settings (&key dry-run verbose)
   (when (command-exists-p "gsettings")
     (when verbose
       (format t "Syncing GSettings for GNOME/GTK apps...~%"))
-    (if dry-run
-        (progn
-          (format t "[DRY-RUN] gsettings set org.gnome.desktop.interface icon-theme 'imp98'~%")
-          (format t "[DRY-RUN] gsettings set org.gnome.desktop.interface gtk-theme 'Adwaita-dark'~%")
-          (format t "[DRY-RUN] gsettings set org.gnome.desktop.interface font-name 'W95FA 10'~%")
-          (format t "[DRY-RUN] gsettings set org.gnome.desktop.interface color-scheme 'prefer-dark'~%")
-          (format t "[DRY-RUN] gsettings set org.gnome.desktop.wm.preferences titlebar-font 'W95FA Bold 10'~%")
-          (format t "[DRY-RUN] gsettings set org.gnome.desktop.wm.preferences button-layout 'close:maximize'~%"))
-        (progn
-          (uiop:run-program '("gsettings" "set" "org.gnome.desktop.interface" "icon-theme" "imp98")
-                            :ignore-error-status t)
-          (uiop:run-program '("gsettings" "set" "org.gnome.desktop.interface" "gtk-theme" "Adwaita-dark")
-                            :ignore-error-status t)
-          (uiop:run-program '("gsettings" "set" "org.gnome.desktop.interface" "font-name" "W95FA 10")
-                            :ignore-error-status t)
-          (uiop:run-program '("gsettings" "set" "org.gnome.desktop.interface" "color-scheme" "prefer-dark")
-                            :ignore-error-status t)
-          (uiop:run-program '("gsettings" "set" "org.gnome.desktop.wm.preferences" "titlebar-font" "W95FA Bold 10")
-                            :ignore-error-status t)
-          (uiop:run-program '("gsettings" "set" "org.gnome.desktop.wm.preferences" "button-layout" "close:maximize")
-                            :ignore-error-status t)))))
+    (dolist (setting *gnome-settings*)
+      (destructuring-bind (schema key value) setting
+        (run-gsettings schema key value :dry-run dry-run)))))
 
 (defun apply-xfce-settings (&key (root (find-dotfiles-root)) dry-run verbose)
   (unless (command-exists-p "xfconf-query")

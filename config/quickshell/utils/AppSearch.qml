@@ -10,11 +10,6 @@ Singleton {
                 entry: a
             }))
 
-    readonly property var preppedIcons: list.map(a => ({
-                name: Fuzzy.prepare(`${a.icon} `),
-                entry: a
-            }))
-
     function fuzzyQuery(search: string): var { // Idk why list<DesktopEntry> doesn't work
         return Fuzzy.go(search, preppedNames, {
             all: true,

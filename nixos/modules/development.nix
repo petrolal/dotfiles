@@ -6,6 +6,8 @@
 let
   jvmTemplate = ../templates/jvm;
   nodeTemplate = ../templates/node;
+  goTemplate = ../templates/go;
+  pythonTemplate = ../templates/python;
   templates = ../templates;
 
   # jvm-init [VERSION] --- drop the JVM shell.nix + .envrc into the current
@@ -43,6 +45,43 @@ let
     install -m 644 ${nodeTemplate}/.envrc .envrc
     ${pkgs.direnv}/bin/direnv allow .
     echo "node-init: Node.js $version environment created; it loads on cd."
+  '';
+
+  # go-init [VERSION] --- drop the Go shell.nix + .envrc into the current
+  # directory, pinned to Go VERSION (default 1.26), and allow it in direnv.
+  go-init = pkgs.writeShellScriptBin "go-init" ''
+    set -eu
+    version="''${1:-1.26}"
+    for f in shell.nix .envrc; do
+      if [ -e "$f" ]; then
+        echo "go-init: $f already exists, refusing to overwrite" >&2
+        exit 1
+      fi
+    done
+    ${pkgs.gnused}/bin/sed "s/go ? \"1.26\"/go ? \"$version\"/" \
+      ${goTemplate}/shell.nix > shell.nix
+    install -m 644 ${goTemplate}/.envrc .envrc
+    ${pkgs.direnv}/bin/direnv allow .
+    echo "go-init: Go $version environment created; it loads on cd."
+  '';
+
+  # python-init [VERSION] --- drop the Python shell.nix + .envrc into the
+  # current directory, pinned to Python VERSION (default 3.13), and allow it
+  # in direnv.
+  python-init = pkgs.writeShellScriptBin "python-init" ''
+    set -eu
+    version="''${1:-3.13}"
+    for f in shell.nix .envrc; do
+      if [ -e "$f" ]; then
+        echo "python-init: $f already exists, refusing to overwrite" >&2
+        exit 1
+      fi
+    done
+    ${pkgs.gnused}/bin/sed "s/python ? \"3.13\"/python ? \"$version\"/" \
+      ${pythonTemplate}/shell.nix > shell.nix
+    install -m 644 ${pythonTemplate}/.envrc .envrc
+    ${pkgs.direnv}/bin/direnv allow .
+    echo "python-init: Python $version environment created; it loads on cd."
   '';
 
   # dev-init [LANG...] --- compose a multi-language environment in the current
@@ -96,5 +135,5 @@ in
   # with caching.
   programs.direnv.enable = true;
 
-  environment.systemPackages = [ jvm-init node-init dev-init devshell ];
+  environment.systemPackages = [ jvm-init node-init go-init python-init dev-init devshell ];
 }

@@ -1,8 +1,8 @@
 { config, pkgs, lib, ... }:
 
-{   
-  networking.hostName = lib.mkDefault "abatedouro-de-anoes-PC";
-  
+{
+  # Hostname is set per-config in flake.nix's mkConfig (one source of truth).
+
   # Override with mkForce to eliminate conflicts
   networking.networkmanager.enable = lib.mkForce true;
 

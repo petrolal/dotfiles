@@ -64,7 +64,8 @@ dotfiles/
 │   ├── paths.lisp                  # Dotfiles root and home resolution
 │   ├── linker.lisp                 # Symlink mappings and link-file
 │   ├── display.lisp                # Display detection (xrandr)
-│   ├── generators.lisp             # Config file generation (terminal)
+│   ├── generators.lisp             # Hook for templated config generation (currently unused)
+│   ├── xfconf-xml.lisp             # Parses exported xfce-perchannel-xml, replays via xfconf-query
 │   ├── xfconf.lisp                 # XFCE/GNOME settings via xfconf-query
 │   ├── orchestrator.lisp           # Deploy + reload orchestration
 │   ├── cli.lisp                    # CLI parsing, --help, --version
@@ -102,6 +103,8 @@ Quick start:
 cd ~/projects/my-app
 jvm-init           # Java (JDK 21 + Gradle + Maven)
 node-init          # Node.js 22
+go-init            # Go 1.26
+python-init        # Python 3.13 + uv
 dev-init python go # Multi-language
 devshell           # Everything, from anywhere
 ```

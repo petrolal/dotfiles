@@ -10,6 +10,7 @@
 bin/invoker
 *.fasl
 *.dx64fsl
+config/gtk-3.0/libwrapper-menu-fix.so
 
 # Nix build outputs
 result

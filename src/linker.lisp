@@ -143,8 +143,8 @@ resolve back onto its own source file."
     (dolist (part (remove "" (uiop:split-string suffix :separator "/") :test #'string=))
       (setf current (concatenate 'string current "/" part))
       (when (symlink-p current)
-        (uiop:run-program (list "rm" "-f" current) :ignore-error-status t))
-      (uiop:run-program (list "mkdir" "-p" current) :ignore-error-status t))))
+        (uiop:run-program (list "rm" "-f" current) :ignore-error-status t)))
+    (uiop:run-program (list "mkdir" "-p" current) :ignore-error-status t)))
 
 (defun link-file (source-rel target-rel root home &key dry-run verbose)
   "Symlink SOURCE-REL under ROOT to TARGET-REL under HOME.
@@ -186,7 +186,8 @@ Ensures destination parent directories exist. Returns T on success, NIL on failu
 (defun unlink-file (source-rel target-rel root home &key dry-run verbose)
   "Remove managed symlink TARGET-REL in HOME.
 Verifies that TARGET-REL is actually a symlink before deletion.
-Returns T if unlinked or would unlink, NIL otherwise."
+Returns :SKIPPED if there was nothing to do, T if unlinked or would unlink,
+or NIL if removal was attempted and failed."
   (declare (ignore source-rel root))
   (let ((dest (merge-pathnames target-rel home)))
     (cond
@@ -195,7 +196,7 @@ Returns T if unlinked or would unlink, NIL otherwise."
          (if (probe-file dest)
              (format *error-output* "[SKIP] Not a symlink: ~A (refusing to delete)~%" dest)
              (format t "[SKIP] Symlink does not exist: ~A~%" dest)))
-       nil)
+       :skipped)
       (dry-run
        (format t "[DRY-RUN] Would remove symlink: ~A~%" dest)
        t)

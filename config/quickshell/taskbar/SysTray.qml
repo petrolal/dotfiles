@@ -26,10 +26,6 @@ RowLayout {
             onClicked: event => {
                 switch (event.button) {
                 case Qt.LeftButton:
-                    if (item.hasMenu) {
-                        menu.open();
-                    }
-                    break;
                 case Qt.RightButton:
                     if (item.hasMenu) {
                         menu.open();

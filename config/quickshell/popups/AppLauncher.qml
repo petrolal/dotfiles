@@ -81,7 +81,7 @@ PopupWindow {
                             anchors.centerIn: parent
                             text: ""
                             font.pixelSize: 16
-                            font.family: fontMonaco.name
+                            font.family: Config.fontMonacoName
                             color: Config.colors.text
                             selectionColor: Config.colors.shadow
                             padding: 2
@@ -124,7 +124,7 @@ PopupWindow {
                                 horizontalAlignment: Text.AlignHCenter
                                 verticalAlignment: Text.AlignVCenter
                                 anchors.fill: parent
-                                font.family: iconFont.name
+                                font.family: Config.iconFontName
                                 font.pixelSize: 24
                                 text: "\ue8b6"
                             }
@@ -234,6 +234,5 @@ PopupWindow {
 
     function closeAppLauncher() {
         closeAnimation.start();
-        Config.currentPopup = Config.SystemPopup.None;
     }
 }

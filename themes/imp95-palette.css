@@ -1,3 +1,8 @@
+/* Canonical reference for the imp95 palette. Not loaded by anything — the
+   values are hand-duplicated (incompatible syntaxes prevent sharing a single
+   file) in config/gtk-3.0/gtk.css (@define-color imp95_*) and
+   themes/imp98/xfwm4/themerc (active_color_1 etc). Keep all three in sync by
+   hand when changing a color. */
 :root {
   /* Accent / Replaced Blue */
   --imp95-accent: #9E2A2B;

@@ -1,18 +1,16 @@
 { pkgs, ... }:
 
 let
-  buildTools = with pkgs; [
-    gnumake
-    git
-    sbcl
+  dynamicLibs = with pkgs; [
     libx11
     libGL
   ];
 
-  LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath (with pkgs; [
-    libx11
-    libGL
-  ]);
+  buildTools = with pkgs; [
+    gnumake
+    git
+    sbcl
+  ] ++ dynamicLibs;
 
   wallpaperTools = with pkgs; [
     mpv
@@ -52,5 +50,8 @@ in {
     ++ systemTools
     ++ mediaUtils;
 
-  environment.variables.LD_LIBRARY_PATH = LD_LIBRARY_PATH;
+  # Lets unpatched/FHS binaries (AppImages, etc.) find dynamic libs without
+  # polluting every process on the system via a global LD_LIBRARY_PATH.
+  programs.nix-ld.enable = true;
+  programs.nix-ld.libraries = dynamicLibs;
 }

@@ -14,7 +14,7 @@ What happens when you enter a project:
 
 | File                              | Purpose                                                                  |
 | --------------------------------- | ------------------------------------------------------------------------ |
-| `nixos/modules/development.nix`   | Enables direnv and flakes; defines `jvm-init`, `node-init`, `dev-init`, `devshell` |
+| `nixos/modules/development.nix`   | Enables direnv and flakes; defines `jvm-init`, `node-init`, `go-init`, `python-init`, `dev-init`, `devshell` |
 | `nixos/templates/jvm/shell.nix`   | Java template (JDK, Gradle, Maven)                                       |
 | `nixos/templates/node/shell.nix`  | Node.js template (Node, npm, optional yarn/pnpm/TypeScript)              |
 | `nixos/templates/python/shell.nix`| Python template (Python, uv, auto-created venv)                          |
@@ -79,39 +79,43 @@ cd .. && cd -   # re-enter so direnv loads it
 
 ## Python
 
-`dev-init python` sets up a project with Python (3.13 by default) and
+`python-init` sets up a project with Python (3.13 by default) and
 [uv](https://docs.astral.sh/uv/). A virtualenv is created in `.venv/` and
 activated on entry, so `pip install` and `uv pip install` just work.
 
 ```bash
 cd ~/projects/my-python-app
-dev-init python
+python-init       # Python 3.13
+python-init 3.12  # or a specific version: 3.11 to 3.15
 cd .. && cd -   # re-enter so direnv loads it
 ```
 
 You should see `🐍 Python 3.13.15 loaded (venv: .../.venv)`.
 
-- **Change the version:** edit `python ? "3.13"` in `nix/python/shell.nix` (3.11 to 3.15). The venv is rebuilt automatically, so reinstall your packages (`pip install -r requirements.txt` or `uv sync`).
+- **Change the version:** edit `python ? "3.13"` in `shell.nix` (3.11 to 3.15). The venv is rebuilt automatically, so reinstall your packages (`pip install -r requirements.txt` or `uv sync`).
 - **Prebuilt wheels (numpy, pandas, ...):** work out of the box. The shell sets `LD_LIBRARY_PATH` to Nix's libstdc++ and zlib, which those wheels expect and NixOS does not have in standard paths. If a package needs another C library, add it to that list in `shell.nix`.
 - **uv:** uses the shell's Python. Downloading its own Python builds is disabled (`UV_PYTHON_DOWNLOADS=never`) because they do not run on NixOS.
 - **pyright, ruff:** uncomment them in `shell.nix`.
 - **.gitignore:** add `.venv/`.
 - **One-off version without editing:** `nix-shell --argstr python 3.12`.
+- **Multi-language project:** use `dev-init python` instead (see below) — it produces `nix/python/shell.nix` merged under the composer, rather than a standalone `shell.nix`.
 
 ## Go
 
-`dev-init go` sets up a project with Go (1.26 by default) and gopls.
+`go-init` sets up a project with Go (1.26 by default) and gopls.
 
 ```bash
 cd ~/projects/my-go-app
-dev-init go
+go-init         # Go 1.26
+go-init 1.27    # or a specific version: anything nixpkgs ships as go_1_NN
 cd .. && cd -
 ```
 
-- **Change the version:** edit `go ? "1.26"` in `nix/go/shell.nix`. Versions older than 1.26 are no longer in nixpkgs.
+- **Change the version:** edit `go ? "1.26"` in `shell.nix`. Versions older than 1.26 are no longer in nixpkgs.
 - **Modules and `go install`:** go to `.go/` in the project (`GOPATH`), and its `bin/` is on your PATH.
 - **delve, golangci-lint:** uncomment them in `shell.nix`.
 - **.gitignore:** add `.go/`.
+- **Multi-language project:** use `dev-init go` instead (see below) — it produces `nix/go/shell.nix` merged under the composer, rather than a standalone `shell.nix`.
 
 ## Everything at once (Java, Node.js, Python, Go)
 
@@ -178,8 +182,9 @@ The project is self-contained, so it keeps working if the dotfiles change.
 - **Add a language later:** copy its folder into `nix/`, e.g. `cp -r ~/dotfiles/nixos/templates/rust nix/`.
 - **Remove one:** delete its folder from `nix/`.
 
-`jvm-init` and `node-init` still exist and produce a single `shell.nix`; use
-them for single-language Java or Node projects.
+`jvm-init`, `node-init`, `go-init` and `python-init` still exist and each
+produce a single standalone `shell.nix`; use them for single-language
+projects instead.
 
 ### From anywhere: `devshell`
 
@@ -248,7 +253,7 @@ programs.java = {
 };
 
 environment.systemPackages = [
-  jvm-init node-init dev-init devshell
+  jvm-init node-init go-init python-init dev-init devshell
   pkgs.nodejs_22
   pkgs.python3   # or with packages: (pkgs.python3.withPackages (ps: [ ps.requests ]))
   pkgs.uv
@@ -290,7 +295,7 @@ it, which is handy for scripts and CI.
 
 | Problem                                                | Fix                                                                  |
 | ------------------------------------------------------ | -------------------------------------------------------------------- |
-| `jvm-init` / `node-init` / `dev-init` / `devshell`: command not found | Run the rebuild in One-time setup                                    |
+| `jvm-init` / `node-init` / `go-init` / `python-init` / `dev-init` / `devshell`: command not found | Run the rebuild in One-time setup                                    |
 | Rebuild fails with a path not found under `templates/` | `git add` the template folder; flakes ignore untracked files         |
 | Rebuild: `does not provide attribute ...nixosConfigurations` | Use `make nix-switch`; the flake reads `/etc/hostname` and needs `--impure` |
 | `direnv: error .envrc is blocked`                      | Run `direnv allow` in the project                                    |

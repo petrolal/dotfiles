@@ -4,6 +4,10 @@
 
    These rules theme GTK3 controls and surfaces to render against
    the imp95 dark palette.
+
+   These values are hand-duplicated (no shared import across these syntaxes)
+   in themes/imp95-palette.css (human-readable reference) and
+   themes/imp98/xfwm4/themerc. Keep all three in sync by hand.
    ========================================================================== */
 
 @define-color imp95_bg #242424;
@@ -21,6 +25,13 @@
 @define-color imp95_accent_darkest #541617;
 @define-color imp95_tooltip_bg #ffffe1;
 @define-color imp95_tooltip_fg #000000;
+
+/* Windows 95 notification titlebar: a separate maroon skin, not part of the
+   imp95 red accent above. */
+@define-color win95_titlebar_bg #800000;
+@define-color win95_titlebar_border_light #A00000;
+@define-color win95_titlebar_border_dark #500000;
+@define-color win95_progress_border #808080;
 
 /* Standard GTK named colors: apps that don't carry their own CSS (e.g.
    xfce4-screenshooter's region-select overlay) look these up via
@@ -992,7 +1003,7 @@ messagedialog button:active,
 XfceTitledDialog button:active {
     background-color: @imp95_surface;
     border-color: @imp95_dark @imp95_light @imp95_light @imp95_dark;
-    box-shadow: inset 1px 1px #000000;
+    box-shadow: inset 1px 1px @imp95_dark;
 }
 
 dialog scrolledwindow,
@@ -1212,7 +1223,7 @@ calendar.button:hover {
 calendar.button:active {
     background-color: @imp95_surface;
     border-color: @imp95_dark @imp95_light @imp95_light @imp95_dark;
-    box-shadow: inset 1px 1px #000000;
+    box-shadow: inset 1px 1px @imp95_dark;
 }
 
 /* Weekday names row: distinct darker band (M T W T F S S) matching Win98 reference */
@@ -1230,11 +1241,11 @@ calendar.highlight {
 calendar.view,
 calendar view {
     background-color: #181818;
-    color: #FFFFFF;
+    color: @imp95_text;
     border-style: solid;
     border-width: 2px;
     border-color: @imp95_shadow @imp95_light @imp95_light @imp95_shadow;
-    box-shadow: inset 1px 1px #000000, inset -1px -1px @imp95_hover;
+    box-shadow: inset 1px 1px @imp95_dark, inset -1px -1px @imp95_hover;
     padding: 6px;
     font-size: 16px;
 }
@@ -1244,9 +1255,9 @@ calendar:selected,
 calendar.view:selected,
 calendar view:selected {
     background-color: @imp95_accent;
-    color: #FFFFFF;
+    color: @imp95_text;
     border-radius: 0px;
-    outline: 1px dotted #FFFFFF;
+    outline: 1px dotted @imp95_text;
     outline-offset: -1px;
     font-weight: bold;
 }
@@ -1327,11 +1338,11 @@ window#XfceNotifyWindow:hover,
 
 /* Windows 95 Active Titlebar Header ("Alert!" with [X] close button on right) */
 #XfceNotifyWindow label#summary {
-    background-color: #800000;
+    background-color: @win95_titlebar_bg;
     background-image: url("assets/win95-close.png");
     background-repeat: no-repeat;
     background-position: calc(100% - 2px) center;
-    color: #FFFFFF;
+    color: @imp95_text;
     font-family: "W95FA", "MS Sans Serif", "Microsoft Sans Serif", "Tahoma", sans-serif;
     font-weight: bold;
     font-size: 11px;
@@ -1341,7 +1352,7 @@ window#XfceNotifyWindow:hover,
     margin: 0px 0px 2px 0px;
     border-style: solid;
     border-width: 1px;
-    border-color: #A00000 #500000 #500000 #A00000;
+    border-color: @win95_titlebar_border_light @win95_titlebar_border_dark @win95_titlebar_border_dark @win95_titlebar_border_light;
     text-shadow: none;
 }
 
@@ -1389,11 +1400,11 @@ window#XfceNotifyWindow:hover,
 #XfceNotifyWindow button:checked {
     background-color: @imp95_surface;
     border-color: @imp95_dark @imp95_light @imp95_light @imp95_dark;
-    box-shadow: inset 1px 1px #000000;
+    box-shadow: inset 1px 1px @imp95_dark;
 }
 
 #XfceNotifyWindow button:focus {
-    outline: 1px dotted #FFFFFF;
+    outline: 1px dotted @imp95_text;
     outline-offset: -4px;
 }
 
@@ -1401,7 +1412,7 @@ window#XfceNotifyWindow:hover,
 #XfceNotifyWindow button.default,
 #XfceNotifyWindow button.suggested-action {
     border-width: 2px;
-    border-color: #000000;
+    border-color: @imp95_dark;
 }
 
 /* Windows 95 Progress Bar */
@@ -1413,17 +1424,17 @@ window#XfceNotifyWindow:hover,
 }
 
 #XfceNotifyWindow progressbar trough {
-    background-color: #FFFFFF;
+    background-color: @imp95_text;
     border-style: solid;
     border-width: 1px;
-    border-color: #808080 #FFFFFF #FFFFFF #808080;
-    box-shadow: inset 1px 1px #000000;
+    border-color: @win95_progress_border @imp95_text @imp95_text @win95_progress_border;
+    box-shadow: inset 1px 1px @imp95_dark;
     border-radius: 0px;
     padding: 2px;
 }
 
 #XfceNotifyWindow progressbar progress {
-    background-color: #800000;
+    background-color: @win95_titlebar_bg;
     border-radius: 0px;
     border: none;
 }
