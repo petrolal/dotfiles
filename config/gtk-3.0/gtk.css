@@ -240,7 +240,7 @@ menu {
                 inset -1px -1px @imp95_shadow,
                 2px 2px 0px @imp95_dark;
     color: @imp95_text;
-    padding: 2px 2px 2px 50px;
+    padding: 2px 2px 2px 52px;
     min-width: 245px;
 }
 
@@ -268,6 +268,27 @@ popover.background {
     padding: 2px;
 }
 
+/* Submenus, text, image */
+menu menuitem menu menuitem {
+  padding: 0 10px;
+}
+
+menu menuitem menu menuitem label {
+    font-size: 14px;
+    margin: 0;
+    padding: 0;
+}
+
+menu menuitem menu menuitem image {
+   -gtk-icon-transform: scale(1);
+   margin: 0;
+}
+
+menu menuitem image {
+  -gtk-icon-transform: scale(1.8);
+  margin: 18px 8px;
+}
+
 menuitem,
 modelbutton {
     color: @imp95_text;
@@ -276,11 +297,6 @@ modelbutton {
     padding: 6px 8px;
     min-height: 30px;
     font-size: 16px;
-}
-
-menu menuitem image {
-  -gtk-icon-transform: scale(1.5);
-  margin: 16px 8px;
 }
 
 menuitem:hover,

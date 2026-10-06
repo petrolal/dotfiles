@@ -5,15 +5,15 @@
 
 (defun generate-terminalrc-content ()
   "[Configuration]
-ColorBackground=#242424
+ColorBackground=#16171d
 ColorForeground=#FFFFFF
 ColorCursor=#FFFFFF
-ColorCursorForeground=#242424
+ColorCursorForeground=#16171d
 ColorSelection=#9E2A2B
 ColorSelectionUseBackground=FALSE
 ColorBold=#FFFFFF
 ColorBoldUseCycle=FALSE
-ColorPalette=#242424;#9E2A2B;#606C38;#BD7B2A;#6F3646;#913348;#4D7C7A;#D6CBBB;#555555;#C0392B;#829C42;#E09F3E;#8C4F62;#B84A62;#6EA3A0;#F5EBE0
+ColorPalette=#16171d;#9E2A2B;#606C38;#BD7B2A;#6F3646;#913348;#4D7C7A;#D6CBBB;#555555;#C0392B;#829C42;#E09F3E;#8C4F62;#B84A62;#6EA3A0;#F5EBE0
 FontName=JetBrainsMono Nerd Font 10
 ScrollingBar=TERMINAL_SCROLLBAR_NONE
 ScrollingOnOutput=TRUE
