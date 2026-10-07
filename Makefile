@@ -6,7 +6,7 @@
 #
 # Every variable below can be overridden on the command line, e.g.
 #   make deploy DEPLOY_FLAGS=--dry-run
-#   make check SBCL=/opt/sbcl/bin/sbcl
+#   make check JAVAC=/opt/graalvm/bin/javac
 
 SHELL = /bin/sh
 
@@ -19,12 +19,19 @@ SHELL = /bin/sh
 # ---------------------------------------------------------------------------
 # Programs
 # ---------------------------------------------------------------------------
-SBCL          = sbcl
-SBCL_FLAGS    = --noinform --non-interactive
+JAVAC         = javac
+JAVA          = java
+# native-image -march=native bakes in the build host's exact CPU features:
+# fine for build-and-run-on-the-same-box, but the result is neither portable
+# to another machine nor reproducible via a Nix binary cache/substituter.
+# Override on the command line (e.g. NATIVE_IMAGE_FLAGS=) to drop it.
+NATIVE_IMAGE       = native-image
+NATIVE_IMAGE_FLAGS = -O3 --gc=epsilon --no-fallback -march=native --install-exit-handlers
 GIT           = git
 LN_S          = ln -sfn
 MKDIR_P       = mkdir -p
 RM            = rm -f
+RM_R          = rm -rf
 SUDO          = sudo
 NIXOS_REBUILD = nixos-rebuild
 
@@ -40,10 +47,9 @@ nixosdir      = $(srcdir)/nixos
 sysconfdir    = /etc/nixos
 
 INVOKER       = $(bindir)/invoker
-DEPLOY_SCRIPT = $(bindir)/deploy.lisp
-BUILD_SRC     = $(srcdir)/src/build.lisp
-DEPLOYER_SRC  = $(srcdir)/src/deployer.lisp
-ALL_SRC       = $(wildcard $(srcdir)/src/*.lisp)
+JAVA_MAIN     = $(srcdir)/java/Main.java
+JAVA_SRC      = $(wildcard $(srcdir)/java/*.java)
+JAVA_BUILD    = $(srcdir)/java/build
 WRAPPER_MODULE = $(srcdir)/config/gtk-3.0/libwrapper-menu-fix.so
 WRAPPER_SRC    = $(srcdir)/config/gtk-3.0/wrapper-menu-fix.c
 GTK3_MOD_DIR   = $(HOME)/.local/state/nix/profile/lib/gtk-3.0/modules
@@ -63,7 +69,7 @@ help:
 	@echo 'Usage: make [TARGET] [VARIABLE=value]...'
 	@echo ''
 	@echo 'Build:'
-	@echo '  all             Compile the native SBCL invoker and GTK module (default)'
+	@echo '  all             Compile the native GraalVM invoker and GTK module (default)'
 	@echo '  modules         Compile and install GTK fix module'
 	@echo '  check           Compile-check the deployer and run a dry-run deploy'
 	@echo ''
@@ -76,30 +82,34 @@ help:
 	@echo '  reload-panel    Restart only xfce4-panel'
 	@echo '  reload-wm       Restart only xfwm4 window manager'
 	@echo '  reload-theme    Trigger instant GTK CSS reload across all windows'
-	@echo '  quick-deploy    Deploy via SBCL script mode, without compiling'
+	@echo '  quick-deploy    Deploy via the JVM directly, without a native-image build'
 	@echo '  uninstall       Remove all dotfiles symlinks managed by deploy'
 	@echo '  installcheck    Verify the installed invoker runs'
 	@echo ''
 	@echo 'NixOS (requires sudo):'
-	@echo '  bootstrap       First-time setup from a fresh NixOS (no make/sbcl needed)'
+	@echo '  bootstrap       First-time setup from a fresh NixOS (no make/GraalVM needed)'
 	@echo '  nix-link        Symlink configuration.nix and flake.nix into $(sysconfdir)'
 	@echo '  nix-switch      Rebuild NixOS from the flake and switch to it'
 	@echo '  system-install  nix-switch, then install'
 	@echo ''
 	@echo 'Cleaning:'
-	@echo '  mostlyclean     Remove compiled .fasl files'
+	@echo '  mostlyclean     Remove compiled .class files'
 	@echo '  clean           mostlyclean + remove the invoker'
 	@echo '  distclean       clean + remove Nix result links'
 	@echo ''
-	@echo 'Variables: SBCL, SUDO, NIXOS_REBUILD, DEPLOY_FLAGS (e.g. --no-reload)'
+	@echo 'Variables: JAVAC, NATIVE_IMAGE, NATIVE_IMAGE_FLAGS, SUDO, NIXOS_REBUILD, DEPLOY_FLAGS (e.g. --no-reload)'
 
 # ---------------------------------------------------------------------------
 # Build
 # ---------------------------------------------------------------------------
-$(INVOKER): $(ALL_SRC) $(BUILD_SRC)
-	@echo '==> Compiling native invoker via SBCL...'
+$(JAVA_BUILD)/Main.class: $(JAVA_SRC)
+	$(MKDIR_P) $(JAVA_BUILD)
+	$(JAVAC) -d $(JAVA_BUILD) $(JAVA_SRC)
+
+$(INVOKER): $(JAVA_BUILD)/Main.class
+	@echo '==> Compiling native invoker via GraalVM native-image...'
 	$(MKDIR_P) $(bindir)
-	$(SBCL) --script $(BUILD_SRC)
+	$(NATIVE_IMAGE) $(NATIVE_IMAGE_FLAGS) -cp $(JAVA_BUILD) Main $(INVOKER)
 
 $(WRAPPER_MODULE): $(WRAPPER_SRC)
 	@echo '==> Compiling GTK module $(WRAPPER_MODULE)...'
@@ -111,11 +121,9 @@ modules: $(WRAPPER_MODULE)
 	install -m 755 $(WRAPPER_MODULE) $(GTK3_MOD_DIR)/libwrapper-menu-fix.so
 
 
-# Compile the deployer with warnings promoted to errors, then dry-run it.
-check: $(INVOKER)
-	$(SBCL) $(SBCL_FLAGS) \
-	  --eval '(require :uiop)' \
-	  --eval '(handler-bind ((warning (lambda (c) (error c)))) (load "$(DEPLOYER_SRC)"))'
+# Compile the deployer with all lint warnings promoted to visibility, then dry-run it.
+check: $(JAVA_BUILD)/Main.class $(INVOKER)
+	$(JAVAC) -Xlint:all -d $(JAVA_BUILD) $(JAVA_SRC)
 	$(INVOKER) --dry-run --no-reload
 
 # ---------------------------------------------------------------------------
@@ -154,8 +162,8 @@ reload-theme:
 	@echo '==> Forcing GTK theme stylesheet reload...'
 	-xfconf-query -c xsettings -p /Net/ThemeName -s "Adwaita" && xfconf-query -c xsettings -p /Net/ThemeName -s "Adwaita-dark"
 
-quick-deploy:
-	$(SBCL) --script $(DEPLOY_SCRIPT) $(DEPLOY_FLAGS)
+quick-deploy: $(JAVA_BUILD)/Main.class
+	$(JAVA) -cp $(JAVA_BUILD) Main $(DEPLOY_FLAGS)
 
 installcheck: $(INVOKER)
 	$(INVOKER) --version
@@ -169,7 +177,7 @@ uninstall: $(INVOKER)
 # Flakes only see files git knows about; `add -N` registers new files
 # without staging their contents.
 bootstrap:
-	@echo '==> Running first-time bootstrap (no make/sbcl required)...'
+	@echo '==> Running first-time bootstrap (no make/GraalVM required)...'
 	$(srcdir)/bootstrap.sh
 
 nix-link:
@@ -189,7 +197,8 @@ system-install: nix-switch
 # Cleaning (GNU levels: mostlyclean < clean < distclean < maintainer-clean)
 # ---------------------------------------------------------------------------
 mostlyclean:
-	find $(srcdir) \( -name '*.fasl' -o -name '*~' -o -name '#*#' \) -type f -exec $(RM) {} +
+	$(RM_R) $(JAVA_BUILD)
+	find $(srcdir) \( -name '*~' -o -name '#*#' \) -type f -exec $(RM) {} +
 
 clean: mostlyclean
 	$(RM) $(INVOKER)

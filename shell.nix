@@ -3,12 +3,12 @@
 pkgs.mkShell {
   packages = with pkgs; [
     gnumake
-    sbcl
+    graalvmPackages.graalvm-ce
     git
   ];
 
   shellHook = ''
     echo "⛧ [Infernal Mainframe Shell Loaded]"
-    echo "Commands available: make, make nix-switch, sbcl"
+    echo "Commands available: make, make nix-switch, native-image"
   '';
 }

@@ -8,8 +8,8 @@
 
 # Build artifacts and compiled binaries
 bin/invoker
-*.fasl
-*.dx64fsl
+java/build/
+*.class
 config/gtk-3.0/libwrapper-menu-fix.so
 
 # Nix build outputs

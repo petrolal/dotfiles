@@ -9,7 +9,7 @@ let
   buildTools = with pkgs; [
     gnumake
     git
-    sbcl
+    graalvmPackages.graalvm-ce
   ] ++ dynamicLibs;
 
   wallpaperTools = with pkgs; [

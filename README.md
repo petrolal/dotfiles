@@ -19,7 +19,7 @@ That's it. The bootstrap script only needs what base NixOS provides (`sh`,
 
 1. Link the flake into `/etc/nixos`
 2. Rebuild NixOS (installs all packages, fonts, tools)
-3. Compile the native deployer
+3. Compile the native deployer (GraalVM native-image)
 4. Deploy dotfiles and apply the desktop theme
 
 Log out and back in for all changes to take effect.
@@ -44,7 +44,7 @@ After the initial bootstrap, use Make:
 dotfiles/
 ├── bootstrap.sh                    # First-time setup script
 ├── Makefile                        # Build and deploy orchestration
-├── shell.nix                       # Nix dev shell (gnumake, sbcl, git)
+├── shell.nix                       # Nix dev shell (gnumake, GraalVM, git)
 │
 ├── nixos/                          # NixOS system configuration
 │   ├── flake.nix                   # Flake entry point
@@ -59,17 +59,19 @@ dotfiles/
 │       ├── packages.nix            # System packages
 │       └── development.nix         # direnv, dev-init, devshell
 │
-├── src/                            # Common Lisp deployer (compiles to native binary)
-│   ├── packages.lisp               # Package definition and exports
-│   ├── paths.lisp                  # Dotfiles root and home resolution
-│   ├── linker.lisp                 # Symlink mappings and link-file
-│   ├── display.lisp                # Display detection (xrandr)
-│   ├── generators.lisp             # Hook for templated config generation (currently unused)
-│   ├── xfconf-xml.lisp             # Parses exported xfce-perchannel-xml, replays via xfconf-query
-│   ├── xfconf.lisp                 # XFCE/GNOME settings via xfconf-query
-│   ├── orchestrator.lisp           # Deploy + reload orchestration
-│   ├── cli.lisp                    # CLI parsing, --help, --version
-│   └── build.lisp                  # SBCL native binary compiler
+├── java/                           # Java deployer (compiles to native binary via GraalVM)
+│   ├── Main.java                   # Entry point, delegates to Cli
+│   ├── Cli.java                    # CLI parsing, --help, --version
+│   ├── Orchestrator.java           # Deploy + reload orchestration
+│   ├── Linker.java                 # Symlink mappings and link-file
+│   ├── DotfilePaths.java           # Dotfiles root and home resolution
+│   ├── Display.java                # Display detection (xrandr)
+│   ├── Xfconf.java                 # XFCE/GNOME settings via xfconf-query
+│   ├── XfconfXml.java              # Parses exported xfce-perchannel-xml, replays via xfconf-query
+│   ├── Generators.java             # Hook for templated config generation (currently unused)
+│   ├── Shell.java                  # ProcessBuilder wrapper
+│   ├── Result.java                 # Functional error handling
+│   └── DotfileError.java           # Typed domain errors
 │
 ├── config/                         # Dotfiles (symlinked to ~/.config/)
 │   ├── gtk-2.0/gtkrc

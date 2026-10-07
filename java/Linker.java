@@ -1,0 +1,256 @@
+// Linker.java --- Symlink discovery/creation/removal
+// License: GPL-3.0-or-later
+
+import java.io.IOException;
+import java.nio.file.FileVisitResult;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.SimpleFileVisitor;
+import java.nio.file.StandardCopyOption;
+import java.nio.file.attribute.BasicFileAttributes;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+
+final class Linker {
+    private Linker() {}
+
+    /** A (from -> to) path pair: used both for root-target prefixes and resolved mappings. */
+    record Mapping(String from, String to) {}
+
+    enum UnlinkOutcome { SKIPPED, REMOVED, FAILED }
+
+    /** Source prefixes (relative to the repo root) auto-discovered and mirrored
+     * file-by-file under the given target base (relative to $HOME). Longest
+     * matching prefix wins, so a more specific entry can override a general one. */
+    static final List<Mapping> ROOT_TARGETS = List.of(
+            // Open Display standalone: embedded in the Settings Manager it renders blank,
+            // so it lives under applications/ and needs its own target root.
+            new Mapping("config/applications", ".local/share/applications"),
+            new Mapping("config", ".config"),
+            new Mapping("fonts", ".local/share/fonts"),
+            new Mapping("themes/imp98", ".local/share/themes/imp98"),
+            // Universal asset store (icons/images shared across gtk-3.0, xfce4-panel, etc.)
+            new Mapping("assets/imp98", ".local/share/imp98")
+    );
+
+    /** Source paths skipped entirely during auto-discovery; a listed directory
+     * is not descended into. */
+    static final List<String> EXCLUDES = List.of(
+            "config/gtk-2.0/gtkrc",
+            "config/gtk-3.0/libwrapper-menu-fix.so",
+            "config/gtk-3.0/wrapper-menu-fix.c"
+    );
+
+    /** Explicit (source -> target) pairs for paths that don't fit the generic
+     * root-mirrored layout: renames, or a source linked to more than one target. */
+    static final List<Mapping> OVERRIDES = List.of(
+            new Mapping("config/gtk-2.0/gtkrc", ".gtkrc-2.0"),
+            new Mapping("themes/icons", ".local/share/icons/imp98"),
+            new Mapping("themes/icons", ".icons/imp98"),
+            // gtk.css references images via a relative url("assets/...") — this keeps
+            // that resolving without editing the CSS; assets/imp98 in the repo stays
+            // the single canonical source (see ROOT_TARGETS above).
+            new Mapping("assets/imp98", ".config/gtk-3.0/assets")
+    );
+
+    private static final String XFCONF_EXPORT_MARKER = "xfconf/xfce-perchannel-xml";
+
+    /** True if relpath is (or is under) an xfce-perchannel-xml export directory.
+     * Those hold live settings exports: never symlinked (the running session
+     * clobbers them), instead auto-applied via xfconf-query. */
+    static boolean xfconfExportDirP(String relpath) {
+        int pos = relpath.indexOf(XFCONF_EXPORT_MARKER);
+        return pos >= 0 && (pos == 0 || relpath.charAt(pos - 1) == '/');
+    }
+
+    static boolean excludedP(String relpath) {
+        if (xfconfExportDirP(relpath)) return true;
+        for (String prefix : EXCLUDES) {
+            if (relpath.equals(prefix)) return true;
+            if (relpath.length() > prefix.length()
+                    && relpath.startsWith(prefix)
+                    && relpath.charAt(prefix.length()) == '/') {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    static boolean prefixMatchP(String prefix, String relpath) {
+        return relpath.length() >= prefix.length()
+                && relpath.startsWith(prefix)
+                && (relpath.length() == prefix.length() || relpath.charAt(prefix.length()) == '/');
+    }
+
+    static Optional<Mapping> rootTargetFor(String relpath) {
+        Mapping best = null;
+        for (Mapping entry : ROOT_TARGETS) {
+            if (prefixMatchP(entry.from(), relpath) && (best == null || entry.from().length() > best.from().length())) {
+                best = entry;
+            }
+        }
+        return Optional.ofNullable(best);
+    }
+
+    /** ROOT_TARGETS prefixes not nested inside another prefix — the minimal
+     * set of directories that need walking once. */
+    static List<String> topLevelRoots() {
+        List<String> prefixes = ROOT_TARGETS.stream().map(Mapping::from).toList();
+        List<String> out = new ArrayList<>();
+        for (String prefix : prefixes) {
+            boolean nested = prefixes.stream().anyMatch(other -> !other.equals(prefix) && prefixMatchP(other, prefix));
+            if (!nested) out.add(prefix);
+        }
+        return out;
+    }
+
+    /** Recursively lists every non-excluded file under relpath (relative to root). */
+    static List<String> scanTree(String relpath, Path root) {
+        List<String> out = new ArrayList<>();
+        Path dir = root.resolve(relpath);
+        if (!Files.isDirectory(dir)) return out;
+        List<Path> entries;
+        try (var stream = Files.list(dir)) {
+            entries = stream.sorted().toList();
+        } catch (IOException e) {
+            return out;
+        }
+        for (Path entry : entries) {
+            String childRel = relpath + "/" + entry.getFileName();
+            if (excludedP(childRel)) continue;
+            if (Files.isDirectory(entry)) {
+                out.addAll(scanTree(childRel, root));
+            } else {
+                out.add(childRel);
+            }
+        }
+        return out;
+    }
+
+    /** Builds the full (source -> target) list: OVERRIDES plus every file
+     * auto-discovered under the ROOT_TARGETS prefixes. */
+    static List<Mapping> collectAllMappings(Path root) {
+        List<Mapping> out = new ArrayList<>(OVERRIDES);
+        for (String top : topLevelRoots()) {
+            for (String fileRel : scanTree(top, root)) {
+                rootTargetFor(fileRel).ifPresent(entry ->
+                        out.add(new Mapping(fileRel, entry.to() + fileRel.substring(entry.from().length()))));
+            }
+        }
+        return out;
+    }
+
+    static boolean symlinkP(Path path) {
+        return Files.isSymbolicLink(path);
+    }
+
+    /** True if PATH exists on disk and is a directory (symlink or not), mirroring `test -d`. */
+    static boolean directoryExistsP(Path path) {
+        return Files.isDirectory(path);
+    }
+
+    private static void deleteRecursively(Path path) throws IOException {
+        Files.walkFileTree(path, new SimpleFileVisitor<>() {
+            @Override
+            public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+                Files.delete(file);
+                return FileVisitResult.CONTINUE;
+            }
+
+            @Override
+            public FileVisitResult postVisitDirectory(Path dir, IOException exc) throws IOException {
+                Files.delete(dir);
+                return FileVisitResult.CONTINUE;
+            }
+        });
+    }
+
+    /** Ensures DIR (under HOME) exists as a real directory, replacing any symlinked
+     * ancestor with a real one first. Needed because an earlier whole-directory link
+     * scheme left some of these as symlinks straight into the repo; leaving such an
+     * ancestor in place would make a new leaf symlink resolve back onto its own source. */
+    static void ensureRealDirectory(Path dir, Path home) throws IOException {
+        Path rel;
+        try {
+            rel = home.relativize(dir);
+        } catch (IllegalArgumentException e) {
+            Files.createDirectories(dir);
+            return;
+        }
+        Path current = home;
+        for (Path part : rel) {
+            current = current.resolve(part);
+            if (Files.isSymbolicLink(current)) {
+                Files.delete(current);
+            }
+        }
+        Files.createDirectories(dir);
+    }
+
+    /** Atomically points DEST at TARGET: create a temp symlink beside DEST, then rename
+     * it over DEST. Avoids the window where DEST is briefly missing that a plain
+     * delete-then-create would have. */
+    private static void atomicSymlink(Path dest, Path target) throws IOException {
+        Path parent = dest.getParent();
+        Path tmp = Files.createTempFile(parent, dest.getFileName().toString(), ".tmp-symlink");
+        Files.delete(tmp);
+        Files.createSymbolicLink(tmp, target);
+        Files.move(tmp, dest, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+    }
+
+    static Result<Void> linkFile(String sourceRel, String targetRel, Path root, Path home,
+                                  boolean dryRun, boolean verbose) {
+        Path src = root.resolve(sourceRel);
+        Path dest = home.resolve(targetRel);
+        if (!Files.exists(src)) {
+            if (verbose) System.err.println("[SKIP] Source missing: " + src);
+            return new Result.Err<>(new DotfileError.FileNotFound(src));
+        }
+        if (dryRun) {
+            System.out.println("[DRY-RUN] Would link: " + dest + " -> " + src);
+            return new Result.Ok<>(null);
+        }
+        try {
+            ensureRealDirectory(dest.getParent(), home);
+            // If SRC is a directory and DEST already exists as a real (non-symlink) directory
+            // — e.g. left over from before this path became a directory-level link — a plain
+            // symlink rename can't replace it; clear it out first so the symlink lands at DEST.
+            if (directoryExistsP(src) && directoryExistsP(dest) && !symlinkP(dest)) {
+                deleteRecursively(dest);
+            }
+            atomicSymlink(dest, src);
+            if (verbose) System.out.println("[OK] Linked: " + dest + " -> " + src);
+            return new Result.Ok<>(null);
+        } catch (IOException e) {
+            System.err.println("[FAIL] Failed to link " + dest + " -> " + src);
+            return new Result.Err<>(new DotfileError.IoError(e.getMessage()));
+        }
+    }
+
+    static UnlinkOutcome unlinkFile(String targetRel, Path home, boolean dryRun, boolean verbose) {
+        Path dest = home.resolve(targetRel);
+        if (!symlinkP(dest)) {
+            if (verbose) {
+                if (Files.exists(dest)) {
+                    System.err.println("[SKIP] Not a symlink: " + dest + " (refusing to delete)");
+                } else {
+                    System.out.println("[SKIP] Symlink does not exist: " + dest);
+                }
+            }
+            return UnlinkOutcome.SKIPPED;
+        }
+        if (dryRun) {
+            System.out.println("[DRY-RUN] Would remove symlink: " + dest);
+            return UnlinkOutcome.REMOVED;
+        }
+        try {
+            Files.delete(dest);
+            if (verbose) System.out.println("[OK] Removed symlink: " + dest);
+            return UnlinkOutcome.REMOVED;
+        } catch (IOException e) {
+            System.err.println("[FAIL] Failed to remove symlink " + dest);
+            return UnlinkOutcome.FAILED;
+        }
+    }
+}

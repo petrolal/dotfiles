@@ -4,7 +4,7 @@
 #
 # This script requires only what a base NixOS provides: sh, git, sudo,
 # ln, and nixos-rebuild.  It links the flake into /etc/nixos, rebuilds
-# the system (which installs gnumake, sbcl, and every other package),
+# the system (which installs gnumake, GraalVM, and every other package),
 # then compiles and deploys the dotfiles.
 #
 # Usage:
@@ -63,7 +63,7 @@ sudo ln -sfn "${NIXOS_DIR}/configuration.nix" "${SYSCONFDIR}/configuration.nix"
 sudo ln -sfn "${NIXOS_DIR}/flake.nix"         "${SYSCONFDIR}/flake.nix"
 
 # ---------------------------------------------------------------------------
-# Step 3: Rebuild NixOS (installs gnumake, sbcl, fonts, everything)
+# Step 3: Rebuild NixOS (installs gnumake, GraalVM, fonts, everything)
 # ---------------------------------------------------------------------------
 info "Rebuilding NixOS (this may take a while on first run)..."
 # nixos-rebuild resolves a bare --flake path by matching this machine's
