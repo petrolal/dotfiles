@@ -36,6 +36,13 @@ pkgs.stdenv.mkDerivation {
     runHook postInstall
   '';
 
+  # eclipseWithPlugins's pluginEnv (pkgs/applications/editors/eclipse/default.nix)
+  # filters its `plugins` list down to `lib.filter (x: x ? isEclipsePlugin)` --
+  # without this, this derivation is silently dropped from the merged dropins,
+  # no error, nothing in the build log. nixpkgs' own buildEclipsePluginBase sets
+  # this via passthru; same here.
+  passthru.isEclipsePlugin = true;
+
   meta = {
     description = "Nix/GTK-rc/GLSL syntax highlighting for Eclipse via TM4E";
     license = pkgs.lib.licenses.gpl3Plus;

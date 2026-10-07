@@ -68,6 +68,12 @@ pkgs.stdenv.mkDerivation {
   outputHashAlgo = "sha256";
   outputHash = "sha256-Q7kfwfucZ55Oy+QcB0h8dz7fYHX/EtAqmzRKGCN/wwk=";
 
+  # eclipseWithPlugins's pluginEnv filters `plugins` down to
+  # `lib.filter (x: x ? isEclipsePlugin)` -- without this, this derivation is
+  # silently dropped from the merged dropins (no error anywhere). See the
+  # identical note in ../dotfiles-syntax/default.nix.
+  passthru.isEclipsePlugin = true;
+
   meta = {
     description = "Spring Tools 5 (Spring Boot support, Boot Dashboard, Spring XML namespaces, Boot/Bosh/CF/Concourse language servers) for Eclipse";
     license = pkgs.lib.licenses.epl20;
