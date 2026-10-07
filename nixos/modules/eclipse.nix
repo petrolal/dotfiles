@@ -18,6 +18,14 @@
 #     comes from the build tools below (Gradle/Maven/sbt) plus Eclipse's
 #     built-in Buildship/m2e, the same as any project built via
 #     nixos/templates/jvm.
+#   - Java EE/Jakarta EE backend support is build-tool level only, for the
+#     same reason: no nixpkgs derivation for Eclipse WTP. Jakarta EE API
+#     jars (servlet, JPA, CDI, ...) aren't installed here at all -- they're
+#     ordinary per-project Maven/Gradle dependencies, resolved the same way
+#     Spring Boot's are. tomcat10 below is just a standalone servlet
+#     container to deploy/test a WAR against outside the IDE. None of this
+#     touches the eclipse-rcp package or its plugin set, so it can't
+#     conflict with RCP/RAP/PDE/Tycho tooling.
 let
   jdk21 = pkgs.jdk21;
   jdk17 = pkgs.jdk17;
@@ -50,6 +58,10 @@ let
     (pkgs.maven.override { jdk_headless = jdk21; })
     (pkgs.sbt.override { jre = jdk21; })
     pkgs.lombok
+
+    # Standalone servlet container for Jakarta EE web-app deploy/test outside
+    # the IDE (Spring Boot doesn't need this -- it embeds its own Tomcat).
+    pkgs.tomcat10
   ];
 in
 {

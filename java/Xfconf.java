@@ -39,6 +39,12 @@ final class Xfconf {
             new XfceSetting("xfwm4", "/general/margin_right", "int", "0"),
             new XfceSetting("xfwm4", "/general/margin_top", "int", "0"),
 
+            // Panel height: default.xml's panel-1/size=26 assumes a thin top strip
+            // paired with a second, taller panel for the taskbar. This single-panel
+            // layout carries the tasklist itself, so it needs enough height for app
+            // icons (icon-size 16) not to get clipped.
+            new XfceSetting("xfce4-panel", "/panels/panel-1/size", "uint", "32"),
+
             // Hyprland-adapted Keybindings (Super+Return, Super+Q, Super+F, Workspaces 1-4)
             new XfceSetting("xfce4-keyboard-shortcuts", "/commands/custom/<Super>Return", "string", "xfce4-terminal"),
             new XfceSetting("xfce4-keyboard-shortcuts", "/commands/custom/<Primary><Alt>t", "string", "xfce4-terminal"),
@@ -95,8 +101,7 @@ final class Xfconf {
             new XfceReset("xfwm4", "/general/show_popup_shadow"),
             new XfceReset("xfwm4", "/general/show_dock_shadow"),
             new XfceReset("xfwm4", "/general/frame_opacity"),
-            new XfceReset("xfwm4", "/general/inactive_opacity"),
-            new XfceReset("xfce4-panel", "/panels/panel-1/size")
+            new XfceReset("xfwm4", "/general/inactive_opacity")
     );
 
     private static void resetXfconf(String channel, String property, boolean dryRun) {
