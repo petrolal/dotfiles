@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=imp98 Shell
+Comment=Custom retro taskbar/panel (quickshell), from config/quickshell
+Exec=imp98
+Icon=utilities-terminal
+Terminal=false
+NoDisplay=true
+X-XFCE-Autostart-enabled=true
+OnlyShowIn=XFCE;

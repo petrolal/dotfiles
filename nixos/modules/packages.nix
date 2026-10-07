@@ -42,13 +42,24 @@ let
     appimage-run
   ];
 
+  # The custom retro taskbar/panel (Config.qml, Bar.qml, etc. under
+  # config/quickshell/). configPath points at the live symlinked dotfiles
+  # (~/.config/quickshell) rather than package.nix's own store-copy default,
+  # so editing the QML takes effect on restart without a NixOS rebuild.
+  customShell = [
+    (pkgs.callPackage ../../config/quickshell/package.nix {
+      configPath = "/home/petrolal/.config/quickshell";
+    })
+  ];
+
 in {
   environment.systemPackages =
     buildTools
     ++ wallpaperTools
     ++ devTools
     ++ systemTools
-    ++ mediaUtils;
+    ++ mediaUtils
+    ++ customShell;
 
   # Lets unpatched/FHS binaries (AppImages, etc.) find dynamic libs without
   # polluting every process on the system via a global LD_LIBRARY_PATH.
