@@ -1,0 +1,53 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "GTK RC",
+  "scopeName": "source.gtkrc",
+  "patterns": [
+    { "include": "#comments" },
+    { "include": "#strings" },
+    { "include": "#keywords" },
+    { "include": "#states" },
+    { "include": "#numbers" }
+  ],
+  "repository": {
+    "comments": {
+      "patterns": [
+        { "name": "comment.line.number-sign.gtkrc", "match": "#.*$" }
+      ]
+    },
+    "strings": {
+      "patterns": [
+        {
+          "name": "string.quoted.double.gtkrc",
+          "begin": "\"",
+          "end": "\"",
+          "patterns": [
+            { "name": "constant.character.escape.gtkrc", "match": "\\\\." }
+          ]
+        }
+      ]
+    },
+    "keywords": {
+      "patterns": [
+        {
+          "name": "keyword.control.gtkrc",
+          "match": "\\b(style|class|widget|widget_class|binding|include|pixmap_path|module_path|im_module_file)\\b"
+        },
+        {
+          "name": "support.type.property-name.gtkrc",
+          "match": "\\b(gtk-color-scheme|gtk-icon-theme-name|gtk-theme-name|gtk-font-name|gtk-cursor-theme-name|gtk-cursor-theme-size|gtk-toolbar-style|xthickness|ythickness|engine|bg_pixmap|fg|bg|text|base|font_name)\\b"
+        }
+      ]
+    },
+    "states": {
+      "patterns": [
+        { "name": "constant.language.gtkrc", "match": "\\b(NORMAL|ACTIVE|PRELIGHT|SELECTED|INSENSITIVE)\\b" }
+      ]
+    },
+    "numbers": {
+      "patterns": [
+        { "name": "constant.numeric.gtkrc", "match": "\\b[0-9]+(\\.[0-9]+)?\\b" }
+      ]
+    }
+  }
+}

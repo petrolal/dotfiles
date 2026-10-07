@@ -45,24 +45,77 @@ final class Linker {
             new Mapping("config/gtk-2.0/gtkrc", ".gtkrc-2.0")
     );
 
-    /** Target paths (relative to $HOME) from ROOT_TARGETS/OVERRIDES entries removed
-     * when the imp98 theme sources were deleted. collectAllMappings can no longer
-     * discover these (their sources are gone), so deploy/uninstall clean them up
-     * explicitly to avoid leaving dangling symlinks into deleted repo paths. */
+    /** Single-symlink target paths (relative to $HOME) from ROOT_TARGETS/OVERRIDES
+     * entries removed when the imp98/quickshell sources were deleted. Includes both
+     * the current and a prior (pre-rename) name actually found deployed on disk --
+     * collectAllMappings can no longer discover either (their sources are gone), so
+     * deploy/uninstall clean them up explicitly to avoid leaving dangling symlinks
+     * into deleted repo paths. */
     static final List<String> LEGACY_TARGETS = List.of(
-            ".local/share/themes/imp98",
-            ".local/share/imp98",
             ".icons/imp98",
+            ".icons/RetroismIcons",
             ".local/share/icons/imp98",
-            ".config/gtk-3.0/assets"
+            ".local/share/icons/RetroismIcons",
+            ".local/share/fonts/w95fa.otf",
+            ".config/gtk-3.0/gtk.css",
+            ".config/gtk-4.0/gtk.css",
+            ".config/gtk-3.0/assets",
+            ".config/autostart/imp98.desktop"
     );
 
-    /** Removes any still-present LEGACY_TARGETS symlinks. Safe to call unconditionally:
-     * unlinkFile no-ops on anything that isn't actually a symlink. */
+    /** Directories that were mirrored file-by-file (ROOT_TARGETS style) from now
+     * -deleted repo sources, so individual leaf symlinks need walking rather than
+     * a single unlink. */
+    static final List<String> LEGACY_TARGET_DIRS = List.of(
+            ".local/share/themes/imp98",
+            ".local/share/imp98",
+            ".config/quickshell"
+    );
+
+    /** Removes every symlink found under DIR (bottom-up), then DIR itself and any
+     * subdirectory left empty by that. Never touches a non-symlink file, so a
+     * directory holding anything unexpected is simply left in place. */
+    private static void cleanupLegacyDir(Path dir, boolean dryRun, boolean verbose) {
+        if (!Files.isDirectory(dir) || Files.isSymbolicLink(dir)) return;
+        List<Path> entries;
+        try (var stream = Files.walk(dir)) {
+            entries = stream.sorted(java.util.Comparator.reverseOrder()).toList();
+        } catch (IOException e) {
+            return;
+        }
+        for (Path entry : entries) {
+            if (Files.isSymbolicLink(entry)) {
+                if (dryRun) {
+                    System.out.println("[DRY-RUN] Would remove symlink: " + entry);
+                    continue;
+                }
+                try {
+                    Files.delete(entry);
+                    if (verbose) System.out.println("[OK] Removed symlink: " + entry);
+                } catch (IOException e) {
+                    System.err.println("[FAIL] Failed to remove symlink " + entry);
+                }
+            } else if (Files.isDirectory(entry) && !dryRun) {
+                try {
+                    Files.deleteIfExists(entry);
+                    if (verbose && !Files.exists(entry)) System.out.println("[OK] Removed empty directory: " + entry);
+                } catch (IOException e) {
+                    // Not empty (holds something unexpected) -- leave it alone.
+                }
+            }
+        }
+    }
+
+    /** Removes any still-present LEGACY_TARGETS/LEGACY_TARGET_DIRS remnants. Safe to
+     * call unconditionally: unlinkFile and cleanupLegacyDir no-op on anything that
+     * isn't actually a symlink (or, for directories, isn't left empty afterward). */
     static int cleanupLegacyTargets(Path home, boolean dryRun, boolean verbose) {
         int removed = 0;
         for (String legacyTarget : LEGACY_TARGETS) {
             if (unlinkFile(legacyTarget, home, dryRun, verbose) == UnlinkOutcome.REMOVED) removed++;
+        }
+        for (String legacyDir : LEGACY_TARGET_DIRS) {
+            cleanupLegacyDir(home.resolve(legacyDir), dryRun, verbose);
         }
         return removed;
     }
