@@ -9,15 +9,23 @@
 #     RCP plugin / Tycho work. JDT and EGit (Git) ship in box in both
 #     editions, so neither needs an extra plugin.
 #   - eclipses.plugins.scala was removed from nixpkgs upstream (deprecated),
-#     and there are no nixpkgs packages for Spring Tools 4 (STS4), Kotlin for
-#     Eclipse, Groovy Development Tools, or Quarkus/Micronaut tooling -- none
-#     of those exist as Nix derivations to pull in declaratively. Provisioning
-#     them would mean an imperative p2-director bootstrap outside of Nix's
-#     purity model, so they're left out here.
-#   - Spring Boot/Micronaut/Quarkus and Scala/Kotlin/Groovy project support
-#     comes from the build tools below (Gradle/Maven/sbt) plus Eclipse's
-#     built-in Buildship/m2e, the same as any project built via
-#     nixos/templates/jvm.
+#     and there are no nixpkgs packages for Kotlin for Eclipse, Groovy
+#     Development Tools, or Quarkus/Micronaut tooling -- none of those exist
+#     as Nix derivations to pull in declaratively, and (unlike Spring Tools
+#     5 below) none of them ship as a single coherent p2 update site that a
+#     fixed-output derivation could reasonably wrap, so they're left out
+#     here.
+#   - Spring Tools 5 (formerly STS4) IS packaged -- see
+#     ./eclipse-plugins/spring-tools. It only ships as a p2 update site, but
+#     a p2-director install run inside a fixed-output derivation is exactly
+#     as "declarative Nix" as fetchurl is: the network access it needs
+#     during the build is sanctioned because the result is checked against
+#     a pinned hash afterward. That's different from an imperative,
+#     un-pinned p2 install mutating the live system outside Nix entirely,
+#     which is what's avoided everywhere else in this file.
+#   - Micronaut/Quarkus and Scala/Kotlin/Groovy project support (still) comes
+#     from the build tools below (Gradle/Maven/sbt) plus Eclipse's built-in
+#     Buildship/m2e, the same as any project built via nixos/templates/jvm.
 #   - Builds are Tycho-only. eclipse-rcp bundles PDE's UI (manifest/plugin.xml
 #     /product editors, launch configs) -- required for RCP/RAP editing and
 #     kept. What's NOT used is PDE Build, the deprecated Ant-based headless
@@ -52,6 +60,12 @@ let
   # compiled Java.
   dotfilesSyntaxPlugin = import ./eclipse-plugins/dotfiles-syntax { inherit pkgs; };
 
+  # Spring Tools 5 -- see ./eclipse-plugins/spring-tools/default.nix for how
+  # this reconciles "declarative Nix package" with "only ships as a p2
+  # update site". Needed for real Spring Boot enterprise work, not just
+  # RCP/RAP plugin development.
+  springToolsPlugin = import ./eclipse-plugins/spring-tools { inherit pkgs; };
+
   eclipseIde = pkgs.eclipses.eclipseWithPlugins {
     eclipse = pkgs.eclipses.eclipse-rcp;
 
@@ -61,15 +75,23 @@ let
     #     build integration (note: Makefile *syntax highlighting* alone
     #     already works out of the box, eclipse-rcp's bundled TM4E language
     #     pack recognizes Makefile/GNUmakefile/*.mk/*.mak with no plugin).
-    plugins = [ pkgs.eclipses.plugins.cdt dotfilesSyntaxPlugin ];
+    plugins = [ pkgs.eclipses.plugins.cdt dotfilesSyntaxPlugin springToolsPlugin ];
 
     # Appended to eclipse.ini's existing -vmargs section (not a replacement).
+    # Memory bumped from 512m/4g: running Boot LS + Boot Dashboard + a Tycho
+    # reactor build concurrently (real enterprise Spring work alongside
+    # RCP/RAP dev) needs more headroom than plugin-editing alone did.
     jvmArgs = [
-      "-Xms512m"
-      "-Xmx4g"
+      "-Xms2g"
+      "-Xmx6g"
       "--add-opens=java.base/java.lang=ALL-UNNAMED"
       "--add-opens=java.base/java.util=ALL-UNNAMED"
       "-javaagent:${pkgs.lombok}/share/java/lombok.jar"
+      # GTK/Wayland stability: avoids intermittent SWT rendering glitches,
+      # and Boot Dashboard/Spring docs views embed a browser widget that
+      # needs an explicit WebKit backend rather than relying on autodetect.
+      "-Dorg.eclipse.swt.internal.gtk.cairoGraphics=true"
+      "-Dorg.eclipse.swt.browser.DefaultType=webkit"
     ];
   };
 
