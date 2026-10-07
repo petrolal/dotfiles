@@ -263,10 +263,10 @@ combobox cellview {
 
 menu {
     background-color: @imp95_surface;
-    background-image: url("assets/imp98-sidebar.png");
-    background-repeat: no-repeat;
-    background-position: left bottom;
-    background-size: auto 100%;
+/*     background-image: url("assets/imp98-sidebar.png"); */
+/*     background-repeat: no-repeat; */
+/*     background-position: left bottom; */
+/*     background-size: auto 100%; */
     border-style: solid;
     border-width: 2px;
     border-color: @imp95_light @imp95_dark @imp95_dark @imp95_light;
@@ -275,8 +275,8 @@ menu {
                 inset -1px -1px @imp95_shadow,
                 2px 2px 0px @imp95_dark;
     color: @imp95_text;
-    padding: 2px 2px 2px 53px;
-    min-width: 245px;
+/*     padding: 2px 2px 2px 53px; */
+/*     min-width: 245px; */
 }
 
 /* Submenus, context menus and popovers: clean 3D bevels without sidebar */

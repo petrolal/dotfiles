@@ -10,6 +10,7 @@
     ./modules/users.nix
     ./modules/packages.nix
     ./modules/development.nix
+    ./modules/eclipse.nix
   ];
 
   system.stateVersion = "26.05";
