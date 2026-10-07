@@ -8,9 +8,15 @@
 
 # Build artifacts and compiled binaries
 bin/invoker
-java/build/
+target/
 *.class
 config/gtk-3.0/libwrapper-menu-fix.so
+
+# Eclipse m2e-generated project files -- regenerate via File > Import >
+# Existing Maven Projects instead of committing them.
+.classpath
+.project
+.settings/
 
 # Nix build outputs
 result

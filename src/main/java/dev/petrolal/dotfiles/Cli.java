@@ -1,5 +1,7 @@
 // Cli.java --- CLI interface
 // License: GPL-3.0-or-later
+package dev.petrolal.dotfiles;
+
 
 final class Cli {
     private Cli() {}

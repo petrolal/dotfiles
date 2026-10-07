@@ -1,5 +1,7 @@
 // Result.java --- Functional error handling
 // License: GPL-3.0-or-later
+package dev.petrolal.dotfiles;
+
 
 sealed interface Result<T> permits Result.Ok, Result.Err {
     record Ok<T>(T value) implements Result<T> {}

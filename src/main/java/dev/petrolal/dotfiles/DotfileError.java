@@ -1,5 +1,7 @@
 // DotfileError.java --- Typed domain errors for Result<T>
 // License: GPL-3.0-or-later
+package dev.petrolal.dotfiles;
+
 
 import java.nio.file.Path;
 
@@ -12,10 +14,11 @@ sealed interface DotfileError
     record ParseError(String message) implements DotfileError {}
 
     default String describe() {
-        if (this instanceof CommandFailed c) return "command failed (" + c.exitCode() + "): " + c.command();
-        if (this instanceof FileNotFound f) return "file not found: " + f.path();
-        if (this instanceof IoError i) return "I/O error: " + i.message();
-        if (this instanceof ParseError p) return "parse error: " + p.message();
-        throw new IllegalStateException("unreachable");
+        return switch (this) {
+            case CommandFailed c -> "command failed (" + c.exitCode() + "): " + c.command();
+            case FileNotFound f -> "file not found: " + f.path();
+            case IoError i -> "I/O error: " + i.message();
+            case ParseError p -> "parse error: " + p.message();
+        };
     }
 }

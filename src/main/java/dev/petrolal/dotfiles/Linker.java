@@ -1,5 +1,7 @@
 // Linker.java --- Symlink discovery/creation/removal
 // License: GPL-3.0-or-later
+package dev.petrolal.dotfiles;
+
 
 import java.io.IOException;
 import java.nio.file.FileVisitResult;

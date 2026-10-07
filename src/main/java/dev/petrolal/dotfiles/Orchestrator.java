@@ -1,5 +1,7 @@
 // Orchestrator.java --- Deployment orchestration
 // License: GPL-3.0-or-later
+package dev.petrolal.dotfiles;
+
 
 import java.nio.file.Path;
 import java.util.List;

@@ -6,7 +6,7 @@
 #
 # Every variable below can be overridden on the command line, e.g.
 #   make deploy DEPLOY_FLAGS=--dry-run
-#   make check JAVAC=/opt/graalvm/bin/javac
+#   make check MVN=/opt/maven/bin/mvn
 
 SHELL = /bin/sh
 
@@ -19,14 +19,16 @@ SHELL = /bin/sh
 # ---------------------------------------------------------------------------
 # Programs
 # ---------------------------------------------------------------------------
-JAVAC         = javac
 JAVA          = java
-# native-image -march=native bakes in the build host's exact CPU features:
-# fine for build-and-run-on-the-same-box, but the result is neither portable
-# to another machine nor reproducible via a Nix binary cache/substituter.
-# Override on the command line (e.g. NATIVE_IMAGE_FLAGS=) to drop it.
-NATIVE_IMAGE       = native-image
-NATIVE_IMAGE_FLAGS = -O3 --gc=epsilon --no-fallback -march=native --install-exit-handlers
+MVN           = mvn
+# The native-image binary ships in a separate GraalVM package (see
+# nixos/modules/packages.nix), distinct from the plain OpenJDK `java`/`mvn`
+# otherwise on PATH -- native-maven-plugin requires JAVA_HOME to actually BE
+# a GraalVM distribution for the `native` profile, so this resolves one from
+# wherever `native-image` lives on PATH. Lazily expanded (`=`, not `:=`) so
+# targets that don't build the native image (help, clean, quick-deploy, ...)
+# never need native-image on PATH at all.
+GRAALVM_HOME  = $(shell dirname $$(dirname $$(readlink -f $$(command -v native-image))))
 GIT           = git
 LN_S          = ln -sfn
 MKDIR_P       = mkdir -p
@@ -47,9 +49,8 @@ nixosdir      = $(srcdir)/nixos
 sysconfdir    = /etc/nixos
 
 INVOKER       = $(bindir)/invoker
-JAVA_MAIN     = $(srcdir)/java/Main.java
-JAVA_SRC      = $(wildcard $(srcdir)/java/*.java)
-JAVA_BUILD    = $(srcdir)/java/build
+JAVA_SRC      = $(shell find $(srcdir)/src/main/java $(srcdir)/src/test/java -name '*.java')
+MAIN_CLASS    = dev.petrolal.dotfiles.Main
 WRAPPER_MODULE = $(srcdir)/config/gtk-3.0/libwrapper-menu-fix.so
 WRAPPER_SRC    = $(srcdir)/config/gtk-3.0/wrapper-menu-fix.c
 GTK3_MOD_DIR   = $(HOME)/.local/state/nix/profile/lib/gtk-3.0/modules
@@ -71,7 +72,7 @@ help:
 	@echo 'Build:'
 	@echo '  all             Compile the native GraalVM invoker and GTK module (default)'
 	@echo '  modules         Compile and install GTK fix module'
-	@echo '  check           Compile-check the deployer and run a dry-run deploy'
+	@echo '  check           Run the test suite and a dry-run deploy'
 	@echo ''
 	@echo 'Deploy (user session, no root):'
 	@echo '  install         Link dotfiles, install GTK module, and apply XFCE theme'
@@ -93,23 +94,24 @@ help:
 	@echo '  system-install  nix-switch, then install'
 	@echo ''
 	@echo 'Cleaning:'
-	@echo '  mostlyclean     Remove compiled .class files'
+	@echo '  mostlyclean     Remove the Maven target/ build directory'
 	@echo '  clean           mostlyclean + remove the invoker'
 	@echo '  distclean       clean + remove Nix result links'
 	@echo ''
-	@echo 'Variables: JAVAC, NATIVE_IMAGE, NATIVE_IMAGE_FLAGS, SUDO, NIXOS_REBUILD, DEPLOY_FLAGS (e.g. --no-reload)'
+	@echo 'Variables: MVN, GRAALVM_HOME, SUDO, NIXOS_REBUILD, DEPLOY_FLAGS (e.g. --no-reload)'
 
 # ---------------------------------------------------------------------------
 # Build
 # ---------------------------------------------------------------------------
-$(JAVA_BUILD)/Main.class: $(JAVA_SRC)
-	$(MKDIR_P) $(JAVA_BUILD)
-	$(JAVAC) -d $(JAVA_BUILD) $(JAVA_SRC)
-
-$(INVOKER): $(JAVA_BUILD)/Main.class
-	@echo '==> Compiling native invoker via GraalVM native-image...'
+# Maven decides its own incrementality internally; these file prerequisites
+# just tell Make whether to invoke it at all. The `native` profile (see
+# pom.xml) places the built binary straight at $(INVOKER) via its own
+# outputDirectory/imageName config, so there's nothing left for Make to do
+# after `mvn` returns.
+$(INVOKER): pom.xml $(JAVA_SRC)
+	@echo '==> Building native invoker via Maven + GraalVM native-image...'
 	$(MKDIR_P) $(bindir)
-	$(NATIVE_IMAGE) $(NATIVE_IMAGE_FLAGS) -cp $(JAVA_BUILD) Main $(INVOKER)
+	JAVA_HOME=$(GRAALVM_HOME) $(MVN) -q -Pnative package
 
 $(WRAPPER_MODULE): $(WRAPPER_SRC)
 	@echo '==> Compiling GTK module $(WRAPPER_MODULE)...'
@@ -121,9 +123,9 @@ modules: $(WRAPPER_MODULE)
 	install -m 755 $(WRAPPER_MODULE) $(GTK3_MOD_DIR)/libwrapper-menu-fix.so
 
 
-# Compile the deployer with all lint warnings promoted to visibility, then dry-run it.
-check: $(JAVA_BUILD)/Main.class $(INVOKER)
-	$(JAVAC) -Xlint:all -d $(JAVA_BUILD) $(JAVA_SRC)
+# Run the test suite, then dry-run the (already built) invoker.
+check: $(INVOKER)
+	$(MVN) -q test
 	$(INVOKER) --dry-run --no-reload
 
 # ---------------------------------------------------------------------------
@@ -162,8 +164,9 @@ reload-theme:
 	@echo '==> Forcing GTK theme stylesheet reload...'
 	-xfconf-query -c xsettings -p /Net/ThemeName -s "Adwaita" && xfconf-query -c xsettings -p /Net/ThemeName -s "Adwaita-dark"
 
-quick-deploy: $(JAVA_BUILD)/Main.class
-	$(JAVA) -cp $(JAVA_BUILD) Main $(DEPLOY_FLAGS)
+quick-deploy:
+	$(MVN) -q compile
+	$(JAVA) -cp target/classes $(MAIN_CLASS) $(DEPLOY_FLAGS)
 
 installcheck: $(INVOKER)
 	$(INVOKER) --version
@@ -197,7 +200,7 @@ system-install: nix-switch
 # Cleaning (GNU levels: mostlyclean < clean < distclean < maintainer-clean)
 # ---------------------------------------------------------------------------
 mostlyclean:
-	$(RM_R) $(JAVA_BUILD)
+	$(MVN) -q clean
 	find $(srcdir) \( -name '*~' -o -name '#*#' \) -type f -exec $(RM) {} +
 
 clean: mostlyclean

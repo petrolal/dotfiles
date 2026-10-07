@@ -1,5 +1,7 @@
 // Shell.java --- Minimal-allocation ProcessBuilder wrapper
 // License: GPL-3.0-or-later
+package dev.petrolal.dotfiles;
+
 
 import java.io.File;
 import java.io.IOException;

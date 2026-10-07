@@ -1,5 +1,7 @@
 // Xfconf.java --- XFCE / GNOME desktop settings
 // License: GPL-3.0-or-later
+package dev.petrolal.dotfiles;
+
 
 import java.nio.file.Path;
 import java.util.ArrayList;

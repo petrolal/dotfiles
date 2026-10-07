@@ -1,5 +1,7 @@
 // Display.java --- xrandr-based resolution detection
 // License: GPL-3.0-or-later
+package dev.petrolal.dotfiles;
+
 
 import java.util.ArrayList;
 import java.util.Comparator;

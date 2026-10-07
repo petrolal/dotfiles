@@ -5,6 +5,8 @@
 // Zero-dependency Java 21 CLI, built as a GraalVM native-image binary. See
 // Cli.java for argument parsing and Orchestrator.java for the deploy/uninstall
 // flow.
+package dev.petrolal.dotfiles;
+
 
 public final class Main {
     public static void main(String[] args) {

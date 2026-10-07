@@ -7,6 +7,8 @@
 // in the repo (see Linker.xfconfExportDirP) is enough to manage that
 // channel declaratively: this file parses it and replays every property
 // via xfconf-query, with no per-property Java code required.
+package dev.petrolal.dotfiles;
+
 
 import java.io.IOException;
 import java.nio.file.Files;

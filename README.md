@@ -19,7 +19,7 @@ That's it. The bootstrap script only needs what base NixOS provides (`sh`,
 
 1. Link the flake into `/etc/nixos`
 2. Rebuild NixOS (installs all packages, fonts, tools)
-3. Compile the native deployer (GraalVM native-image)
+3. Build the native deployer (Maven + GraalVM native-image)
 4. Deploy dotfiles and apply the desktop theme
 
 Log out and back in for all changes to take effect.
@@ -44,7 +44,8 @@ After the initial bootstrap, use Make:
 dotfiles/
 ├── bootstrap.sh                    # First-time setup script
 ├── Makefile                        # Build and deploy orchestration
-├── shell.nix                       # Nix dev shell (gnumake, GraalVM, git)
+├── pom.xml                         # Maven build (GraalVM native-image via the `native` profile)
+├── shell.nix                       # Nix dev shell (gnumake, GraalVM, Maven, git)
 │
 ├── nixos/                          # NixOS system configuration
 │   ├── flake.nix                   # Flake entry point
@@ -59,7 +60,7 @@ dotfiles/
 │       ├── packages.nix            # System packages
 │       └── development.nix         # direnv, dev-init, devshell
 │
-├── java/                           # Java deployer (compiles to native binary via GraalVM)
+├── src/main/java/dev/petrolal/dotfiles/  # Java deployer (compiles to native binary via GraalVM)
 │   ├── Main.java                   # Entry point, delegates to Cli
 │   ├── Cli.java                    # CLI parsing, --help, --version
 │   ├── Orchestrator.java           # Deploy + reload orchestration
@@ -72,6 +73,8 @@ dotfiles/
 │   ├── Shell.java                  # ProcessBuilder wrapper
 │   ├── Result.java                 # Functional error handling
 │   └── DotfileError.java           # Typed domain errors
+│
+├── src/test/java/dev/petrolal/dotfiles/  # JUnit 5 tests (`mvn test`)
 │
 ├── config/                         # Dotfiles (symlinked to ~/.config/)
 │   ├── gtk-2.0/gtkrc
