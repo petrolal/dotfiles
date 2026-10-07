@@ -52,6 +52,7 @@ final class Orchestrator {
         if (generateConfigs) {
             if (Generators.generateAllConfigs(verbose)) successes++; else failures++;
         }
+        Linker.cleanupLegacyTargets(home, dryRun, verbose);
         for (Linker.Mapping mapping : Linker.collectAllMappings(root)) {
             Result<Void> r = Linker.linkFile(mapping.from(), mapping.to(), root, home, dryRun, verbose);
             if (r instanceof Result.Ok<Void>) successes++; else failures++;
@@ -84,6 +85,7 @@ final class Orchestrator {
             if (outcome == Linker.UnlinkOutcome.REMOVED) removedCount++;
             else if (outcome == Linker.UnlinkOutcome.FAILED) failures++;
         }
+        removedCount += Linker.cleanupLegacyTargets(home, dryRun, verbose);
         if (verbose) {
             if (dryRun) {
                 System.out.println("Dry-run complete. " + removedCount + " symlink(s) would be removed.");

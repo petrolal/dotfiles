@@ -13,11 +13,11 @@ final class Cli {
         System.out.println("Commands:");
         System.out.println("  deploy            perform full deployment (generate, link, configure, reload) [default]");
         System.out.println("  uninstall         remove all deployed dotfile symlinks safely");
-        System.out.println("  scale             query display resolution and reset panel height and WM margins");
+        System.out.println("  scale             query display resolution and reset WM margins");
         System.out.println("  generate          generate and verify templated configuration assets\n");
         System.out.println("Options:");
         System.out.println("  -u, --uninstall   remove all deployed dotfile symlinks safely");
-        System.out.println("  -s, --scale       detect resolution and reset panel height and WM margins");
+        System.out.println("  -s, --scale       detect resolution and reset WM margins");
         System.out.println("  -g, --generate    generate/ensure templated configuration assets");
         System.out.println("  -n, --dry-run     simulate actions without modifying filesystem or xfconf");
         System.out.println("  -q, --quiet       suppress non-error output");

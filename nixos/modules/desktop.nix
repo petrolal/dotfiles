@@ -59,14 +59,11 @@
     pulse.enable = true;
   };
 
-  # Global Theme & Toolkit Overrides (Dark base for IMP95 palette)
+  # Global Theme & Toolkit Overrides
   environment.variables = {
     GTK_THEME = "Adwaita:dark";
     QT_STYLE_OVERRIDE = "Adwaita-Dark";
   };
-
-  # System-wide GTK3 CSS so LightDM and system dialogs share the dark retro styling
-  environment.etc."xdg/gtk-3.0/gtk.css".text = builtins.readFile ../lightdm-gtk-greeter.css;
 
   environment.systemPackages = with pkgs; [
     adwaita-icon-theme

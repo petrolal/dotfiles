@@ -1,8 +1,8 @@
 
-# Abyssal Biopunk / Infernal Retro Dotfiles
+# Dotfiles
 
-NixOS system configuration and XFCE desktop theme inspired by Windows 98 and
-Mac OS 9 — dark palette, pixel-perfect bevels, zero animations.
+NixOS system configuration and XFCE desktop setup, using the stock XFCE dark
+theme.
 
 ## From-Scratch Install
 
@@ -35,7 +35,7 @@ After the initial bootstrap, use Make:
 | `make system-install` | Rebuild NixOS + redeploy (full update) |
 | `make dry-run` | Preview what deploy would change |
 | `make uninstall` | Safely remove all deployed dotfiles symlinks |
-| `make scale` | Reset panel height and WM margins for current display |
+| `make scale` | Reset WM margins for current display |
 | `make help` | Show all available targets |
 
 ## Project Structure
@@ -76,19 +76,8 @@ dotfiles/
 ├── config/                         # Dotfiles (symlinked to ~/.config/)
 │   ├── gtk-2.0/gtkrc
 │   ├── gtk-3.0/settings.ini
-│   ├── gtk-3.0/gtk.css             # IMP95 dark palette overrides
 │   ├── gtk-4.0/settings.ini
-│   ├── gtk-4.0/gtk.css             # Libadwaita accent overrides
-│   ├── picom/picom.conf            # Compositor (hard shadows, no blur)
-│   └── quickshell/                 # Quickshell panel config
-│
-├── themes/
-│   ├── imp95-palette.css           # Canonical color palette
-│   ├── icons/                      # imp98 icon theme
-│   └── imp98/xfwm4/               # Window manager border theme
-│
-├── fonts/
-│   └── w95fa.otf                   # Windows 95 font (W95FA)
+│   └── picom/picom.conf            # Compositor
 │
 └── docs/
     └── dev-environments.md         # Per-project dev environment guide

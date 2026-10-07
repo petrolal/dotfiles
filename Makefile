@@ -77,7 +77,7 @@ help:
 	@echo '  install         Link dotfiles, install GTK module, and apply XFCE theme'
 	@echo '  deploy          Same as install'
 	@echo '  dry-run         Show what deploy would do without changing anything'
-	@echo '  scale           Reset panel height (44px) and WM margins, reload XFCE'
+	@echo '  scale           Reset WM margins for current display, reload XFCE'
 	@echo '  reload          Reload EVERYTHING (panel, xfwm4, xsettingsd, GTK, thunar, notifyd)'
 	@echo '  reload-panel    Restart only xfce4-panel'
 	@echo '  reload-wm       Restart only xfwm4 window manager'

@@ -28,10 +28,7 @@ final class Linker {
             // so it lives under applications/ and needs its own target root.
             new Mapping("config/applications", ".local/share/applications"),
             new Mapping("config", ".config"),
-            new Mapping("fonts", ".local/share/fonts"),
-            new Mapping("themes/imp98", ".local/share/themes/imp98"),
-            // Universal asset store (icons/images shared across gtk-3.0, xfce4-panel, etc.)
-            new Mapping("assets/imp98", ".local/share/imp98")
+            new Mapping("fonts", ".local/share/fonts")
     );
 
     /** Source paths skipped entirely during auto-discovery; a listed directory
@@ -45,14 +42,30 @@ final class Linker {
     /** Explicit (source -> target) pairs for paths that don't fit the generic
      * root-mirrored layout: renames, or a source linked to more than one target. */
     static final List<Mapping> OVERRIDES = List.of(
-            new Mapping("config/gtk-2.0/gtkrc", ".gtkrc-2.0"),
-            new Mapping("themes/icons", ".local/share/icons/imp98"),
-            new Mapping("themes/icons", ".icons/imp98"),
-            // gtk.css references images via a relative url("assets/...") — this keeps
-            // that resolving without editing the CSS; assets/imp98 in the repo stays
-            // the single canonical source (see ROOT_TARGETS above).
-            new Mapping("assets/imp98", ".config/gtk-3.0/assets")
+            new Mapping("config/gtk-2.0/gtkrc", ".gtkrc-2.0")
     );
+
+    /** Target paths (relative to $HOME) from ROOT_TARGETS/OVERRIDES entries removed
+     * when the imp98 theme sources were deleted. collectAllMappings can no longer
+     * discover these (their sources are gone), so deploy/uninstall clean them up
+     * explicitly to avoid leaving dangling symlinks into deleted repo paths. */
+    static final List<String> LEGACY_TARGETS = List.of(
+            ".local/share/themes/imp98",
+            ".local/share/imp98",
+            ".icons/imp98",
+            ".local/share/icons/imp98",
+            ".config/gtk-3.0/assets"
+    );
+
+    /** Removes any still-present LEGACY_TARGETS symlinks. Safe to call unconditionally:
+     * unlinkFile no-ops on anything that isn't actually a symlink. */
+    static int cleanupLegacyTargets(Path home, boolean dryRun, boolean verbose) {
+        int removed = 0;
+        for (String legacyTarget : LEGACY_TARGETS) {
+            if (unlinkFile(legacyTarget, home, dryRun, verbose) == UnlinkOutcome.REMOVED) removed++;
+        }
+        return removed;
+    }
 
     private static final String XFCONF_EXPORT_MARKER = "xfconf/xfce-perchannel-xml";
 
