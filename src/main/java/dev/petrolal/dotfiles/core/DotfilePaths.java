@@ -1,7 +1,6 @@
-// DotfilePaths.java --- Path/environment utilities
+// DotfilePaths.java --- Path and environment utilities
 // License: GPL-3.0-or-later
-package dev.petrolal.dotfiles.conf;
-
+package dev.petrolal.dotfiles.core;
 
 import java.io.IOException;
 import java.nio.file.Files;

@@ -1,14 +1,13 @@
 // Xfconf.java --- XFCE / GNOME desktop settings
 // License: GPL-3.0-or-later
-package dev.petrolal.dotfiles.conf;
-
+package dev.petrolal.dotfiles.desktop;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
-import dev.petrolal.dotfiles.screen.Display;
-import dev.petrolal.dotfiles.terminal.Shell;
+import dev.petrolal.dotfiles.core.DotfilePaths;
+import dev.petrolal.dotfiles.system.ProcessRunner;
 
 public final class Xfconf {
     private Xfconf() {}
@@ -44,13 +43,10 @@ public final class Xfconf {
             new XfceSetting("xfwm4", "/general/margin_right", "int", "0"),
             new XfceSetting("xfwm4", "/general/margin_top", "int", "0"),
 
-            // Panel height: default.xml's panel-1/size=26 assumes a thin top strip
-            // paired with a second, taller panel for the taskbar. This single-panel
-            // layout carries the tasklist itself, so it needs enough height for app
-            // icons (icon-size 16) not to get clipped.
+            // Panel height
             new XfceSetting("xfce4-panel", "/panels/panel-1/size", "uint", "32"),
 
-            // Hyprland-adapted Keybindings (Super+Return, Super+Q, Super+F, Workspaces 1-4)
+            // Keybindings
             new XfceSetting("xfce4-keyboard-shortcuts", "/commands/custom/<Super>Return", "string", "xfce4-terminal"),
             new XfceSetting("xfce4-keyboard-shortcuts", "/commands/custom/<Primary><Alt>t", "string", "xfce4-terminal"),
             new XfceSetting("xfce4-keyboard-shortcuts", "/commands/custom/<Super>e", "string", "thunar"),
@@ -73,10 +69,8 @@ public final class Xfconf {
             new GnomeSetting("org.gnome.desktop.interface", "color-scheme", "prefer-dark")
     );
 
-    /** Expands a leading ~/ to $HOME. xfconf-query passes values straight through to
-     * the consuming app/library with no shell in between, so a literal ~/ never expands
-     * on its own and silently fails to resolve. */
-    public static String expandHomeTilde(String valStr) {
+    /** Expands a leading ~/ to $HOME. */
+    static String expandHomeTilde(String valStr) {
         if (valStr.length() >= 2 && valStr.startsWith("~/")) {
             String home = DotfilePaths.userHomeDirectory().toString();
             String trimmed = home.endsWith("/") ? home.substring(0, home.length() - 1) : home;
@@ -87,9 +81,6 @@ public final class Xfconf {
 
     record XfceReset(String channel, String property) {}
 
-    /** Clears retro-theme xfwm4/xfce4-panel property overrides from before they were
-     * dropped from XFCE_SETTINGS, so a stale button-layout/shadow/panel-size setting
-     * doesn't linger forever on an existing install. */
     private static final List<XfceReset> XFCE_RESETS = List.of(
             new XfceReset("xfwm4", "/general/button_layout"),
             new XfceReset("xfwm4", "/general/button_spacing"),
@@ -113,7 +104,7 @@ public final class Xfconf {
         if (dryRun) {
             System.out.printf("[DRY-RUN] xfconf-query -c %s -p %s -r%n", channel, property);
         } else {
-            Shell.run(List.of("xfconf-query", "-c", channel, "-p", property, "-r"));
+            ProcessRunner.run(List.of("xfconf-query", "-c", channel, "-p", property, "-r"));
         }
     }
 
@@ -122,7 +113,7 @@ public final class Xfconf {
         if (dryRun) {
             System.out.printf("[DRY-RUN] xfconf-query -c %s -p %s -t %s -s %s%n", channel, property, type, valStr);
         } else {
-            Shell.run(List.of("xfconf-query", "-c", channel, "-p", property, "-s", valStr, "--create", "-t", type));
+            ProcessRunner.run(List.of("xfconf-query", "-c", channel, "-p", property, "-s", valStr, "--create", "-t", type));
         }
     }
 
@@ -139,7 +130,7 @@ public final class Xfconf {
             System.out.println("[DRY-RUN] " + String.join(" ", cmd));
         } else {
             if (verbose) System.out.println("[OK] Setting " + channel + " " + property + " to " + values);
-            Shell.run(cmd);
+            ProcessRunner.run(cmd);
         }
     }
 
@@ -161,12 +152,10 @@ public final class Xfconf {
         if (dryRun) {
             System.out.printf("[DRY-RUN] gsettings set %s %s '%s'%n", schema, key, value);
         } else {
-            Shell.run(List.of("gsettings", "set", schema, key, value));
+            ProcessRunner.run(List.of("gsettings", "set", schema, key, value));
         }
     }
 
-    /** Clears retro-theme GSettings overrides from before they were dropped from
-     * GNOME_SETTINGS, so a stale custom font/button-layout doesn't linger forever. */
     private static final List<GnomeSetting> GNOME_RESETS = List.of(
             new GnomeSetting("org.gnome.desktop.interface", "font-name", ""),
             new GnomeSetting("org.gnome.desktop.wm.preferences", "titlebar-font", ""),
@@ -180,7 +169,7 @@ public final class Xfconf {
             if (dryRun) {
                 System.out.printf("[DRY-RUN] gsettings reset %s %s%n", s.schema(), s.key());
             } else {
-                Shell.run(List.of("gsettings", "reset", s.schema(), s.key()));
+                ProcessRunner.run(List.of("gsettings", "reset", s.schema(), s.key()));
             }
         }
         for (GnomeSetting s : GNOME_SETTINGS) {
@@ -200,7 +189,6 @@ public final class Xfconf {
         for (XfceSetting s : XFCE_SETTINGS) {
             setXfconf(s.channel(), s.property(), s.type(), s.value(), dryRun);
         }
-        // Replay any exported xfce-perchannel-xml files found under config/ — see XfconfXml.
         XfconfXml.applyExportedXfconfFiles(root, dryRun, verbose);
         applyDynamicResolutionScaling(dryRun, verbose);
         applyGnomeSettings(dryRun, verbose);

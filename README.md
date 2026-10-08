@@ -63,19 +63,14 @@ dotfiles/
 │
 ├── src/main/java/dev/petrolal/dotfiles/  # Java deployer (compiles to native binary via GraalVM)
 │   ├── Main.java                   # Entry point, delegates to Cli
-│   ├── Cli.java                    # CLI parsing, --help, --version
-│   ├── Orchestrator.java           # Deploy + reload orchestration
-│   ├── Linker.java                 # Symlink mappings and link-file
-│   ├── DotfilePaths.java           # Dotfiles root and home resolution
-│   ├── Display.java                # Display detection (xrandr)
-│   ├── Xfconf.java                 # XFCE/GNOME settings via xfconf-query
-│   ├── XfconfXml.java              # Parses exported xfce-perchannel-xml, replays via xfconf-query
-│   ├── Generators.java             # Hook for templated config generation (currently unused)
-│   ├── Shell.java                  # ProcessBuilder wrapper
-│   ├── Result.java                 # Functional error handling
-│   └── DotfileError.java           # Typed domain errors
+│   ├── cli/                        # CLI argument parsing (Cli.java)
+│   ├── core/                       # Orchestration & path resolution (Orchestrator, DotfilePaths)
+│   ├── desktop/                    # Display, XFCE settings & XML replay (Display, Xfconf, XfconfXml)
+│   ├── domain/                     # Functional domain types (Result, DotfileError)
+│   ├── linker/                     # Symlink engine & config generation (Linker, Generators)
+│   └── system/                     # Subprocess execution (ProcessRunner)
 │
-├── src/test/java/dev/petrolal/dotfiles/  # JUnit 5 tests (`./gradlew test`)
+├── src/test/java/dev/petrolal/dotfiles/  # JUnit 5 tests (mirrored package structure)
 │
 ├── config/                         # Dotfiles (symlinked to ~/.config/)
 │   ├── gtk-2.0/gtkrc

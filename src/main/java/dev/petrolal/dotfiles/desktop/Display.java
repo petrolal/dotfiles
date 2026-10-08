@@ -1,16 +1,15 @@
 // Display.java --- xrandr-based resolution detection
 // License: GPL-3.0-or-later
-package dev.petrolal.dotfiles.screen;
-
+package dev.petrolal.dotfiles.desktop;
 
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 
-import dev.petrolal.dotfiles.conf.DotfilePaths;
+import dev.petrolal.dotfiles.core.DotfilePaths;
 import dev.petrolal.dotfiles.domain.Result;
-import dev.petrolal.dotfiles.terminal.Shell;
+import dev.petrolal.dotfiles.system.ProcessRunner;
 
 public final class Display {
     private Display() {}
@@ -40,7 +39,7 @@ public final class Display {
 
     static List<DisplayInfo> detectDisplayResolutions() {
         if (!DotfilePaths.commandExists("xrandr")) return List.of();
-        Result<String> result = Shell.captureOutput(List.of("xrandr", "--current"));
+        Result<String> result = ProcessRunner.captureOutput(List.of("xrandr", "--current"));
         if (!(result instanceof Result.Ok<String> ok)) return List.of();
         List<DisplayInfo> displays = new ArrayList<>();
         for (String line : ok.value().split("\r\n|\n|\r")) {

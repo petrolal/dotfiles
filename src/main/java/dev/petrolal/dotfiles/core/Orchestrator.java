@@ -1,22 +1,22 @@
 // Orchestrator.java --- Deployment orchestration
 // License: GPL-3.0-or-later
-package dev.petrolal.dotfiles.util;
-
+package dev.petrolal.dotfiles.core;
 
 import java.nio.file.Path;
 import java.util.List;
 
-import dev.petrolal.dotfiles.conf.DotfilePaths;
-import dev.petrolal.dotfiles.conf.Xfconf;
+import dev.petrolal.dotfiles.desktop.Xfconf;
 import dev.petrolal.dotfiles.domain.Result;
-import dev.petrolal.dotfiles.terminal.Shell;
+import dev.petrolal.dotfiles.linker.Generators;
+import dev.petrolal.dotfiles.linker.Linker;
+import dev.petrolal.dotfiles.system.ProcessRunner;
 
 public final class Orchestrator {
     private Orchestrator() {}
 
-    record DeployResult(boolean ok, int failures, int successes) {}
+    public record DeployResult(boolean ok, int failures, int successes) {}
 
-    record UninstallResult(boolean ok, int failures, int removed) {}
+    public record UninstallResult(boolean ok, int failures, int removed) {}
 
     private static final List<List<String>> RELOAD_COMMANDS = List.of(
             List.of("xfsettingsd", "--replace"),
@@ -27,7 +27,7 @@ public final class Orchestrator {
     );
 
     /** Reloads active XFCE desktop components if running in an X11 session. */
-    static void reloadDesktopServices(boolean dryRun, boolean verbose) {
+    public static void reloadDesktopServices(boolean dryRun, boolean verbose) {
         if (System.getenv("DISPLAY") == null) {
             if (verbose) System.out.println("[SKIP] No DISPLAY available, skipping desktop reload.");
             return;
@@ -40,13 +40,13 @@ public final class Orchestrator {
             } else if (dryRun) {
                 System.out.println("[DRY-RUN] Would execute: " + String.join(" ", args));
             } else {
-                Shell.spawnDetached(args);
+                ProcessRunner.spawnDetached(args);
             }
         }
     }
 
-    static DeployResult deploy(boolean dryRun, boolean verbose, boolean reload,
-                                boolean applySettings, boolean generateConfigs) {
+    public static DeployResult deploy(boolean dryRun, boolean verbose, boolean reload,
+                                       boolean applySettings, boolean generateConfigs) {
         if (verbose) System.out.println("=== Deploying Abyssal Biopunk / Infernal Retro Dotfiles ===");
         Path root = DotfilePaths.findDotfilesRoot();
         Path home = DotfilePaths.userHomeDirectory();
@@ -80,7 +80,7 @@ public final class Orchestrator {
         return new DeployResult(failures == 0, failures, successes);
     }
 
-    static UninstallResult uninstall(boolean dryRun, boolean verbose) {
+    public static UninstallResult uninstall(boolean dryRun, boolean verbose) {
         if (verbose) System.out.println("=== Removing Abyssal Biopunk / Infernal Retro Dotfiles Symlinks ===");
         Path root = DotfilePaths.findDotfilesRoot();
         Path home = DotfilePaths.userHomeDirectory();

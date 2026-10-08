@@ -1,7 +1,6 @@
 // Generators.java --- Templated config file generation
 // License: GPL-3.0-or-later
-package dev.petrolal.dotfiles.util;
-
+package dev.petrolal.dotfiles.linker;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -10,11 +9,11 @@ import java.nio.file.Path;
 import dev.petrolal.dotfiles.domain.DotfileError;
 import dev.petrolal.dotfiles.domain.Result;
 
-final class Generators {
+public final class Generators {
     private Generators() {}
 
     /** Ensures TARGET exists with CONTENT, skipping the rewrite if unchanged. */
-    static Result<Void> ensureFileContent(Path target, String content, boolean dryRun, boolean verbose) {
+    public static Result<Void> ensureFileContent(Path target, String content, boolean dryRun, boolean verbose) {
         if (dryRun) {
             System.out.println("[DRY-RUN] Would generate " + target);
             return new Result.Ok<>(null);
@@ -37,11 +36,8 @@ final class Generators {
         }
     }
 
-    /** Currently a no-op: every config file under config/ is a plain tracked dotfile
-     * handled by the symlink mechanism (Linker) rather than generated content. This
-     * hook exists for a future config that genuinely needs to be derived (e.g. from
-     * theme colors) rather than duplicated verbatim. */
-    static boolean generateAllConfigs(boolean verbose) {
+    /** Hook for future templated configuration assets. */
+    public static boolean generateAllConfigs(boolean verbose) {
         if (verbose) System.out.println("Ensuring templated configuration assets... (none defined)");
         return true;
     }

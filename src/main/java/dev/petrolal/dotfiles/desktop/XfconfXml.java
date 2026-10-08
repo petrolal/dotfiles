@@ -1,14 +1,6 @@
 // XfconfXml.java --- Hand-rolled xfce-perchannel-xml parser
 // License: GPL-3.0-or-later
-//
-// XFCE's own live settings store already writes one XML file per channel
-// at ~/.config/xfce4/xfconf/xfce-perchannel-xml/<channel>.xml. Dropping a
-// copy of one of those files under config/<app>/xfconf/xfce-perchannel-xml/
-// in the repo (see Linker.xfconfExportDirP) is enough to manage that
-// channel declaratively: this file parses it and replays every property
-// via xfconf-query, with no per-property Java code required.
-package dev.petrolal.dotfiles.conf;
-
+package dev.petrolal.dotfiles.desktop;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -18,7 +10,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-public final class XfconfXml {
+final class XfconfXml {
     private XfconfXml() {}
 
     record Node(String name, Map<String, String> attrs, List<Node> children) {

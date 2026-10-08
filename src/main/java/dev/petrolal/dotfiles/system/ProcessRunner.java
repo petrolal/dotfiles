@@ -1,7 +1,6 @@
-// Shell.java --- Minimal-allocation ProcessBuilder wrapper
+// ProcessRunner.java --- Process execution and subprocess management
 // License: GPL-3.0-or-later
-package dev.petrolal.dotfiles.terminal;
-
+package dev.petrolal.dotfiles.system;
 
 import java.io.File;
 import java.io.IOException;
@@ -11,8 +10,8 @@ import java.util.List;
 import dev.petrolal.dotfiles.domain.DotfileError;
 import dev.petrolal.dotfiles.domain.Result;
 
-public final class Shell {
-    private Shell() {}
+public final class ProcessRunner {
+    private ProcessRunner() {}
 
     public static Result<String> captureOutput(List<String> cmd) {
         try {

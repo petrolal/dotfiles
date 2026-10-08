@@ -1,11 +1,10 @@
-package dev.petrolal.dotfiles;
+package dev.petrolal.dotfiles.desktop;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.junit.jupiter.api.Test;
 
-import dev.petrolal.dotfiles.conf.DotfilePaths;
-import dev.petrolal.dotfiles.conf.Xfconf;
+import dev.petrolal.dotfiles.core.DotfilePaths;
 
 class XfconfTest {
 

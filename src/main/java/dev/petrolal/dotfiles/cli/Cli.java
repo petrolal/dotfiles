@@ -1,8 +1,10 @@
 // Cli.java --- CLI interface
 // License: GPL-3.0-or-later
-package dev.petrolal.dotfiles.util;
+package dev.petrolal.dotfiles.cli;
 
-import dev.petrolal.dotfiles.conf.Xfconf;
+import dev.petrolal.dotfiles.core.Orchestrator;
+import dev.petrolal.dotfiles.desktop.Xfconf;
+import dev.petrolal.dotfiles.linker.Generators;
 
 public final class Cli {
     private Cli() {}

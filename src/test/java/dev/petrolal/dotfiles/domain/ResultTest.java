@@ -1,12 +1,9 @@
-package dev.petrolal.dotfiles;
+package dev.petrolal.dotfiles.domain;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
-
-import dev.petrolal.dotfiles.domain.DotfileError;
-import dev.petrolal.dotfiles.domain.Result;
 
 class ResultTest {
 
