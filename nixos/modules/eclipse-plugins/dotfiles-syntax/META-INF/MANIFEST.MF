@@ -1,9 +1,0 @@
-Manifest-Version: 1.0
-Bundle-ManifestVersion: 2
-Bundle-Name: Dotfiles Syntax Highlighting
-Bundle-SymbolicName: dotfiles.syntax;singleton:=true
-Bundle-Version: 1.0.0
-Bundle-Vendor: dotfiles
-Require-Bundle: org.eclipse.core.runtime,
- org.eclipse.tm4e.registry,
- org.eclipse.tm4e.languageconfiguration

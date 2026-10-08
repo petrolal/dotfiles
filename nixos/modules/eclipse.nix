@@ -1,102 +1,143 @@
-{ pkgs, ... }:
+{ pkgs, lib, ... }:
 
-# Eclipse IDE for JVM development (RCP/PDE/Tycho + JDT), configured the Nix
-# way: package choice and eclipse.ini VM args are declared here instead of
-# hand-edited in the installed IDE.
-#
-# Scope notes (checked against nixpkgs before writing this):
-#   - eclipse-rcp (not eclipse-jee) is used because it bundles PDE, needed for
-#     RCP plugin / Tycho work. JDT and EGit (Git) ship in box in both
-#     editions, so neither needs an extra plugin.
-#   - eclipses.plugins.scala was removed from nixpkgs upstream (deprecated),
-#     and there are no nixpkgs packages for Kotlin for Eclipse, Groovy
-#     Development Tools, or Quarkus/Micronaut tooling -- none of those exist
-#     as Nix derivations to pull in declaratively, and (unlike Spring Tools
-#     5 below) none of them ship as a single coherent p2 update site that a
-#     fixed-output derivation could reasonably wrap, so they're left out
-#     here.
-#   - Spring Tools 5 (formerly STS4) IS packaged -- see
-#     ./eclipse-plugins/spring-tools. It only ships as a p2 update site, but
-#     a p2-director install run inside a fixed-output derivation is exactly
-#     as "declarative Nix" as fetchurl is: the network access it needs
-#     during the build is sanctioned because the result is checked against
-#     a pinned hash afterward. That's different from an imperative,
-#     un-pinned p2 install mutating the live system outside Nix entirely,
-#     which is what's avoided everywhere else in this file.
-#   - Micronaut/Quarkus and Scala/Kotlin/Groovy project support (still) comes
-#     from the build tools below (Gradle/Maven/sbt) plus Eclipse's built-in
-#     Buildship/m2e, the same as any project built via nixos/templates/jvm.
-#   - Builds are Tycho-only. eclipse-rcp bundles PDE's UI (manifest/plugin.xml
-#     /product editors, launch configs) -- required for RCP/RAP editing and
-#     kept. What's NOT used is PDE Build, the deprecated Ant-based headless
-#     build system Tycho replaced: nothing here invokes it (no
-#     `-application org.eclipse.pde.build.*`), and no project should add an
-#     Eclipse "Export > Deployable plug-ins" / PDE Build step -- build via
-#     `mvn` (Tycho, from pom.xml) instead, same as inferna-ide's releng/
-#     reactor. nixpkgs ships eclipse-rcp as one pre-built tarball with no
-#     granular feature selection, so PDE Build's jars can't be stripped from
-#     the install itself; this is a usage policy, not a package option.
-#   - Java EE/Jakarta EE backend support is build-tool level only, for the
-#     same reason: no nixpkgs derivation for Eclipse WTP. Jakarta EE API
-#     jars (servlet, JPA, CDI, ...) aren't installed here at all -- they're
-#     ordinary per-project Maven/Gradle dependencies, resolved the same way
-#     Spring Boot's are. tomcat10 below is just a standalone servlet
-#     container to deploy/test a WAR against outside the IDE. None of this
-#     touches the eclipse-rcp package or its plugin set, so it can't
-#     conflict with RCP/RAP/PDE/Tycho tooling.
 let
   jdk21 = pkgs.jdk21;
   jdk17 = pkgs.jdk17;
 
-  # Custom TextMate-grammar bundle (source in ./eclipse-plugins/dotfiles-syntax)
-  # giving the Generic Editor + TM4E -- both already shipped in eclipse-rcp --
-  # syntax highlighting for file types the bundled language pack doesn't cover:
-  # Nix, GTK rc files, and GLSL (OpenGL/WebGL shaders). .ui/.glade reuse the
-  # platform's existing XML grammar rather than shipping a new one. Built
-  # entirely from source in the sandbox (zip into a plain OSGi bundle jar
-  # dropped into eclipse/dropins), so it needs no network fetch and no
-  # imperative p2 install -- unlike STS4/Groovy-Eclipse/etc noted above, this
-  # one *can* be done declaratively because it's pure plugin.xml/JSON, no
-  # compiled Java.
-  dotfilesSyntaxPlugin = import ./eclipse-plugins/dotfiles-syntax { inherit pkgs; };
+  # Helper to expose official Eclipse distributions with distinct commands & desktop files
+  mkEclipseWrapper = { pkg, binName, desktopName, defaultAlias ? false }:
+    pkgs.runCommand binName {
+      nativeBuildInputs = [ pkgs.makeWrapper ];
+    } ''
+      mkdir -p $out/bin $out/share/applications $out/share/pixmaps
 
-  # Spring Tools 5 -- see ./eclipse-plugins/spring-tools/default.nix for how
-  # this reconciles "declarative Nix package" with "only ships as a p2
-  # update site". Needed for real Spring Boot enterprise work, not just
-  # RCP/RAP plugin development.
-  springToolsPlugin = import ./eclipse-plugins/spring-tools { inherit pkgs; };
+      makeWrapper ${pkg}/bin/eclipse $out/bin/${binName}
 
-  eclipseIde = pkgs.eclipses.eclipseWithPlugins {
-    eclipse = pkgs.eclipses.eclipse-rcp;
+      ${lib.optionalString defaultAlias ''
+        ln -s $out/bin/${binName} $out/bin/eclipse
+      ''}
 
-    # eclipses.plugins currently offers: cdt, checkstyle, eclemma, findbugs,
-    # spotbugs, testng, jdt-codemining, jsonedit, and a few others.
-    #   - cdt: real "good Makefile plugin" -- Makefile editor/targets view/
-    #     build integration (note: Makefile *syntax highlighting* alone
-    #     already works out of the box, eclipse-rcp's bundled TM4E language
-    #     pack recognizes Makefile/GNUmakefile/*.mk/*.mak with no plugin).
-    plugins = [ pkgs.eclipses.plugins.cdt dotfilesSyntaxPlugin springToolsPlugin ];
+      if [ -f ${pkg}/share/pixmaps/eclipse.xpm ]; then
+        ln -s ${pkg}/share/pixmaps/eclipse.xpm $out/share/pixmaps/${binName}.xpm
+      fi
 
-    # Appended to eclipse.ini's existing -vmargs section (not a replacement).
-    # Memory bumped from 512m/4g: running Boot LS + Boot Dashboard + a Tycho
-    # reactor build concurrently (real enterprise Spring work alongside
-    # RCP/RAP dev) needs more headroom than plugin-editing alone did.
-    jvmArgs = [
-      "-Xms2g"
-      "-Xmx6g"
-      "--add-opens=java.base/java.lang=ALL-UNNAMED"
-      "--add-opens=java.base/java.util=ALL-UNNAMED"
-      "-javaagent:${pkgs.lombok}/share/java/lombok.jar"
-      # GTK/Wayland stability: avoids intermittent SWT rendering glitches,
-      # and Boot Dashboard/Spring docs views embed a browser widget that
-      # needs an explicit WebKit backend rather than relying on autodetect.
-      "-Dorg.eclipse.swt.internal.gtk.cairoGraphics=true"
-      "-Dorg.eclipse.swt.browser.DefaultType=webkit"
-    ];
+      cat <<EOF > $out/share/applications/${binName}.desktop
+      [Desktop Entry]
+      Type=Application
+      Name=${desktopName}
+      Comment=Official ${desktopName} IDE
+      Exec=$out/bin/${binName} %U
+      Icon=${binName}
+      Terminal=false
+      Categories=Development;IDE;Java;
+      EOF
+    '';
+
+  # 1. Official Eclipse RCP / RAP (PDE, RCP, Tycho, Plugin development)
+  eclipseRcp = mkEclipseWrapper {
+    pkg = pkgs.eclipses.eclipse-rcp;
+    binName = "eclipse-rcp";
+    desktopName = "Eclipse RCP/RAP";
+    defaultAlias = true;
   };
 
-  # JDK21 is the default toolchain; JDK17 is kept on PATH so it can be
-  # registered under Eclipse's Installed JREs for projects pinned to it.
+  # 2. Official Eclipse Java EE (Enterprise Java, Jakarta EE, WTP)
+  eclipseJee = mkEclipseWrapper {
+    pkg = pkgs.eclipses.eclipse-jee;
+    binName = "eclipse-jee";
+    desktopName = "Eclipse Java EE";
+  };
+
+  # 3. Official Spring Tool Suite (STS) IDE standalone release
+  springToolSuite =
+    let
+      version = "5.4.0";
+      eVersion = "e4.41.0";
+    in
+    pkgs.stdenv.mkDerivation {
+      pname = "spring-tool-suite";
+      inherit version;
+
+      src = pkgs.fetchurl {
+        url = "https://cdn.spring.io/spring-tools/release/dist/${version}.RELEASE/e4.41/spring-tools-for-eclipse-${version}.RELEASE-${eVersion}-linux.gtk.x86_64.tar.gz";
+        sha256 = "1k2mpcbpqh002byqr419z7pjdsd9ac7pp93dwbdqa98kfcsfvn8h";
+      };
+
+      nativeBuildInputs = [ pkgs.makeWrapper pkgs.perl ];
+      buildInputs = [
+        pkgs.fontconfig
+        pkgs.freetype
+        pkgs.glib
+        pkgs.gsettings-desktop-schemas
+        pkgs.gtk3
+        jdk21
+        pkgs.libx11
+        pkgs.libxrender
+        pkgs.libxtst
+        pkgs.libsecret
+        pkgs.zlib
+        pkgs.webkitgtk_4_1
+      ];
+
+      buildCommand = ''
+        mkdir -p unpack
+        tar -xzf $src -C unpack
+        mkdir -p $out/lib/sts
+        cp -a unpack/sts-*/* $out/lib/sts/
+
+        interpreter="$(cat $NIX_BINTOOLS/nix-support/dynamic-linker)"
+        patchelf --set-interpreter "$interpreter" $out/lib/sts/SpringToolsForEclipse
+
+        libCairo=$out/lib/sts/libcairo-swt.so
+        if [ -f "$libCairo" ]; then
+          patchelf --set-rpath ${lib.makeLibraryPath [
+            pkgs.freetype
+            pkgs.fontconfig
+            pkgs.libx11
+            pkgs.libxrender
+            pkgs.zlib
+          ]} "$libCairo"
+        fi
+
+        # Remove bundled justj JVM in ini if present to use system JDK
+        perl -i -p0e 's|-vm\nplugins/org.eclipse.justj.*/jre/bin.*\n||' $out/lib/sts/SpringToolsForEclipse.ini
+
+        mkdir -p $out/bin $out/share/applications $out/share/pixmaps
+
+        makeWrapper $out/lib/sts/SpringToolsForEclipse $out/bin/sts \
+          --prefix PATH : ${jdk21}/bin \
+          --prefix LD_LIBRARY_PATH : ${lib.makeLibraryPath [
+            pkgs.glib
+            pkgs.gtk3
+            pkgs.libxtst
+            pkgs.libsecret
+            pkgs.webkitgtk_4_1
+            pkgs.freetype
+            pkgs.fontconfig
+            pkgs.libx11
+            pkgs.libxrender
+            pkgs.zlib
+          ]} \
+          --prefix GIO_EXTRA_MODULES : "${pkgs.glib-networking}/lib/gio/modules" \
+          --prefix XDG_DATA_DIRS : "${pkgs.gsettings-desktop-schemas}/share/gsettings-schemas/${pkgs.gsettings-desktop-schemas.name}:$XDG_DATA_DIRS"
+
+        ln -s $out/bin/sts $out/bin/spring-tool-suite
+        ln -s $out/lib/sts/icon.xpm $out/share/pixmaps/sts.xpm
+
+        cat <<EOF > $out/share/applications/sts.desktop
+        [Desktop Entry]
+        Type=Application
+        Name=Spring Tool Suite
+        Comment=Official Spring Tool Suite IDE
+        Exec=$out/bin/sts %U
+        Icon=sts
+        Terminal=false
+        Categories=Development;IDE;Java;
+        EOF
+      '';
+    };
+
+  # Common JVM & build tooling
   buildTools = [
     jdk21
     jdk17
@@ -104,12 +145,13 @@ let
     (pkgs.maven.override { jdk_headless = jdk21; })
     (pkgs.sbt.override { jre = jdk21; })
     pkgs.lombok
-
-    # Standalone servlet container for Jakarta EE web-app deploy/test outside
-    # the IDE (Spring Boot doesn't need this -- it embeds its own Tomcat).
     pkgs.tomcat10
   ];
 in
 {
-  environment.systemPackages = [ eclipseIde ] ++ buildTools;
+  environment.systemPackages = [
+    eclipseRcp
+    eclipseJee
+    springToolSuite
+  ] ++ buildTools;
 }

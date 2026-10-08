@@ -1,34 +1,82 @@
-# Editor and temporary files
-*~
-*.swp
-*.swo
-*.bak
-.#*
-\#*#
+# ==============================================================================
+# Dotfiles Repository .gitignore
+# ==============================================================================
 
-# Build artifacts and compiled binaries
-bin/invoker
+# ------------------------------------------------------------------------------
+# Build Artifacts & Binaries
+# ------------------------------------------------------------------------------
+# Gradle output
 build/
 .gradle/
 *.class
+
+# GraalVM Native Image & Eclipse output directory
+bin/
+
+# Compiled C shared libraries & object files
 config/gtk-3.0/libwrapper-menu-fix.so
+*.so
+*.o
+*.a
 
-# IDE and project files
-.classpath
-.project
-.settings/
-.idea/
-*.iml
-
-# Nix build outputs
+# ------------------------------------------------------------------------------
+# Nix & Environment Tools
+# ------------------------------------------------------------------------------
+# Nix build symlinks
 result
 result-*
 
-# OS-specific files
+# Direnv cache
+.direnv/
+.envrc.cache
+
+# ------------------------------------------------------------------------------
+# IDEs & Code Editors
+# ------------------------------------------------------------------------------
+# Eclipse
+.classpath
+.project
+.settings/
+.factorypath
+
+# IntelliJ IDEA
+.idea/
+*.iml
+*.ipr
+*.iws
+out/
+
+# Visual Studio Code
+.vscode/
+
+# NetBeans
+nbproject/private/
+
+# ------------------------------------------------------------------------------
+# Editor Backups & Swap Files
+# ------------------------------------------------------------------------------
+*~
+*.swp
+*.swo
+*.swn
+*.bak
+*.orig
+*.rej
+.#*
+\#*#
+
+# ------------------------------------------------------------------------------
+# Logs & JVM Crash Dumps
+# ------------------------------------------------------------------------------
+*.log
+hs_err_pid*.log
+replay_pid*.log
+
+# ------------------------------------------------------------------------------
+# OS & Desktop Cache Files
+# ------------------------------------------------------------------------------
 .DS_Store
 Thumbs.db
-
-# Icon cache files
 *.cache
 .icon-theme.cache
 icon-theme.cache

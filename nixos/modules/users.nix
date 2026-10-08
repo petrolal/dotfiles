@@ -29,6 +29,9 @@ in
       ];
     };
 
+    # Allow wheel group to run sudo without password prompts
+    security.sudo.wheelNeedsPassword = false;
+
     programs.firefox.enable = false;
   };
 }

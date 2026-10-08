@@ -340,11 +340,25 @@ tasks.register('nix-link') {
             ignoreExitValue = true
             commandLine 'git', 'add', '-N', '.'
         }
-        exec {
-            commandLine 'sudo', 'ln', '-sfn', "${nixosDir}/configuration.nix", '/etc/nixos/configuration.nix'
+        def confTarget = "${nixosDir}/configuration.nix"
+        def flakeTarget = "${nixosDir}/flake.nix"
+        def confLink = java.nio.file.Paths.get('/etc/nixos/configuration.nix')
+        def flakeLink = java.nio.file.Paths.get('/etc/nixos/flake.nix')
+
+        boolean needsConf = !java.nio.file.Files.isSymbolicLink(confLink) || java.nio.file.Files.readSymbolicLink(confLink).toString() != confTarget
+        boolean needsFlake = !java.nio.file.Files.isSymbolicLink(flakeLink) || java.nio.file.Files.readSymbolicLink(flakeLink).toString() != flakeTarget
+
+        if (needsConf) {
+            exec {
+                standardInput = System.in
+                commandLine 'sudo', '-S', 'ln', '-sfn', confTarget, '/etc/nixos/configuration.nix'
+            }
         }
-        exec {
-            commandLine 'sudo', 'ln', '-sfn', "${nixosDir}/flake.nix", '/etc/nixos/flake.nix'
+        if (needsFlake) {
+            exec {
+                standardInput = System.in
+                commandLine 'sudo', '-S', 'ln', '-sfn', flakeTarget, '/etc/nixos/flake.nix'
+            }
         }
     }
 }
@@ -361,7 +375,8 @@ tasks.register('nix-switch') {
     doLast {
         def nixosDir = layout.projectDirectory.dir('nixos').asFile.absolutePath
         exec {
-            commandLine 'sudo', 'nixos-rebuild', 'switch', '--flake', nixosDir
+            standardInput = System.in
+            commandLine 'sudo', '-S', 'nixos-rebuild', 'switch', '--flake', nixosDir
         }
     }
 }
@@ -369,6 +384,56 @@ tasks.register('nixSwitch') {
     group = 'NixOS'
     description = 'Alias for nix-switch.'
     dependsOn 'nix-switch'
+}
+
+tasks.register('nix-check') {
+    group = 'NixOS'
+    description = 'Verify Nix flake syntax and evaluate configuration without building.'
+    doLast {
+        def nixosDir = layout.projectDirectory.dir('nixos').asFile.absolutePath
+        exec {
+            commandLine 'nix', 'flake', 'check', nixosDir
+        }
+    }
+}
+tasks.register('nixCheck') {
+    group = 'NixOS'
+    description = 'Alias for nix-check.'
+    dependsOn 'nix-check'
+}
+
+tasks.register('nix-update') {
+    group = 'NixOS'
+    description = 'Update Nix flake inputs (flake.lock) to latest upstream revisions.'
+    doLast {
+        def nixosDir = layout.projectDirectory.dir('nixos').asFile.absolutePath
+        exec {
+            commandLine 'nix', 'flake', 'update', '--flake', nixosDir
+        }
+    }
+}
+tasks.register('nixUpdate') {
+    group = 'NixOS'
+    description = 'Alias for nix-update.'
+    dependsOn 'nix-update'
+}
+
+tasks.register('nix-gc') {
+    group = 'NixOS'
+    description = 'Collect garbage and remove old Nix store generations.'
+    doLast {
+        exec {
+            commandLine 'nix-collect-garbage', '-d'
+        }
+        exec {
+            commandLine 'sudo', '-S', 'nix-collect-garbage', '-d'
+        }
+    }
+}
+tasks.register('nixGc') {
+    group = 'NixOS'
+    description = 'Alias for nix-gc.'
+    dependsOn 'nix-gc'
 }
 
 tasks.register('system-install') {
@@ -380,6 +445,20 @@ tasks.register('systemInstall') {
     group = 'NixOS'
     description = 'Alias for system-install.'
     dependsOn 'system-install'
+}
+
+tasks.register('upgrade') {
+    group = 'NixOS'
+    description = 'Full system upgrade: update flake inputs, rebuild NixOS, and redeploy dotfiles.'
+    dependsOn 'nix-update', 'system-install'
+}
+
+// Ensure proper task execution sequence
+tasks.named('install') {
+    mustRunAfter 'nix-switch'
+}
+tasks.named('system-install') {
+    mustRunAfter 'nix-update'
 }
 
 // ---------------------------------------------------------------------------
