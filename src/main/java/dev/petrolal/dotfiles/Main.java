@@ -7,6 +7,7 @@
 // flow.
 package dev.petrolal.dotfiles;
 
+import dev.petrolal.dotfiles.util.Cli;
 
 public final class Main {
     public static void main(String[] args) {

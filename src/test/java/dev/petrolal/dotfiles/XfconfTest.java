@@ -4,6 +4,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.junit.jupiter.api.Test;
 
+import dev.petrolal.dotfiles.conf.DotfilePaths;
+import dev.petrolal.dotfiles.conf.Xfconf;
+
 class XfconfTest {
 
     @Test

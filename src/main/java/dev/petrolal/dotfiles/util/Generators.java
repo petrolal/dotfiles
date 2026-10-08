@@ -1,11 +1,14 @@
 // Generators.java --- Templated config file generation
 // License: GPL-3.0-or-later
-package dev.petrolal.dotfiles;
+package dev.petrolal.dotfiles.util;
 
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+
+import dev.petrolal.dotfiles.domain.DotfileError;
+import dev.petrolal.dotfiles.domain.Result;
 
 final class Generators {
     private Generators() {}

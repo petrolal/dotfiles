@@ -1,6 +1,6 @@
 // Display.java --- xrandr-based resolution detection
 // License: GPL-3.0-or-later
-package dev.petrolal.dotfiles;
+package dev.petrolal.dotfiles.screen;
 
 
 import java.util.ArrayList;
@@ -8,12 +8,16 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 
-final class Display {
+import dev.petrolal.dotfiles.conf.DotfilePaths;
+import dev.petrolal.dotfiles.domain.Result;
+import dev.petrolal.dotfiles.terminal.Shell;
+
+public final class Display {
     private Display() {}
 
     record DisplayInfo(String output, boolean primary, int width, int height) {}
 
-    record PrimaryResolution(int width, int height, String output) {}
+    public record PrimaryResolution(int width, int height, String output) {}
 
     /** Parses a "WIDTHxHEIGHT[+x+y]" token out of an xrandr output line. */
     static Optional<int[]> parseDisplayResolution(String line) {
@@ -54,7 +58,7 @@ final class Display {
 
     /** Prefers the primary connected monitor, otherwise the highest-resolution one,
      * or defaults to 1920x1080 if undetectable. */
-    static PrimaryResolution determinePrimaryResolution() {
+    public static PrimaryResolution determinePrimaryResolution() {
         List<DisplayInfo> displays = detectDisplayResolutions();
         if (displays.isEmpty()) {
             return new PrimaryResolution(1920, 1080, null);

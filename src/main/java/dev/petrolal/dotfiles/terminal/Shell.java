@@ -1,6 +1,6 @@
 // Shell.java --- Minimal-allocation ProcessBuilder wrapper
 // License: GPL-3.0-or-later
-package dev.petrolal.dotfiles;
+package dev.petrolal.dotfiles.terminal;
 
 
 import java.io.File;
@@ -8,10 +8,13 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
-final class Shell {
+import dev.petrolal.dotfiles.domain.DotfileError;
+import dev.petrolal.dotfiles.domain.Result;
+
+public final class Shell {
     private Shell() {}
 
-    static Result<String> captureOutput(List<String> cmd) {
+    public static Result<String> captureOutput(List<String> cmd) {
         try {
             Process p = new ProcessBuilder(cmd).redirectErrorStream(false).start();
             String out = new String(p.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
@@ -28,7 +31,7 @@ final class Shell {
 
     /** Runs CMD to completion, discarding output. Exit status is not treated as
      * failure — callers that care check it themselves. */
-    static Result<Integer> run(List<String> cmd) {
+    public static Result<Integer> run(List<String> cmd) {
         try {
             Process p = new ProcessBuilder(cmd)
                     .redirectOutput(ProcessBuilder.Redirect.DISCARD)
@@ -45,7 +48,7 @@ final class Shell {
 
     /** Fire-and-forget launch: start() without waitFor() genuinely detaches the child
      * process instead of blocking for its lifetime. */
-    static void spawnDetached(List<String> cmd) {
+    public static void spawnDetached(List<String> cmd) {
         try {
             new ProcessBuilder(cmd)
                     .redirectOutput(ProcessBuilder.Redirect.DISCARD)

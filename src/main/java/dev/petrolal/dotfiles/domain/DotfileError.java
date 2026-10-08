@@ -1,11 +1,11 @@
 // DotfileError.java --- Typed domain errors for Result<T>
 // License: GPL-3.0-or-later
-package dev.petrolal.dotfiles;
+package dev.petrolal.dotfiles.domain;
 
 
 import java.nio.file.Path;
 
-sealed interface DotfileError
+public sealed interface DotfileError
         permits DotfileError.CommandFailed, DotfileError.FileNotFound,
         DotfileError.IoError, DotfileError.ParseError {
     record CommandFailed(String command, int exitCode) implements DotfileError {}

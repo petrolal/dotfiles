@@ -7,7 +7,7 @@
 // in the repo (see Linker.xfconfExportDirP) is enough to manage that
 // channel declaratively: this file parses it and replays every property
 // via xfconf-query, with no per-property Java code required.
-package dev.petrolal.dotfiles;
+package dev.petrolal.dotfiles.conf;
 
 
 import java.io.IOException;
@@ -18,7 +18,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-final class XfconfXml {
+public final class XfconfXml {
     private XfconfXml() {}
 
     record Node(String name, Map<String, String> attrs, List<Node> children) {

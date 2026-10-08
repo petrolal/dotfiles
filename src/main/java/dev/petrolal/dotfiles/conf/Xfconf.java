@@ -1,13 +1,16 @@
 // Xfconf.java --- XFCE / GNOME desktop settings
 // License: GPL-3.0-or-later
-package dev.petrolal.dotfiles;
+package dev.petrolal.dotfiles.conf;
 
 
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
-final class Xfconf {
+import dev.petrolal.dotfiles.screen.Display;
+import dev.petrolal.dotfiles.terminal.Shell;
+
+public final class Xfconf {
     private Xfconf() {}
 
     record XfceSetting(String channel, String property, String type, String value) {}
@@ -73,7 +76,7 @@ final class Xfconf {
     /** Expands a leading ~/ to $HOME. xfconf-query passes values straight through to
      * the consuming app/library with no shell in between, so a literal ~/ never expands
      * on its own and silently fails to resolve. */
-    static String expandHomeTilde(String valStr) {
+    public static String expandHomeTilde(String valStr) {
         if (valStr.length() >= 2 && valStr.startsWith("~/")) {
             String home = DotfilePaths.userHomeDirectory().toString();
             String trimmed = home.endsWith("/") ? home.substring(0, home.length() - 1) : home;
@@ -142,7 +145,7 @@ final class Xfconf {
 
     /** Detects the current display resolution and enforces 0px window manager
      * margins via xfconf. */
-    static void applyDynamicResolutionScaling(boolean dryRun, boolean verbose) {
+    public static void applyDynamicResolutionScaling(boolean dryRun, boolean verbose) {
         Display.PrimaryResolution res = Display.determinePrimaryResolution();
         if (verbose) {
             System.out.printf("Display detection: %dx%d%s -> WM margins: 0px%n",
@@ -185,7 +188,7 @@ final class Xfconf {
         }
     }
 
-    static void applyXfceSettings(Path root, boolean dryRun, boolean verbose) {
+    public static void applyXfceSettings(Path root, boolean dryRun, boolean verbose) {
         if (!DotfilePaths.commandExists("xfconf-query")) {
             if (verbose) System.out.println("[SKIP] xfconf-query not found, skipping desktop theme configuration.");
             return;

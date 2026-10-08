@@ -1,6 +1,6 @@
 // DotfilePaths.java --- Path/environment utilities
 // License: GPL-3.0-or-later
-package dev.petrolal.dotfiles;
+package dev.petrolal.dotfiles.conf;
 
 
 import java.io.IOException;
@@ -9,10 +9,10 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Optional;
 
-final class DotfilePaths {
+public final class DotfilePaths {
     private DotfilePaths() {}
 
-    static Path userHomeDirectory() {
+    public static Path userHomeDirectory() {
         String home = System.getenv("HOME");
         return Paths.get(home != null ? home : System.getProperty("user.home"));
     }
@@ -26,7 +26,7 @@ final class DotfilePaths {
         return dir;
     }
 
-    static Path findDotfilesRoot() {
+    public static Path findDotfilesRoot() {
         String envDir = System.getenv("DOTFILES_DIR");
         if (envDir != null) {
             Path p = Paths.get(envDir);
@@ -56,7 +56,7 @@ final class DotfilePaths {
         return Paths.get("").toAbsolutePath().normalize();
     }
 
-    static boolean commandExists(String cmd) {
+    public static boolean commandExists(String cmd) {
         if (cmd == null || cmd.isEmpty()) return false;
         if (cmd.indexOf('/') >= 0) {
             Path p = Paths.get(cmd);

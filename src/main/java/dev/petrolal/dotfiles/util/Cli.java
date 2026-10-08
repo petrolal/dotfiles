@@ -1,9 +1,10 @@
 // Cli.java --- CLI interface
 // License: GPL-3.0-or-later
-package dev.petrolal.dotfiles;
+package dev.petrolal.dotfiles.util;
 
+import dev.petrolal.dotfiles.conf.Xfconf;
 
-final class Cli {
+public final class Cli {
     private Cli() {}
 
     static final String VERSION = "1.2.0";
@@ -40,7 +41,7 @@ final class Cli {
 
     private enum Action { DEPLOY, UNINSTALL, SCALE, GENERATE }
 
-    static void main(String[] argv) {
+    public static void main(String[] argv) {
         boolean dryRun = false;
         boolean verbose = true;
         boolean reload = true;

@@ -1,12 +1,17 @@
 // Orchestrator.java --- Deployment orchestration
 // License: GPL-3.0-or-later
-package dev.petrolal.dotfiles;
+package dev.petrolal.dotfiles.util;
 
 
 import java.nio.file.Path;
 import java.util.List;
 
-final class Orchestrator {
+import dev.petrolal.dotfiles.conf.DotfilePaths;
+import dev.petrolal.dotfiles.conf.Xfconf;
+import dev.petrolal.dotfiles.domain.Result;
+import dev.petrolal.dotfiles.terminal.Shell;
+
+public final class Orchestrator {
     private Orchestrator() {}
 
     record DeployResult(boolean ok, int failures, int successes) {}

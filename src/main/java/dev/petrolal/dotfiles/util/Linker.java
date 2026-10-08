@@ -1,6 +1,6 @@
 // Linker.java --- Symlink discovery/creation/removal
 // License: GPL-3.0-or-later
-package dev.petrolal.dotfiles;
+package dev.petrolal.dotfiles.util;
 
 
 import java.io.IOException;
@@ -14,11 +14,14 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-final class Linker {
+import dev.petrolal.dotfiles.domain.DotfileError;
+import dev.petrolal.dotfiles.domain.Result;
+
+public final class Linker {
     private Linker() {}
 
     /** A (from -> to) path pair: used both for root-target prefixes and resolved mappings. */
-    record Mapping(String from, String to) {}
+    public record Mapping(String from, String to) {}
 
     enum UnlinkOutcome { SKIPPED, REMOVED, FAILED }
 
@@ -127,12 +130,12 @@ final class Linker {
     /** True if relpath is (or is under) an xfce-perchannel-xml export directory.
      * Those hold live settings exports: never symlinked (the running session
      * clobbers them), instead auto-applied via xfconf-query. */
-    static boolean xfconfExportDirP(String relpath) {
+    public static boolean xfconfExportDirP(String relpath) {
         int pos = relpath.indexOf(XFCONF_EXPORT_MARKER);
         return pos >= 0 && (pos == 0 || relpath.charAt(pos - 1) == '/');
     }
 
-    static boolean excludedP(String relpath) {
+    public static boolean excludedP(String relpath) {
         if (xfconfExportDirP(relpath)) return true;
         for (String prefix : EXCLUDES) {
             if (relpath.equals(prefix)) return true;
@@ -145,13 +148,13 @@ final class Linker {
         return false;
     }
 
-    static boolean prefixMatchP(String prefix, String relpath) {
+    public static boolean prefixMatchP(String prefix, String relpath) {
         return relpath.length() >= prefix.length()
                 && relpath.startsWith(prefix)
                 && (relpath.length() == prefix.length() || relpath.charAt(prefix.length()) == '/');
     }
 
-    static Optional<Mapping> rootTargetFor(String relpath) {
+    public static Optional<Mapping> rootTargetFor(String relpath) {
         Mapping best = null;
         for (Mapping entry : ROOT_TARGETS) {
             if (prefixMatchP(entry.from(), relpath) && (best == null || entry.from().length() > best.from().length())) {
