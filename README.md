@@ -19,33 +19,34 @@ That's it. The bootstrap script only needs what base NixOS provides (`sh`,
 
 1. Link the flake into `/etc/nixos`
 2. Rebuild NixOS (installs all packages, fonts, tools)
-3. Build the native deployer (Maven + GraalVM native-image)
+3. Build the native deployer (Gradle + GraalVM native-image)
 4. Deploy dotfiles and apply the desktop theme
 
 Log out and back in for all changes to take effect.
 
 ## Day-to-Day Usage
 
-After the initial bootstrap, use Make:
+After the initial bootstrap, use Gradle (`./gradlew`):
 
 | Command | What it does |
 |---|---|
-| `make deploy` | Redeploy dotfiles + theme (no NixOS rebuild) |
-| `make nix-switch` | Rebuild NixOS after editing `.nix` modules |
-| `make system-install` | Rebuild NixOS + redeploy (full update) |
-| `make dry-run` | Preview what deploy would change |
-| `make uninstall` | Safely remove all deployed dotfiles symlinks |
-| `make scale` | Reset WM margins for current display |
-| `make help` | Show all available targets |
+| `./gradlew deploy` | Redeploy dotfiles + theme (no NixOS rebuild) |
+| `./gradlew nix-switch` | Rebuild NixOS after editing `.nix` modules |
+| `./gradlew system-install` | Rebuild NixOS + redeploy (full update) |
+| `./gradlew dry-run` | Preview what deploy would change |
+| `./gradlew uninstall` | Safely remove all deployed dotfiles symlinks |
+| `./gradlew scale` | Reset WM margins for current display |
+| `./gradlew tasks` | Show all available Gradle tasks |
 
 ## Project Structure
 
 ```
 dotfiles/
 ├── bootstrap.sh                    # First-time setup script
-├── Makefile                        # Build and deploy orchestration
-├── pom.xml                         # Maven build (GraalVM native-image via the `native` profile)
-├── shell.nix                       # Nix dev shell (gnumake, GraalVM, Maven, git)
+├── build.gradle                    # Gradle build & orchestration tasks
+├── settings.gradle                 # Gradle settings
+├── gradlew                         # Gradle wrapper script
+├── shell.nix                       # Nix dev shell (Gradle, GraalVM, git)
 │
 ├── nixos/                          # NixOS system configuration
 │   ├── flake.nix                   # Flake entry point
@@ -74,7 +75,7 @@ dotfiles/
 │   ├── Result.java                 # Functional error handling
 │   └── DotfileError.java           # Typed domain errors
 │
-├── src/test/java/dev/petrolal/dotfiles/  # JUnit 5 tests (`mvn test`)
+├── src/test/java/dev/petrolal/dotfiles/  # JUnit 5 tests (`./gradlew test`)
 │
 ├── config/                         # Dotfiles (symlinked to ~/.config/)
 │   ├── gtk-2.0/gtkrc

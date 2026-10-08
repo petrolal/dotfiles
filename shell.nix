@@ -2,13 +2,13 @@
 
 pkgs.mkShell {
   packages = with pkgs; [
-    gnumake
+    gradle
     graalvmPackages.graalvm-ce
     git
   ];
 
   shellHook = ''
     echo "⛧ [Infernal Mainframe Shell Loaded]"
-    echo "Commands available: make, make nix-switch, native-image"
+    echo "Commands available: ./gradlew, ./gradlew nix-switch, native-image"
   '';
 }

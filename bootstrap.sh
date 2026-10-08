@@ -4,7 +4,7 @@
 #
 # This script requires only what a base NixOS provides: sh, git, sudo,
 # ln, and nixos-rebuild.  It links the flake into /etc/nixos, rebuilds
-# the system (which installs gnumake, GraalVM, and every other package),
+# the system (which installs Gradle, GraalVM, and every other package),
 # then compiles and deploys the dotfiles.
 #
 # Usage:
@@ -12,7 +12,7 @@
 #   cd ~/dotfiles
 #   ./bootstrap.sh
 #
-# After the first run, use `make system-install` or `make deploy` for
+# After the first run, use `./gradlew system-install` or `./gradlew deploy` for
 # subsequent updates.
 
 set -eu
@@ -77,10 +77,10 @@ sudo nixos-rebuild switch --flake "${NIXOS_DIR}#default"
 # Step 4: Build the native invoker and deploy dotfiles
 # ---------------------------------------------------------------------------
 info "Compiling the invoker..."
-make -C "${DOTFILES_DIR}" all
+"${DOTFILES_DIR}/gradlew" -p "${DOTFILES_DIR}" all
 
 info "Deploying dotfiles and desktop theme..."
-make -C "${DOTFILES_DIR}" deploy
+"${DOTFILES_DIR}/gradlew" -p "${DOTFILES_DIR}" deploy
 
 # ---------------------------------------------------------------------------
 # Done
@@ -90,8 +90,8 @@ info "Bootstrap complete!"
 echo ""
 echo "  Your system is fully configured. For future changes:"
 echo ""
-echo "    make deploy          Redeploy dotfiles and theme"
-echo "    make nix-switch      Rebuild NixOS after editing nix modules"
-echo "    make system-install  Rebuild NixOS + redeploy (= full update)"
+echo "    ./gradlew deploy          Redeploy dotfiles and theme"
+echo "    ./gradlew nix-switch      Rebuild NixOS after editing nix modules"
+echo "    ./gradlew system-install  Rebuild NixOS + redeploy (= full update)"
 echo ""
 echo "  Log out and back in for all desktop changes to take effect."
