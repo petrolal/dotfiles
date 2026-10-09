@@ -22,7 +22,7 @@ in
     users.users.${username} = {
       isNormalUser = true;
       description = userDesc;
-      extraGroups = [ "networkmanager" "wheel" ];
+      extraGroups = [ "networkmanager" "wheel" "docker" ];
       packages = with pkgs; [
         thunderbird
         google-chrome

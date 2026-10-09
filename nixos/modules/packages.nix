@@ -23,6 +23,35 @@ let
     claude-code
   ];
 
+  # Fast search, used by Hell Emacs' consult-ripgrep/consult-find (C-c s p / C-c s f).
+  searchTools = with pkgs; [
+    ripgrep
+    fd
+  ];
+
+  # Language servers, linters and CLIs that Hell Emacs' modules (:lang glsl,
+  # :lang nix, :lang sh, :lang terraform, :lang sql, :lang protobuf, :lang org)
+  # shell out to but don't install themselves.
+  languageTools = with pkgs; [
+    nixd            # Nix language server
+    glslls          # GLSL language server
+    glslang         # glslangValidator
+    shaderc         # glslc
+    shellcheck      # shell script diagnostics
+    terraform
+    terraform-ls
+    protobuf        # protoc
+    postgresql      # psql client
+    pandoc          # extended Org exports
+  ];
+
+  # The Scala language server. Installed here (reproducibly, pinned to
+  # nixpkgs) rather than left to lsp-metals, which would otherwise
+  # self-install it via coursier on first use.
+  scalaTools = with pkgs; [
+    metals
+  ];
+
   systemTools = with pkgs; [
     pciutils
     htop
@@ -47,6 +76,9 @@ in {
     buildTools
     ++ wallpaperTools
     ++ devTools
+    ++ searchTools
+    ++ languageTools
+    ++ scalaTools
     ++ systemTools
     ++ mediaUtils;
 

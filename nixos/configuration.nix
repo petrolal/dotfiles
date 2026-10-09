@@ -11,6 +11,7 @@
     ./modules/packages.nix
     ./modules/development.nix
     ./modules/eclipse.nix
+    ./modules/containers.nix
   ];
 
   system.stateVersion = "26.05";
