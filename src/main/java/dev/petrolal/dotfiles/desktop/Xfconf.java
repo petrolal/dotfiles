@@ -19,7 +19,7 @@ public final class Xfconf {
     static final List<XfceSetting> XFCE_SETTINGS = List.of(
             // GTK and Theme Configuration (default dark theme)
             new XfceSetting("xsettings", "/Net/ThemeName", "string", "Adwaita-dark"),
-            new XfceSetting("xsettings", "/Net/IconThemeName", "string", "Adwaita"),
+            new XfceSetting("xsettings", "/Net/IconThemeName", "string", "Chicago95"),
             new XfceSetting("xsettings", "/Gtk/CursorThemeSize", "int", "24"),
             new XfceSetting("xsettings", "/Gtk/FontName", "string", "Sans 10"),
             new XfceSetting("xsettings", "/Gtk/ApplicationPreferDarkTheme", "bool", "true"),
@@ -64,7 +64,7 @@ public final class Xfconf {
     );
 
     static final List<GnomeSetting> GNOME_SETTINGS = List.of(
-            new GnomeSetting("org.gnome.desktop.interface", "icon-theme", "Adwaita"),
+            new GnomeSetting("org.gnome.desktop.interface", "icon-theme", "Chicago95"),
             new GnomeSetting("org.gnome.desktop.interface", "gtk-theme", "Adwaita-dark"),
             new GnomeSetting("org.gnome.desktop.interface", "color-scheme", "prefer-dark")
     );

@@ -1,0 +1,9 @@
+[version]
+junitBom = "5.11.13"
+
+[libraries]
+
+junitBom = { module = "" }
+
+[bundle]
+tests = { "" }

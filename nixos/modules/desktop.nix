@@ -68,6 +68,7 @@
   environment.systemPackages = with pkgs; [
     adwaita-icon-theme
     gnome-themes-extra
+    chicago95
   ];
 
   # Portal and dconf management
