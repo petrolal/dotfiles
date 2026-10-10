@@ -195,7 +195,7 @@ exit                                        # leave
 ```
 
 Every version argument goes to the template that declares it. On entry each
-template prints its line:
+template prints its line and drops you straight into Fish (or your configured `$SHELL`):
 
 ```
 🐍 Python 3.13.15 loaded (venv: ...)

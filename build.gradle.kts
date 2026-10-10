@@ -106,6 +106,7 @@ tasks.named<BuildNativeImageTask>("nativeCompile") {
     outputDirectory.set(layout.projectDirectory.dir("bin"))
     doFirst {
         layout.projectDirectory.dir("bin").asFile.mkdirs()
+        layout.buildDirectory.dir("native/nativeCompile").get().asFile.mkdirs()
     }
     val graalHome = resolveGraalVmHome()
     if (graalHome != null) {

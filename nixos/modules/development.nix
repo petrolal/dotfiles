@@ -120,10 +120,12 @@ let
   # devshell [--argstr NAME VERSION ...] --- enter the shell with every
   # template from any directory. venv, GOPATH and npm -g live in
   # ~/.local/share/devshell instead of the current directory.
+  # Drops into fish (or $SHELL) interactively so users keep their chosen shell.
   devshell = pkgs.writeShellScriptBin "devshell" ''
     export DEV_STATE_DIR="''${XDG_DATA_HOME:-$HOME/.local/share}/devshell"
     mkdir -p "$DEV_STATE_DIR"
-    exec nix-shell ${templates}/full/shell.nix "$@"
+    user_shell="''${SHELL:-${pkgs.fish}/bin/fish}"
+    exec nix-shell ${templates}/full/shell.nix "$@" --command "exec $user_shell"
   '';
 in
 {
