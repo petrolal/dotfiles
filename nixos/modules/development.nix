@@ -133,8 +133,8 @@ in
   # nixpkgs), so nix-shell needs flakes enabled.
   nix.settings.experimental-features = [ "nix-command" "flakes" ];
 
-  # Hooks into bash; nix-direnv is enabled by default and provides `use nix`
-  # with caching.
+  # Hooks into fish, bash, and zsh automatically; nix-direnv is enabled by default
+  # and provides `use nix` with caching.
   programs.direnv.enable = true;
 
   environment.systemPackages = [ jvm-init node-init go-init python-init dev-init devshell ];

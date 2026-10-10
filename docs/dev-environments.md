@@ -273,19 +273,19 @@ to the read-only Nix store. Either:
   `environment.systemPackages`, for example `pkgs.typescript`, `pkgs.pnpm`,
   `pkgs.typescript-language-server`, `pkgs.ruff`, `pkgs.black` or
   `pkgs.poetry`. It is versioned with the rest of the system.
-- **npm's way:** point npm at a folder in your home and add it to PATH, for
-  example in `~/.bashrc`:
+- **npm's way:** point npm at a folder in your home and add it to PATH (in `~/.config/fish/config.fish` or `~/.bashrc`):
 
-  ```bash
-  export NPM_CONFIG_PREFIX="$HOME/.npm-global"
-  export PATH="$NPM_CONFIG_PREFIX/bin:$PATH"
+  ```fish
+  set -gx NPM_CONFIG_PREFIX "$HOME/.npm-global"
+  fish_add_path "$NPM_CONFIG_PREFIX/bin"
   ```
 
   Packages with native addons may break after a Node upgrade; reinstall them if so.
 - **Python's way:** with a global `python3` and `uv` (option 3), run
   `uv tool install <pkg>`. Each tool gets its own isolated venv and its command
-  lands in `~/.local/bin`. Set `UV_PYTHON_DOWNLOADS=never` in `~/.bashrc` so uv
-  uses the Nix Python instead of downloading one that does not run on NixOS.
+  lands in `~/.local/bin`. Set `set -gx UV_PYTHON_DOWNLOADS never` in `~/.config/fish/config.fish`
+  (or `export UV_PYTHON_DOWNLOADS=never` in `~/.bashrc`) so uv uses the Nix Python
+  instead of downloading one that does not run on NixOS.
 
 ## Without direnv, and troubleshooting
 
