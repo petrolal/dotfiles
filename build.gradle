@@ -142,6 +142,15 @@ tasks.register('all') {
     dependsOn 'nativeCompile', 'compileWrapperModule'
 }
 
+// NOTE: An Emacs+ Eclipse plugin install step was attempted here (p2 director,
+// IU com.mulgasoft.emacsplus.feature.feature.group) but was dropped: that
+// plugin hasn't been updated since 2021 and depends on an OSGi bundle
+// (javax.xml 1.3.4) that current Eclipse no longer ships -- a real binary
+// incompatibility, not something fixable with director flags. The native
+// Emacs keybinding scheme (config/eclipse/plugin_customization.ini +
+// org.eclipse.ui.workbench.prefs, see nixos/modules/eclipse.nix) already
+// gives C-x C-f, C-x b, C-x 2/3 etc. without needing this plugin.
+
 // ---------------------------------------------------------------------------
 // Verification & Check Tasks
 // ---------------------------------------------------------------------------

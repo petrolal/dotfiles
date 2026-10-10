@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Conky
+Comment=Abyssal Biopunk system stats overlay
+Exec=conky
+Icon=utilities-system-monitor
+Terminal=false
+NoDisplay=true
+X-GNOME-Autostart-enabled=true
+X-XFCE-Autostart-enabled=true
+X-XFCE-Autostart-Delay=2

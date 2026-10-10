@@ -11,7 +11,19 @@ let
     } ''
       mkdir -p $out/bin $out/share/applications $out/share/pixmaps
 
-      makeWrapper ${pkg}/bin/eclipse $out/bin/${binName}
+      # -pluginCustomization seeds the native Emacs key scheme
+      # (org.eclipse.ui.emacsAcceleratorConfiguration: C-x C-f, C-x b, C-x 2/3,
+      # etc.) as the default on first run, deployed to that path by the
+      # invoker from config/eclipse/ (see Linker.OVERRIDES). -configuration
+      # points Equinox at a writable per-user config area instead of the
+      # read-only Nix store install, since Eclipse needs to write there on
+      # every launch. The \$HOME escapes are deliberate: they must reach the
+      # generated wrapper script as the literal text "$HOME", to be expanded
+      # when the user launches Eclipse, not substituted now with the build
+      # sandbox's HOME.
+      makeWrapper ${pkg}/bin/eclipse $out/bin/${binName} \
+        --add-flags "-pluginCustomization \$HOME/.config/eclipse/plugin_customization.ini" \
+        --add-flags "-configuration \$HOME/.local/share/eclipse/configuration"
 
       ${lib.optionalString defaultAlias ''
         ln -s $out/bin/${binName} $out/bin/eclipse

@@ -18,6 +18,19 @@ let
     feh
   ];
 
+  # GLSL/OpenGL audio-reactive rice layer: glava renders audio-reactive GLSL
+  # shaders (via xwinwrap, same tool as wallpaperTools, as a desktop-level
+  # window) and conky overlays system/clock widgets on top. Both read their
+  # config from config/glava and config/conky (symlinked by the invoker, see
+  # Linker.ROOT_TARGETS); only the packages themselves are installed here.
+  # Audio capture goes through pipewire's pulse-compat socket (desktop.nix:
+  # services.pipewire.pulse.enable), which glava's libpulse backend talks to
+  # directly.
+  visualizerTools = with pkgs; [
+    glava
+    conky
+  ];
+
   devTools = with pkgs; [
     emacs
     claude-code
@@ -75,6 +88,7 @@ in {
   environment.systemPackages =
     buildTools
     ++ wallpaperTools
+    ++ visualizerTools
     ++ devTools
     ++ searchTools
     ++ languageTools

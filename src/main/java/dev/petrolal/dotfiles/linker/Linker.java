@@ -38,13 +38,18 @@ public final class Linker {
     static final List<String> EXCLUDES = List.of(
             "config/gtk-2.0/gtkrc",
             "config/gtk-3.0/libwrapper-menu-fix.so",
-            "config/gtk-3.0/wrapper-menu-fix.c"
+            "config/gtk-3.0/wrapper-menu-fix.c",
+            "config/eclipse/org.eclipse.ui.workbench.prefs"
     );
 
     /** Explicit (source -> target) pairs for paths that don't fit the generic
      * root-mirrored layout: renames, or a source linked to more than one target. */
     static final List<Mapping> OVERRIDES = List.of(
-            new Mapping("config/gtk-2.0/gtkrc", ".gtkrc-2.0")
+            new Mapping("config/gtk-2.0/gtkrc", ".gtkrc-2.0"),
+            // Eclipse reads this "configuration scope" default from
+            // ~/.eclipse/.settings/, not from $XDG_CONFIG_HOME.
+            new Mapping("config/eclipse/org.eclipse.ui.workbench.prefs",
+                    ".eclipse/.settings/org.eclipse.ui.workbench.prefs")
     );
 
     /** Single-symlink target paths (relative to $HOME) from ROOT_TARGETS/OVERRIDES

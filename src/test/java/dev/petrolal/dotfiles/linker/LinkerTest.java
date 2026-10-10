@@ -20,7 +20,9 @@ class LinkerTest {
     void isExcludedMatchesListedFileAndSkipsUnrelatedOnes() {
         assertTrue(Linker.isExcluded("config/gtk-2.0/gtkrc"));
         assertTrue(Linker.isExcluded("config/gtk-3.0/wrapper-menu-fix.c"));
+        assertTrue(Linker.isExcluded("config/eclipse/org.eclipse.ui.workbench.prefs"));
         assertFalse(Linker.isExcluded("config/gtk-3.0/settings.ini"));
+        assertFalse(Linker.isExcluded("config/eclipse/plugin_customization.ini"));
     }
 
     @Test
