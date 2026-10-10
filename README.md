@@ -38,6 +38,12 @@ After the initial bootstrap, use Gradle (`./gradlew`):
 | `./gradlew scale` | Reset WM margins for current display |
 | `./gradlew tasks` | Show all available Gradle tasks |
 
+Default login shell is [fish](https://fishshell.com/) (`nixos/modules/users.nix`),
+configured in `config/fish/` (prompt, theme, abbreviations). Each command
+above also has a fish abbreviation that runs from anywhere, no `cd` needed:
+`dfdeploy`, `dfdry`, `dfinstall`, `dfuninstall`, `dfswitch`, `dfupdate`,
+`dfupgrade`, `dfscale`, `dfreload`, plus `dotfiles` to `cd ~/dotfiles`.
+
 ## Project Structure
 
 ```
@@ -57,7 +63,7 @@ dotfiles/
 │       ├── desktop.nix             # X11, XFCE, sound, locale, GTK env
 │       ├── nvidia.nix              # GPU (PRIME offload)
 │       ├── fonts.nix               # Nerd Fonts (JetBrainsMono, FiraCode, Hack, Meslo)
-│       ├── users.nix               # User accounts
+│       ├── users.nix               # User accounts, default shell (fish)
 │       ├── packages.nix            # System packages
 │       └── development.nix         # direnv, dev-init, devshell
 │
@@ -73,9 +79,12 @@ dotfiles/
 ├── src/test/java/dev/petrolal/dotfiles/  # JUnit 5 tests (mirrored package structure)
 │
 ├── config/                         # Dotfiles (symlinked to ~/.config/)
+│   ├── fish/                       # Default shell: prompt, abbreviations, theme
 │   ├── gtk-2.0/gtkrc
 │   ├── gtk-3.0/settings.ini
 │   ├── gtk-4.0/settings.ini
+│   ├── conky/conky.conf            # System stats overlay
+│   ├── glava/                      # Audio-reactive GLSL visualizer
 │   └── picom/picom.conf            # Compositor
 │
 └── docs/
