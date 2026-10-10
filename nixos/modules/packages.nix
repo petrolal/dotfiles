@@ -82,6 +82,16 @@ let
   mediaUtils = with pkgs; [
     shotcut
     appimage-run
+    nomacs      # image viewer
+    celluloid   # GTK frontend for mpv, used as the default video viewer
+    spotify
+  ];
+
+  # General-purpose apps reached for daily, outside any dev/media workflow.
+  dailyTools = with pkgs; [
+    galculator
+    xarchiver   # archive manager (zip/tar/7z)
+    evince      # PDF viewer
   ];
 
 in {
@@ -94,7 +104,8 @@ in {
     ++ languageTools
     ++ scalaTools
     ++ systemTools
-    ++ mediaUtils;
+    ++ mediaUtils
+    ++ dailyTools;
 
   # Lets unpatched/FHS binaries (AppImages, etc.) find dynamic libs without
   # polluting every process on the system via a global LD_LIBRARY_PATH.
