@@ -15,8 +15,30 @@ version = "1.0.0"
 defaultTasks("all")
 
 java {
-    sourceCompatibility = JavaVersion.VERSION_21
-    targetCompatibility = JavaVersion.VERSION_21
+    sourceCompatibility = JavaVersion.toVersion("25")
+    targetCompatibility = JavaVersion.toVersion("25")
+}
+
+tasks.withType<JavaCompile> {
+    val graalHome = resolveGraalVmHome()
+    if (graalHome != null) {
+        options.isFork = true
+        options.forkOptions.javaHome = File(graalHome)
+    }
+}
+
+tasks.withType<Test> {
+    val graalHome = resolveGraalVmHome()
+    if (graalHome != null) {
+        executable = File(graalHome, "bin/java").absolutePath
+    }
+}
+
+tasks.withType<JavaExec> {
+    val graalHome = resolveGraalVmHome()
+    if (graalHome != null) {
+        executable = File(graalHome, "bin/java").absolutePath
+    }
 }
 
 application {
@@ -97,7 +119,7 @@ graalvmNative {
         named("main") {
             imageName.set("invoker")
             mainClass.set("dev.petrolal.dotfiles.Main")
-            buildArgs.addAll("-O3", "--gc=epsilon", "-march=native")
+            buildArgs.addAll("-O3", "--gc=epsilon", "-march=native", "--enable-native-access=ALL-UNNAMED")
         }
     }
 }
@@ -162,10 +184,7 @@ tasks.register("all") {
 // IU com.mulgasoft.emacsplus.feature.feature.group) but was dropped: that
 // plugin hasn't been updated since 2021 and depends on an OSGi bundle
 // (javax.xml 1.3.4) that current Eclipse no longer ships -- a real binary
-// incompatibility, not something fixable with director flags. The native
-// Emacs keybinding scheme (config/eclipse/plugin_customization.ini +
-// org.eclipse.ui.workbench.prefs, see nixos/modules/eclipse.nix) already
-// gives C-x C-f, C-x b, C-x 2/3 etc. without needing this plugin.
+// incompatibility, not something fixable with director flags.
 
 // ---------------------------------------------------------------------------
 // Verification & Check Tasks

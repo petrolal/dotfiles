@@ -11,10 +11,9 @@ let
     } ''
       mkdir -p $out/bin $out/share/applications $out/share/pixmaps
 
-      # -pluginCustomization seeds the native Emacs key scheme
-      # (org.eclipse.ui.emacsAcceleratorConfiguration: C-x C-f, C-x b, C-x 2/3,
-      # etc.) as the default on first run, deployed to that path by the
-      # invoker from config/eclipse/ (see Linker.OVERRIDES). -configuration
+      # -pluginCustomization seeds plugin preference defaults on first run,
+      # deployed to that path by the invoker from config/eclipse/ (see
+      # Linker.OVERRIDES). -configuration
       # points Equinox at a writable per-user config area instead of the
       # read-only Nix store install, since Eclipse needs to write there on
       # every launch. The \$HOME escapes are deliberate: they must reach the
