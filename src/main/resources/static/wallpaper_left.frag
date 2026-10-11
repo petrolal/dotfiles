@@ -129,18 +129,12 @@ vec3 calcNormal(vec3 p) {
 }
 
 void main() {
-    vec2 uv = (gl_FragCoord.xy - 0.5 * u_resolution.xy) / u_resolution.y;
+    vec2 coord = vec2(mod(gl_FragCoord.x, u_resolution.x), gl_FragCoord.y);
+    vec2 uv = (coord - 0.5 * u_resolution.xy) / u_resolution.y;
 
-    // Flashlight aim direction linked smoothly to mouse cursor
-    vec2 mouseNorm = vec2(0.0);
-    if (u_resolution.x > 0.0 && u_resolution.y > 0.0) {
-        mouseNorm = (u_mouse.xy / u_resolution.xy) - 0.5;
-        mouseNorm.y = -mouseNorm.y;
-    }
-
-    // Camera view
+    // Camera view (steady aim, no mouse tilt)
     vec3 ro = vec3(0.0, 0.45, 0.7);
-    vec3 target = vec3(mouseNorm.x * 0.8, -0.1 + mouseNorm.y * 0.6, 3.4);
+    vec3 target = vec3(0.0, -0.1, 3.4);
     vec3 fwd = normalize(target - ro);
     vec3 right = normalize(cross(vec3(0.0, 1.0, 0.0), fwd));
     vec3 up = cross(fwd, right);
