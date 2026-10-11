@@ -54,46 +54,43 @@ float sdCylinder(vec3 p, float h, float r) {
 
 int hitMat = 0;
 
-// Scene Definition matching the medical horror room
+// Scene Definition: Perspective room with rotated front-facing medical cart
 float map(vec3 p) {
     hitMat = 0;
     float d = 1e5;
 
-    // 1. Room Shell (Floor y=-1.5, Back wall z=6.5, Left wall x=-3.2)
+    // 1. Room Envelope (Floor y=-1.5, Back wall z=8.5, Left wall x=-3.8)
     float floorDist = p.y + 1.5;
     if (floorDist < d) { d = floorDist; hitMat = 1; }
 
-    float backWall = 6.5 - p.z;
+    float backWall = 8.5 - p.z;
     if (backWall < d) { d = backWall; hitMat = 2; }
 
-    float leftWall = p.x + 3.2;
+    float leftWall = p.x + 3.8;
     if (leftWall < d) { d = leftWall; hitMat = 3; }
 
-    // 2. Central Anesthesia / Medical Monitoring Machine
-    vec3 machP = p - vec3(0.0, -0.6, 3.4);
+    // 2. Medical Anesthesia Machine - Rotated to face the camera/viewer directly
+    vec3 machP = p - vec3(-2.1, -0.6, 4.4);
+    machP.xz *= rot(-0.25); // Slanted slightly inward, front panel and screen face viewer
     
-    // Base Cabinet / Cart
     float cart = sdBox(machP - vec3(0.0, -0.35, 0.0), vec3(0.55, 0.55, 0.45));
-    
-    // Slanted Front Panel
     vec3 panelP = machP - vec3(0.0, 0.15, -0.05);
     panelP.yz *= rot(0.18);
     float panel = sdBox(panelP, vec3(0.52, 0.22, 0.42));
     float body = min(cart, panel);
 
-    // CRT Monitor on top
     vec3 monP = machP - vec3(-0.05, 0.6, 0.0);
     float monitor = sdBox(monP, vec3(0.48, 0.28, 0.35));
     float machine = min(body, monitor);
 
-    // CRT Screen Face (Inset)
+    // Front-facing Medical CRT Screen face
     vec3 screenP = monP - vec3(-0.12, 0.02, -0.36);
     float screen = sdBox(screenP, vec3(0.26, 0.18, 0.03));
     if (screen < d) { d = screen; hitMat = 10; }
 
     if (machine < d) { d = machine; hitMat = 4; }
 
-    // Dials / Gauge Knobs on slanted panel
+    // Front Control Dials
     vec3 knobP1 = panelP - vec3(-0.25, 0.0, -0.44);
     vec3 knobP2 = panelP - vec3(0.0, 0.0, -0.44);
     vec3 knobP3 = panelP - vec3(0.25, 0.0, -0.44);
@@ -102,19 +99,56 @@ float map(vec3 p) {
                      sdCylinder(knobP3.xzy, 0.04, 0.09)));
     if (knob < d) { d = knob; hitMat = 6; }
 
-    // Gas / Oxygen Cylinders mounted to the cart sides
+    // Side Oxygen Cylinders
     vec3 tankL = machP - vec3(-0.72, -0.3, 0.0);
     vec3 tankR = machP - vec3(0.72, -0.3, 0.0);
     float tanks = min(sdCylinder(tankL, 0.55, 0.15), sdCylinder(tankR, 0.55, 0.15));
     if (tanks < d) { d = tanks; hitMat = 7; }
 
-    // 3. Autopsy / Stretcher Examination Bed (Right Background)
-    vec3 bedP = p - vec3(1.9, -0.85, 4.8);
-    bedP.xz *= rot(-0.08);
+    // 3. Autopsy Examination Bed (Right corridor)
+    vec3 bedP = p - vec3(2.3, -0.85, 5.6);
+    bedP.xz *= rot(-0.12);
     float bedPad = sdBox(bedP, vec3(0.65, 0.1, 1.4));
     float bedFrame = sdBox(bedP - vec3(0.0, -0.35, 0.0), vec3(0.6, 0.25, 1.35));
     float bed = min(bedPad, bedFrame);
     if (bed < d) { d = bed; hitMat = 5; }
+
+    // 4. Center Office Desk with Retro White PC (Rear of room at z=6.4)
+    vec3 deskP = p - vec3(0.0, -0.75, 6.4);
+    
+    float deskTop = sdBox(deskP - vec3(0.0, 0.0, 0.0), vec3(1.15, 0.04, 0.65));
+    float deskLegL = sdBox(deskP - vec3(-1.05, -0.36, 0.0), vec3(0.05, 0.34, 0.55));
+    float deskLegR = sdBox(deskP - vec3(1.05, -0.36, 0.0), vec3(0.05, 0.34, 0.55));
+    float deskBack = sdBox(deskP - vec3(0.0, -0.30, 0.45), vec3(1.05, 0.28, 0.03));
+    float desk = min(min(deskTop, min(deskLegL, deskLegR)), deskBack);
+    if (desk < d) { d = desk; hitMat = 8; }
+
+    // Retro Off-White PC CRT Monitor
+    vec3 pcMonP = deskP - vec3(-0.15, 0.44, 0.10);
+    float pcBezel = sdBox(pcMonP, vec3(0.44, 0.34, 0.36));
+    float pcBase = sdBox(pcMonP - vec3(0.0, -0.36, 0.0), vec3(0.24, 0.04, 0.24));
+    float pcNeck = sdCylinder(pcMonP - vec3(0.0, -0.32, 0.0), 0.04, 0.08);
+    float pcMonitorHousing = min(pcBezel, min(pcBase, pcNeck));
+
+    // PC Screen Face
+    vec3 pcScrP = pcMonP - vec3(0.0, 0.0, -0.365);
+    float pcScreen = sdBox(pcScrP, vec3(0.35, 0.26, 0.02));
+    if (pcScreen < d) { d = pcScreen; hitMat = 11; }
+
+    // Retro Beige Horizontal Desktop Tower Case
+    vec3 towerP = deskP - vec3(0.70, 0.26, 0.08);
+    float tower = sdBox(towerP, vec3(0.24, 0.22, 0.46));
+    
+    // Keyboard
+    vec3 kbP = deskP - vec3(-0.15, 0.055, -0.32);
+    float keyboard = sdBox(kbP, vec3(0.42, 0.015, 0.15));
+
+    // Mouse
+    vec3 mouseP = deskP - vec3(0.45, 0.055, -0.30);
+    float pcMouse = sdBox(mouseP, vec3(0.05, 0.015, 0.08));
+
+    float retroHardware = min(min(pcMonitorHousing, tower), min(keyboard, pcMouse));
+    if (retroHardware < d) { d = retroHardware; hitMat = 9; }
 
     return d;
 }
@@ -132,13 +166,13 @@ void main() {
     vec2 coord = vec2(mod(gl_FragCoord.x, u_resolution.x), gl_FragCoord.y);
     vec2 uv = (coord - 0.5 * u_resolution.xy) / u_resolution.y;
 
-    // Camera view (steady aim, no mouse tilt)
-    vec3 ro = vec3(0.0, 0.45, 0.7);
-    vec3 target = vec3(0.0, -0.1, 3.4);
+    // Camera view elevated and looking down the central axis
+    vec3 ro = vec3(0.0, 0.65, 0.4);
+    vec3 target = vec3(-0.1, -0.15, 6.4);
     vec3 fwd = normalize(target - ro);
     vec3 right = normalize(cross(vec3(0.0, 1.0, 0.0), fwd));
     vec3 up = cross(fwd, right);
-    vec3 rd = normalize(fwd + uv.x * right * 0.8 + uv.y * up * 0.8);
+    vec3 rd = normalize(fwd + uv.x * right * 0.95 + uv.y * up * 0.95);
 
     // Raymarching
     float t = 0.05;
@@ -146,7 +180,7 @@ void main() {
     vec3 p;
     bool hit = false;
 
-    for (int i = 0; i < 48; i++) {
+    for (int i = 0; i < 54; i++) {
         p = ro + rd * t;
         float dist = map(p);
         obj = hitMat;
@@ -155,7 +189,7 @@ void main() {
             break;
         }
         t += dist;
-        if (t > 14.0) break;
+        if (t > 16.0) break;
     }
 
     if (!hit) {
@@ -165,20 +199,19 @@ void main() {
 
     vec3 n = calcNormal(p);
 
-    // Steady, stable Flashlight (Zero flickering/strobing)
+    // Steady, wide-cone Flashlight filling room depth
     vec3 lightPos = ro + vec3(0.1, -0.1, 0.0);
     vec3 lightDir = normalize(target - lightPos);
     vec3 toFrag = normalize(p - lightPos);
     float distToLight = length(p - lightPos);
 
-    // Soft spotlight cone
     float spotCos = dot(lightDir, toFrag);
-    float spot = smoothstep(0.70, 0.94, spotCos);
+    float spot = smoothstep(0.60, 0.92, spotCos);
 
-    float atten = 1.0 / (1.0 + 0.15 * distToLight + 0.08 * distToLight * distToLight);
+    float atten = 1.0 / (1.0 + 0.10 * distToLight + 0.04 * distToLight * distToLight);
     float diffuse = max(dot(n, -toFrag), 0.0);
-    float directLight = diffuse * atten * spot * 1.35; // Constant solid brightness
-    float ambient = 0.06; // Raised slightly so background is comfortably visible
+    float directLight = diffuse * atten * spot * 1.55;
+    float ambient = 0.08;
 
     // --- Procedural Textures & Materials ---
     vec3 albedo = vec3(0.4);
@@ -207,7 +240,7 @@ void main() {
         albedo = tileColor * mix(0.18, 1.0, grout);
     }
     else if (obj == 2 || obj == 3) {
-        // Tiled Hospital Wall
+        // Tiled Hospital Walls
         vec2 wallUV = (obj == 2) ? p.xy : p.zy;
         wallUV *= 2.2;
         vec2 wFract = fract(wallUV);
@@ -223,7 +256,7 @@ void main() {
         albedo = wallCol * mix(0.25, 1.0, grout);
     }
     else if (obj == 4) {
-        // Medical Machine Enclosure
+        // Medical Machine Enclosure (Aged metal with rust)
         vec3 metalCol = vec3(0.62, 0.60, 0.54);
         float rust = fbm(p.xy * 7.0 + p.z * 4.0);
         vec3 rustCol = vec3(0.38, 0.20, 0.12);
@@ -240,21 +273,39 @@ void main() {
         }
     }
     else if (obj == 6) {
-        // Dial Knobs
+        // Machine Dial Knobs
         albedo = vec3(0.22, 0.24, 0.22);
     }
     else if (obj == 7) {
-        // Oxygen Tanks
+        // Oxygen Gas Cylinders
         float scratches = noise(p.xy * vec2(2.0, 30.0));
         albedo = mix(vec3(0.42, 0.44, 0.42), vec3(0.65), scratches * 0.35);
+    }
+    else if (obj == 8) {
+        // Dark Laminate Rear Desk
+        vec3 woodCol = vec3(0.42, 0.36, 0.30);
+        float woodGrain = noise(p.xz * vec2(22.0, 2.0));
+        woodCol = mix(woodCol, vec3(0.28, 0.22, 0.18), woodGrain * 0.5);
+        float stains = fbm(p.xz * 5.0);
+        albedo = mix(woodCol, vec3(0.18, 0.14, 0.12), stains * 0.45);
+    }
+    else if (obj == 9) {
+        // Aged 90s Off-White / Beige PC Hardware
+        vec3 beigeCol = vec3(0.85, 0.82, 0.72);
+        float grime = fbm(p.xy * 12.0 + p.z * 10.0);
+        vec3 darkGrime = vec3(0.45, 0.42, 0.34);
+        albedo = mix(beigeCol, darkGrime, grime * 0.42);
     }
 
     vec3 col = albedo * (ambient + directLight * 1.25);
 
-    // Constant, stable CRT Monitor Screen
+    // Front-Facing Medical CRT Screen (Local coordinate aligned)
     if (obj == 10) {
-        vec2 scrUV = p.xy - vec3(-0.05, 0.6, 0.0).xy;
-        // Smooth, constant ECG pulse line
+        vec3 machScreenOrigin = vec3(-2.1, -0.6, 4.4);
+        vec3 localP = p - machScreenOrigin;
+        localP.xz *= rot(-0.25); // Undo rotation for planar screen rendering
+
+        vec2 scrUV = localP.xy - vec2(-0.17, 0.62);
         float heartX = fract(scrUV.x * 2.0 - u_time * 0.35);
         float beat = sin(heartX * 25.0) * exp(-abs(heartX - 0.5) * 12.0) * 0.08;
         float ecg = smoothstep(0.015, 0.002, abs(scrUV.y - beat));
@@ -265,18 +316,41 @@ void main() {
         col = screenCol;
     }
 
-    // Steady green emissive spill from monitor
-    vec3 screenWorldPos = vec3(-0.05, 0.6, 3.05);
-    float distToScreen = length(p - screenWorldPos);
-    if (obj != 10 && distToScreen < 1.2) {
-        float glowAtten = (1.2 - distToScreen) / 1.2;
-        col += vec3(0.12, 0.35, 0.15) * glowAtten * glowAtten * 0.6;
+    // Rear Retro PC Amber/DOS Terminal Screen
+    if (obj == 11) {
+        vec3 pcScreenPos = vec3(-0.15, -0.31, 6.48);
+        vec2 scrUV = (p.xy - pcScreenPos.xy);
+        
+        float textLines = step(0.45, fract(scrUV.y * 24.0)) * step(0.12, hash(floor(scrUV * vec2(2.0, 24.0))));
+        float cursorBlink = step(0.5, fract(u_time * 1.5));
+        float cursorBox = step(abs(scrUV.x - 0.10), 0.022) * step(abs(scrUV.y + 0.04), 0.015) * cursorBlink;
+
+        vec3 amberCol = vec3(1.0, 0.72, 0.20);
+        vec3 screenCol = mix(vec3(0.08, 0.05, 0.02), amberCol, clamp(textLines + cursorBox, 0.0, 1.0));
+        screenCol *= mix(0.80, 1.0, step(0.35, fract(p.y * 130.0)));
+        col = screenCol;
     }
 
-    // Gentle distance fog
-    col *= exp(-0.06 * t);
+    // Emissive Spill from Medical Screen
+    vec3 medScreenWorld = vec3(-2.1, 0.0, 4.4);
+    float distToMedScreen = length(p - medScreenWorld);
+    if (obj != 10 && distToMedScreen < 1.6) {
+        float medGlow = (1.6 - distToMedScreen) / 1.6;
+        col += vec3(0.12, 0.35, 0.15) * medGlow * medGlow * 0.65;
+    }
 
-    // Warm, steady horror tone mapping (no noisy grain/strobe)
+    // Emissive Amber Spill from Rear PC Screen
+    vec3 pcScreenWorld = vec3(-0.15, -0.31, 6.48);
+    float distToPcScreen = length(p - pcScreenWorld);
+    if (obj != 11 && distToPcScreen < 1.4) {
+        float pcGlow = (1.4 - distToPcScreen) / 1.4;
+        col += vec3(0.42, 0.22, 0.04) * pcGlow * pcGlow * 0.75;
+    }
+
+    // Distance fog
+    col *= exp(-0.045 * t);
+
+    // Warm, steady horror tone mapping
     col = pow(col, vec3(0.92, 0.95, 1.02));
 
     fragColor = vec4(clamp(col, 0.0, 1.0), 1.0);
