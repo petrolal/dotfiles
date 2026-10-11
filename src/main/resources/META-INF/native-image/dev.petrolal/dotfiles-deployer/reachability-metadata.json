@@ -11,6 +11,15 @@
           ]
         }
       ]
+    },
+    {
+      "type": "sun.text.resources.cldr.FormatData"
+    },
+    {
+      "type": "sun.text.resources.cldr.FormatData_en"
+    },
+    {
+      "type": "sun.text.resources.cldr.FormatData_en_US"
     }
   ],
   "foreign": {
@@ -63,6 +72,20 @@
         ]
       },
       {
+        "returnType": "jint",
+        "parameterTypes": [
+          "void*",
+          "jlong",
+          "void*",
+          "void*",
+          "void*",
+          "void*",
+          "void*",
+          "void*",
+          "void*"
+        ]
+      },
+      {
         "returnType": "void",
         "parameterTypes": [
           "jint",
@@ -95,6 +118,16 @@
         "parameterTypes": [
           "void*",
           "jlong"
+        ]
+      },
+      {
+        "returnType": "void",
+        "parameterTypes": [
+          "jint",
+          "jfloat",
+          "jfloat",
+          "jfloat",
+          "jfloat"
         ]
       },
       {
@@ -194,6 +227,23 @@
         ]
       },
       {
+        "returnType": "jint",
+        "parameterTypes": [
+          "void*",
+          "jlong",
+          "jlong",
+          "jlong",
+          "jlong",
+          "jint",
+          "jlong",
+          "void*",
+          "void*",
+          "void*",
+          "void*",
+          "void*"
+        ]
+      },
+      {
         "returnType": "void",
         "parameterTypes": [
           "jint",
@@ -203,6 +253,15 @@
       {
         "returnType": "jint",
         "parameterTypes": []
+      },
+      {
+        "returnType": "void",
+        "parameterTypes": [
+          "jint",
+          "jint",
+          "jint",
+          "jint"
+        ]
       }
     ]
   }
