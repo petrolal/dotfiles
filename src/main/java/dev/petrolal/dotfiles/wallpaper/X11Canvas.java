@@ -268,11 +268,23 @@ public class X11Canvas implements AutoCloseable {
     /**
      * Creates one monitor's desktop-background window and GL context, sized
      * and positioned to exactly cover that monitor. Every surface after the
-     * first shares the first context's GL object namespace (shaders/buffers),
-     * and gets its own vsync'd swap chain -- each monitor's presentation is
-     * then paced purely by its own hardware vblank via {@link #swapBuffers}.
+     * first shares the first context's GL object namespace (shaders/buffers).
+     * <p>
+     * Mixed refresh rates (e.g. 165Hz primary + 60Hz HDMI) cannot serially
+     * block on multiple vblanks in a single render thread without dropping
+     * frame rates down to ~40 FPS. Therefore, the bootstrap (primary) surface
+     * paces the loop with vsync (swapInterval=1), while subsequent secondary
+     * surfaces default to swapInterval=0 to avoid cross-locking delays.
      */
     public Surface createSurface(int x, int y, int w, int h) throws Throwable {
+        return createSurface(x, y, w, h, sharedGlContext == null ? 1 : 0);
+    }
+
+    /**
+     * Creates one monitor's desktop-background window and GL context with an
+     * explicit VSync swap interval (1 for vsync-paced, 0 for immediate unblocked presentation).
+     */
+    public Surface createSurface(int x, int y, int w, int h, int swapInterval) throws Throwable {
         long window = (long) XCreateSimpleWindow.invokeExact(display, root, x, y, w, h, 0, 0L, 0L);
 
         try (Arena arena = Arena.ofConfined()) {
@@ -306,11 +318,10 @@ public class X11Canvas implements AutoCloseable {
             bindQuadAttribs();
         }
 
-        // Vsync per surface: each monitor's swapBuffers call blocks on THAT
-        // monitor's own vblank, so mixed refresh rates (e.g. 165Hz + 60Hz)
-        // each get correctly paced -- automatically, with no target FPS or
-        // Hz value hardcoded anywhere.
-        setSwapInterval(window, 1);
+        // Pacing strategy: The primary surface (swapInterval=1) paces the render loop
+        // to its hardware vblank, while secondary surfaces (swapInterval=0) present
+        // immediately without blocking the single thread.
+        setSwapInterval(window, swapInterval);
 
         return new Surface(window, glContext);
     }

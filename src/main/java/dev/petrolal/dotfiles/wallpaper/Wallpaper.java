@@ -160,15 +160,15 @@ public final class Wallpaper {
             int totalScreenHeight = canvas.getHeight();
 
             // One independent window + GL context per monitor (see X11Canvas):
-            // each gets its own swapBuffers call, vsync'd to its own display's
-            // hardware vblank, so mixed refresh rates are handled automatically
-            // with no shared buffer swap and no hardcoded target Hz/FPS.
+            // The primary surface is vsync'd to pace the render loop to its hardware
+            // vblank (e.g. 165Hz), while secondary surfaces present without blocking (swapInterval=0).
+            // This prevents serial vblank waiting from dragging mixed-refresh-rate setups down to ~40 FPS.
             List<X11Canvas.Surface> surfaces = new ArrayList<>();
             Monitor firstMon = monitors.get(0);
             surfaces.add(canvas.initGL(firstMon.x(), firstMon.y(), firstMon.width(), firstMon.height()));
             for (int i = 1; i < monitors.size(); i++) {
                 Monitor mon = monitors.get(i);
-                surfaces.add(canvas.createSurface(mon.x(), mon.y(), mon.width(), mon.height()));
+                surfaces.add(canvas.createSurface(mon.x(), mon.y(), mon.width(), mon.height(), 0));
             }
 
             // One shared program for every surface: all contexts share the same

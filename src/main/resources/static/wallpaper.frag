@@ -177,27 +177,38 @@ float map(vec3 p) {
 
         // 6. Cylindrical Specimen Incubation Vat (right, glowing lantern effect)
         vec3 vatP = p - vec3(1.3, -0.1, 5.6);
-        float vatBase = sdCylinder(vatP - vec3(0.0, -1.25, 0.0), 0.15, 0.65);
-        float vatCap  = sdCylinder(vatP - vec3(0.0, 1.25, 0.0), 0.15, 0.65);
-        float vatGlass = sdCylinder(vatP, 1.1, 0.52);
-        float vatHardware = min(vatBase, vatCap);
+        float vatBound = sdCylinder(vatP, 1.45, 0.7);
+        if (vatBound < d) {
+            float vatBase = sdCylinder(vatP - vec3(0.0, -1.25, 0.0), 0.15, 0.65);
+            float vatCap  = sdCylinder(vatP - vec3(0.0, 1.25, 0.0), 0.15, 0.65);
+            float vatGlass = sdCylinder(vatP, 1.1, 0.52);
+            float vatHardware = min(vatBase, vatCap);
 
-        if (vatGlass < d) { d = vatGlass; hitMat = 13; } // Glowing fluid core
-        if (vatHardware < d) { d = vatHardware; hitMat = 7; }
+            if (vatGlass < d) { d = vatGlass; hitMat = 13; } // Glowing fluid core
+            if (vatHardware < d) { d = vatHardware; hitMat = 7; }
+        }
 
         // 7. Medical IV Drip Pole (far right foreground)
+        // Wrapped with a tight bounding box to prevent thin cylinder micro-stepping trap
         vec3 poleP = p - vec3(2.9, -0.4, 4.0);
-        float poleRod = sdCylinder(poleP, 1.05, 0.02);
-        float poleBase = sdBox(poleP - vec3(0.0, -1.05, 0.0), vec3(0.2, 0.02, 0.2));
-        float fluidBag = sdBox(poleP - vec3(0.08, 0.75, 0.0), vec3(0.08, 0.18, 0.04));
-        float ivStand = min(min(poleRod, poleBase), fluidBag);
-        if (ivStand < d) { d = ivStand; hitMat = 14; }
+        float poleBound = sdBox(poleP, vec3(0.25, 1.15, 0.25));
+        if (poleBound < d) {
+            float poleRod = sdCylinder(poleP, 1.05, 0.03);
+            float poleBase = sdBox(poleP - vec3(0.0, -1.05, 0.0), vec3(0.2, 0.02, 0.2));
+            float fluidBag = sdBox(poleP - vec3(0.08, 0.75, 0.0), vec3(0.08, 0.18, 0.04));
+            float ivStand = min(min(poleRod, poleBase), fluidBag);
+            if (ivStand < d) { d = ivStand; hitMat = 14; }
+        }
 
         // 8. Biohazard Disposal Bin (right, near vault)
         vec3 binP = p - vec3(2.3, -1.15, 6.2);
-        binP.xz *= rot(0.25);
-        float bin = sdBox(binP, vec3(0.3, 0.35, 0.3));
-        if (bin < d) { d = bin; hitMat = 15; }
+        float binBound = sdBox(binP, vec3(0.48, 0.4, 0.48));
+        if (binBound < d) {
+            vec3 bP = binP;
+            bP.xz *= rot(0.25);
+            float bin = sdBox(bP, vec3(0.3, 0.35, 0.3));
+            if (bin < d) { d = bin; hitMat = 15; }
+        }
     } else {
         d = min(d, clusterRegion);
     }
@@ -205,14 +216,25 @@ float map(vec3 p) {
     return d;
 }
 
+// 4-tap tetrahedral normal: reduces map() evaluations by 33% compared to central differences
 vec3 calcNormal(vec3 p) {
-    vec2 e = vec2(0.003, 0.0);
-    return normalize(vec3(
-        map(p + e.xyy) - map(p - e.xyy),
-        map(p + e.yxy) - map(p - e.yxy),
-        map(p + e.yyx) - map(p - e.yyx)
-    ));
+    const vec2 k = vec2(1.0, -1.0);
+    const float h = 0.0035;
+    return normalize(
+        k.xyy * map(p + k.xyy * h) +
+        k.yyx * map(p + k.yyx * h) +
+        k.yxy * map(p + k.yxy * h) +
+        k.xxx * map(p + k.xxx * h)
+    );
 }
+
+// 4x4 Bayer ordered-dither matrix (file-scope constant to avoid per-fragment stack allocation)
+const float bayer[16] = float[16](
+     0.0,  8.0,  2.0, 10.0,
+    12.0,  4.0, 14.0,  6.0,
+     3.0, 11.0,  1.0,  9.0,
+    15.0,  7.0, 13.0,  5.0
+);
 
 void main() {
     // Each monitor now has its own window, so gl_FragCoord is local to it
@@ -247,11 +269,11 @@ void main() {
     vec3 p;
     bool hit = false;
 
-    for (int i = 0; i < 70; i++) {
+    for (int i = 0; i < 52; i++) {
         p = ro + rd * t;
         float dist = map(p);
         obj = hitMat;
-        if (dist < 0.004) {
+        if (dist < 0.0055) {
             hit = true;
             break;
         }
@@ -489,12 +511,6 @@ void main() {
     // so the dither pattern matches the chunky resolution instead of fighting it.
     int bx = int(mod(blockPx.x / pixelBlock, 4.0));
     int by = int(mod(blockPx.y / pixelBlock, 4.0));
-    float bayer[16] = float[16](
-         0.0,  8.0,  2.0, 10.0,
-        12.0,  4.0, 14.0,  6.0,
-         3.0, 11.0,  1.0,  9.0,
-        15.0,  7.0, 13.0,  5.0
-    );
     float dither = (bayer[by * 4 + bx] + 0.5) / 16.0 - 0.5;
 
     // Limited color depth per channel, broken up by the dither pattern
