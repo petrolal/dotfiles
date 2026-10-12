@@ -12,10 +12,10 @@ import java.util.List;
  * - Audio / media playback detection (Linux ALSA / PipeWire / Pulse)
  * - System CPU & RAM telemetry
  *
- * Designed as a clean boilerplate: easily add keyboard hotkeys, window hooks,
- * or custom sensor listeners right here.
+ * Utilizes a background Virtual Thread for procfs file I/O to ensure the
+ * OpenGL render loop never blocks on disk or kernel file reads.
  */
-public class WallpaperEvents {
+public class WallpaperEvents implements AutoCloseable {
 
     /**
      * Immutable snapshot of all event & telemetry states dispatched to the shader.
@@ -35,43 +35,66 @@ public class WallpaperEvents {
     ) {}
 
     private final X11Canvas canvas;
+    private final Thread pollerThread;
+    private volatile boolean running = true;
 
-    // Audio envelope
+    // Asynchronously updated telemetry cache
+    private volatile float cachedAudio = 0.0f;
+    private volatile float cachedCpu = 0.0f;
+    private volatile float cachedRam = 0.0f;
+
+    // Audio envelope state (confined to the virtual background thread)
     private float smoothedAudio = 0.0f;
-    private long lastAudioCheck = 0;
-    private boolean lastAudioState = false;
 
-    // CPU telemetry state
+    // CPU telemetry state (confined to the virtual background thread)
     private long prevIdle = 0;
     private long prevTotal = 0;
-    private long lastSysTelemetryCheck = 0;
-    private float cachedCpu = 0.0f;
-    private float cachedRam = 0.0f;
 
     public WallpaperEvents(X11Canvas canvas) {
         this.canvas = canvas;
+        // Start background virtual thread for off-thread procfs reading
+        this.pollerThread = Thread.ofVirtual()
+                .name("wallpaper-telemetry-sensor")
+                .start(this::telemetryLoop);
     }
 
     /**
-     * Poll all current event states and return an immutable snapshot.
+     * Background telemetry loop running on a Virtual Thread.
+     * Continuously samples ALSA status and system memory/CPU statistics
+     * without blocking the OpenGL presentation cadence.
+     */
+    private void telemetryLoop() {
+        long lastSysTelemetryCheck = 0;
+        while (running) {
+            // 1. Audio Activity (10Hz sampling)
+            float target = isAlsaPcmActive() ? 1.0f : 0.0f;
+            smoothedAudio += (target - smoothedAudio) * 0.15f;
+            cachedAudio = smoothedAudio;
+
+            // 2. System CPU & RAM (2Hz sampling)
+            long now = System.currentTimeMillis();
+            if (now - lastSysTelemetryCheck > 500) {
+                lastSysTelemetryCheck = now;
+                cachedCpu = readCpuUsage();
+                cachedRam = readRamUsage();
+            }
+
+            try {
+                Thread.sleep(100);
+            } catch (InterruptedException _) {
+                break;
+            }
+        }
+    }
+
+    /**
+     * Fast, non-blocking state poll invoked on the OpenGL render thread.
+     * Queries X11 pointer/workspace atoms and performs volatile reads
+     * of cached background telemetry (0ms I/O latency).
      */
     public WallpaperState pollState(float width, float height, float elapsedSeconds) {
-        // 1. Mouse Events (Global X11 cursor & click state)
         X11Canvas.MouseInfo mouse = canvas.queryMouse();
-
-        // 2. Active Virtual Workspace
         int workspace = canvas.queryWorkspace();
-
-        // 3. Audio / Media Playback Activity
-        float audio = pollAudioActivity();
-
-        // 4. System Telemetry (Throttled to 500ms to eliminate per-frame procfs read overhead)
-        long now = System.currentTimeMillis();
-        if (now - lastSysTelemetryCheck > 500) {
-            lastSysTelemetryCheck = now;
-            cachedCpu = getCpuUsage();
-            cachedRam = getRamUsage();
-        }
 
         return new WallpaperState(
             width,
@@ -82,26 +105,10 @@ public class WallpaperEvents {
             mouse.leftDown(),
             mouse.rightDown(),
             workspace,
-            audio,
+            cachedAudio,
             cachedCpu,
             cachedRam
         );
-    }
-
-    /**
-     * Detects if audio or media is actively playing on the system.
-     * Checks Linux /proc/asound hardware PCM playback streams with a smooth attack/decay envelope.
-     */
-    private float pollAudioActivity() {
-        long now = System.currentTimeMillis();
-        if (now - lastAudioCheck > 100) {
-            lastAudioCheck = now;
-            lastAudioState = isAlsaPcmActive();
-        }
-
-        float target = lastAudioState ? 1.0f : 0.0f;
-        smoothedAudio += (target - smoothedAudio) * 0.15f;
-        return smoothedAudio;
     }
 
     private boolean isAlsaPcmActive() {
@@ -109,15 +116,15 @@ public class WallpaperEvents {
             File asoundDir = new File("/proc/asound");
             if (!asoundDir.exists()) return false;
 
-            File[] cards = asoundDir.listFiles((dir, name) -> name.startsWith("card") && Character.isDigit(name.charAt(4)));
+            File[] cards = asoundDir.listFiles((_, name) -> name.startsWith("card") && Character.isDigit(name.charAt(4)));
             if (cards == null) return false;
 
             for (File card : cards) {
-                File[] pcms = card.listFiles((dir, name) -> name.startsWith("pcm") && name.endsWith("p"));
+                File[] pcms = card.listFiles((_, name) -> name.startsWith("pcm") && name.endsWith("p"));
                 if (pcms == null) continue;
 
                 for (File pcm : pcms) {
-                    File[] subs = pcm.listFiles((dir, name) -> name.startsWith("sub"));
+                    File[] subs = pcm.listFiles((_, name) -> name.startsWith("sub"));
                     if (subs == null) continue;
 
                     for (File sub : subs) {
@@ -133,14 +140,14 @@ public class WallpaperEvents {
                     }
                 }
             }
-        } catch (Exception ignored) {}
+        } catch (Exception _) {}
         return false;
     }
 
     /**
      * Reads /proc/stat to compute overall CPU utilization between 0.0 and 1.0.
      */
-    public float getCpuUsage() {
+    private float readCpuUsage() {
         try {
             String line = Files.lines(Path.of("/proc/stat")).findFirst().orElse("");
             String[] parts = line.trim().split("\\s+");
@@ -157,7 +164,7 @@ public class WallpaperEvents {
 
             if (diffTotal == 0) return 0.0f;
             return Math.clamp((float) (diffTotal - diffIdle) / diffTotal, 0.0f, 1.0f);
-        } catch (Exception ignored) {
+        } catch (Exception _) {
             return 0.0f;
         }
     }
@@ -165,7 +172,7 @@ public class WallpaperEvents {
     /**
      * Reads /proc/meminfo to compute overall RAM utilization between 0.0 and 1.0.
      */
-    public float getRamUsage() {
+    private float readRamUsage() {
         try {
             long total = 0, avail = 0;
             for (String l : Files.readAllLines(Path.of("/proc/meminfo"))) {
@@ -175,8 +182,16 @@ public class WallpaperEvents {
             }
             if (total == 0) return 0.0f;
             return (float) (total - avail) / total;
-        } catch (Exception ignored) {
+        } catch (Exception _) {
             return 0.0f;
+        }
+    }
+
+    @Override
+    public void close() {
+        running = false;
+        if (pollerThread != null) {
+            pollerThread.interrupt();
         }
     }
 }

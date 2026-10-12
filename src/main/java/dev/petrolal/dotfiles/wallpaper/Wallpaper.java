@@ -176,62 +176,52 @@ public final class Wallpaper {
             // panorama scene, rendered by one camera and split only by the bezels.
             ShaderPipeline sharedPipeline = new ShaderPipeline(canvas, vertPath, panoramaFrag);
 
-            WallpaperEvents events = new WallpaperEvents(canvas);
+            try (WallpaperEvents events = new WallpaperEvents(canvas)) {
+                long startTimeNanos = System.nanoTime();
+                long lastLowerNanos = System.nanoTime();
+                final long lowerIntervalNanos = 3_000_000_000L;
+                long lastReloadCheckNanos = System.nanoTime();
+                final long reloadCheckIntervalNanos = 1_000_000_000L;
 
-            long startTimeNanos = System.nanoTime();
-            long lastLowerNanos = System.nanoTime();
-            final long lowerIntervalNanos = 3_000_000_000L;
-            long lastReloadCheckNanos = System.nanoTime();
-            final long reloadCheckIntervalNanos = 1_000_000_000L;
+                while (true) {
+                    // Hot-reload is a developer convenience, not a per-frame need:
+                    // stat()-ing the shader file 60x/sec forever is wasted syscalls.
+                    long nowForReload = System.nanoTime();
+                    if (nowForReload - lastReloadCheckNanos > reloadCheckIntervalNanos) {
+                        sharedPipeline.reloadIfModified();
+                        lastReloadCheckNanos = nowForReload;
+                    }
 
-            while (true) {
-                // Hot-reload is a developer convenience, not a per-frame need:
-                // stat()-ing the shader file 60x/sec forever is wasted syscalls.
-                long nowForReload = System.nanoTime();
-                if (nowForReload - lastReloadCheckNanos > reloadCheckIntervalNanos) {
-                    sharedPipeline.reloadIfModified();
-                    lastReloadCheckNanos = nowForReload;
-                }
+                    // Desktop icons / panel widgets can get (re)mapped above us after
+                    // startup; periodically re-assert that we stay at the bottom of
+                    // the window stack instead of covering them.
+                    long nowForLower = System.nanoTime();
+                    if (nowForLower - lastLowerNanos > lowerIntervalNanos) {
+                        canvas.lowerToBackground();
+                        lastLowerNanos = nowForLower;
+                    }
 
-                // Desktop icons / panel widgets can get (re)mapped above us after
-                // startup; periodically re-assert that we stay at the bottom of
-                // the window stack instead of covering them.
-                long nowForLower = System.nanoTime();
-                if (nowForLower - lastLowerNanos > lowerIntervalNanos) {
-                    canvas.lowerToBackground();
-                    lastLowerNanos = nowForLower;
-                }
+                    long frameStartNanos = System.nanoTime();
+                    float elapsed = (frameStartNanos - startTimeNanos) / 1_000_000_000.0f;
 
-                long frameStartNanos = System.nanoTime();
-                float elapsed = (frameStartNanos - startTimeNanos) / 1_000_000_000.0f;
+                    // Throttled non-blocking query strictly bound to render frame cadence
+                    WallpaperEvents.WallpaperState rawState = events.pollState(canvas.getWidth(), canvas.getHeight(), elapsed);
 
-                // Throttled non-blocking query strictly bound to render frame cadence
-                WallpaperEvents.WallpaperState rawState = events.pollState(canvas.getWidth(), canvas.getHeight(), elapsed);
+                    // Render + present each monitor independently, on its own surface.
+                    for (int i = 0; i < monitors.size(); i++) {
+                        Monitor mon = monitors.get(i);
+                        X11Canvas.Surface surface = surfaces.get(i);
 
-                // Render + present each monitor independently, on its own surface.
-                // Each swapBuffers call below blocks on THAT monitor's own vblank
-                // (swap interval 1, set per-surface in X11Canvas) -- a second,
-                // software wall-clock timer stacked on top of that (the previous
-                // LockSupport.parkNanos-based limiter, shared across monitors)
-                // fought the hardware clock and produced exactly the kind of
-                // beat-frequency stutter this was meant to avoid. One pacing
-                // source per monitor now: that monitor's own vsync, automatically.
-                for (int i = 0; i < monitors.size(); i++) {
-                    Monitor mon = monitors.get(i);
-                    X11Canvas.Surface surface = surfaces.get(i);
+                        float viewportOffsetX = mon.x();
+                        float viewportOffsetY = totalScreenHeight - (mon.y() + mon.height());
 
-                    // This monitor's own window, so gl_FragCoord is local to it --
-                    // the shader adds u_viewportOffset back in to rejoin the
-                    // continuous global panorama coordinate space.
-                    float viewportOffsetX = mon.x();
-                    float viewportOffsetY = totalScreenHeight - (mon.y() + mon.height());
-
-                    canvas.makeCurrent(surface);
-                    canvas.setViewport(0, 0, mon.width(), mon.height());
-                    sharedPipeline.bind();
-                    sharedPipeline.updateUniforms(rawState, viewportOffsetX, viewportOffsetY);
-                    canvas.drawQuad();
-                    canvas.swapBuffers(surface);
+                        canvas.makeCurrent(surface);
+                        canvas.setViewport(0, 0, mon.width(), mon.height());
+                        sharedPipeline.bind();
+                        sharedPipeline.updateUniforms(rawState, viewportOffsetX, viewportOffsetY);
+                        canvas.drawQuad();
+                        canvas.swapBuffers(surface);
+                    }
                 }
             }
         }

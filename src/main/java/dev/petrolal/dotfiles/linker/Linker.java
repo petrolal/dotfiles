@@ -82,7 +82,7 @@ public final class Linker {
         List<Path> entries;
         try (var stream = Files.walk(dir)) {
             entries = stream.sorted(java.util.Comparator.reverseOrder()).toList();
-        } catch (IOException e) {
+        } catch (IOException _) {
             return;
         }
         for (Path entry : entries) {
@@ -101,7 +101,7 @@ public final class Linker {
                 try {
                     Files.deleteIfExists(entry);
                     if (verbose && !Files.exists(entry)) System.out.println("[OK] Removed empty directory: " + entry);
-                } catch (IOException e) {
+                } catch (IOException _) {
                     // Not empty -- leave it alone.
                 }
             }
@@ -110,7 +110,7 @@ public final class Linker {
             try {
                 Files.deleteIfExists(dir);
                 if (verbose && !Files.exists(dir)) System.out.println("[OK] Removed empty directory: " + dir);
-            } catch (IOException ignored) {}
+            } catch (IOException _) {}
         }
     }
 
@@ -179,7 +179,7 @@ public final class Linker {
         List<Path> entries;
         try (var stream = Files.list(dir)) {
             entries = stream.sorted().toList();
-        } catch (IOException e) {
+        } catch (IOException _) {
             return out;
         }
         for (Path entry : entries) {

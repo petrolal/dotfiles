@@ -6,6 +6,9 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 import dev.petrolal.dotfiles.domain.DotfileError;
 import dev.petrolal.dotfiles.domain.Result;
@@ -14,24 +17,35 @@ public final class ProcessRunner {
     private ProcessRunner() {}
 
     /**
-     * Executes CMD, merging standard error into standard output to prevent pipe buffer
-     * deadlocks, and returns the captured output if the process exits successfully.
+     * Executes CMD, utilizing Virtual Threads to concurrently drain standard output
+     * and standard error without blocking or pipe deadlocks, returning the captured
+     * stdout on exit code 0.
      */
     public static Result<String> captureOutput(List<String> cmd) {
-        try {
-            Process p = new ProcessBuilder(cmd).redirectErrorStream(true).start();
-            String out = new String(p.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+        try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
+            Process p = new ProcessBuilder(cmd).start();
+            Future<String> stdoutFuture = executor.submit(() ->
+                new String(p.getInputStream().readAllBytes(), StandardCharsets.UTF_8));
+            Future<String> stderrFuture = executor.submit(() ->
+                new String(p.getErrorStream().readAllBytes(), StandardCharsets.UTF_8));
+
             int exitCode = p.waitFor();
+            String stdout = stdoutFuture.get();
+            String stderr = stderrFuture.get();
+
             if (exitCode != 0) {
                 String binary = cmd.isEmpty() ? "" : cmd.get(0);
-                return Result.err(new DotfileError.CommandFailed(binary, exitCode));
+                String detail = stderr.isBlank() ? binary : binary + ": " + stderr.trim();
+                return Result.err(new DotfileError.CommandFailed(detail, exitCode));
             }
-            return Result.ok(out);
+            return Result.ok(stdout);
         } catch (IOException e) {
             return Result.err(new DotfileError.IoError(e.getMessage()));
-        } catch (InterruptedException e) {
+        } catch (InterruptedException _) {
             Thread.currentThread().interrupt();
             return Result.err(new DotfileError.IoError("interrupted"));
+        } catch (ExecutionException e) {
+            return Result.err(new DotfileError.IoError(e.getCause() != null ? e.getCause().getMessage() : e.getMessage()));
         }
     }
 
@@ -53,7 +67,7 @@ public final class ProcessRunner {
             return Result.ok(exitCode);
         } catch (IOException e) {
             return Result.err(new DotfileError.IoError(e.getMessage()));
-        } catch (InterruptedException e) {
+        } catch (InterruptedException _) {
             Thread.currentThread().interrupt();
             return Result.err(new DotfileError.IoError("interrupted"));
         }
@@ -70,7 +84,7 @@ public final class ProcessRunner {
                     .redirectError(ProcessBuilder.Redirect.DISCARD)
                     .redirectInput(ProcessBuilder.Redirect.from(new File("/dev/null")))
                     .start();
-        } catch (IOException ignored) {
+        } catch (IOException _) {
             // best-effort: service reload is not fatal to deployment
         }
     }

@@ -38,15 +38,20 @@ public final class Orchestrator {
 		}
 		if (verbose)
 			System.out.println("Reloading XFCE services...");
-		for (List<String> args : RELOAD_COMMANDS) {
-			String binary = args.get(0);
-			if (!DotfilePaths.commandExists(binary)) {
-				if (verbose)
-					System.out.println("[SKIP] " + binary + " not found, skipping.");
-			} else if (dryRun) {
-				System.out.println("[DRY-RUN] Would execute: " + String.join(" ", args));
-			} else {
-				ProcessRunner.spawnDetached(args);
+
+		try (var executor = java.util.concurrent.Executors.newVirtualThreadPerTaskExecutor()) {
+			for (List<String> args : RELOAD_COMMANDS) {
+				executor.submit(() -> {
+					String binary = args.get(0);
+					if (!DotfilePaths.commandExists(binary)) {
+						if (verbose)
+							System.out.println("[SKIP] " + binary + " not found, skipping.");
+					} else if (dryRun) {
+						System.out.println("[DRY-RUN] Would execute: " + String.join(" ", args));
+					} else {
+						ProcessRunner.spawnDetached(args);
+					}
+				});
 			}
 		}
 	}
@@ -70,13 +75,26 @@ public final class Orchestrator {
 				failures++;
 		}
 		Linker.cleanupLegacyTargets(home, dryRun, verbose);
-		for (Linker.Mapping mapping : Linker.collectAllMappings(root)) {
-			Result<Void> r = Linker.linkFile(mapping.from(), mapping.to(), root, home, dryRun, verbose);
-			if (r.isOk())
-				successes++;
-			else
-				failures++;
+
+		List<Linker.Mapping> mappings = Linker.collectAllMappings(root);
+		try (var executor = java.util.concurrent.Executors.newVirtualThreadPerTaskExecutor()) {
+			var linkTasks = mappings.stream()
+					.map(mapping -> executor.submit(() ->
+							Linker.linkFile(mapping.from(), mapping.to(), root, home, dryRun, verbose)))
+					.toList();
+
+			for (var task : linkTasks) {
+				try {
+					if (task.get().isOk())
+						successes++;
+					else
+						failures++;
+				} catch (Exception _) {
+					failures++;
+				}
+			}
 		}
+
 		if (applySettings) {
 			Xfconf.applyXfceSettings(root, dryRun, verbose);
 		}
@@ -102,13 +120,27 @@ public final class Orchestrator {
 		int removedCount = 0;
 		if (verbose)
 			System.out.println("Target: " + home);
-		for (Linker.Mapping mapping : Linker.collectAllMappings(root)) {
-			Linker.UnlinkOutcome outcome = Linker.unlinkFile(mapping.to(), home, dryRun, verbose);
-			if (outcome == Linker.UnlinkOutcome.REMOVED)
-				removedCount++;
-			else if (outcome == Linker.UnlinkOutcome.FAILED)
-				failures++;
+
+		List<Linker.Mapping> mappings = Linker.collectAllMappings(root);
+		try (var executor = java.util.concurrent.Executors.newVirtualThreadPerTaskExecutor()) {
+			var unlinkTasks = mappings.stream()
+					.map(mapping -> executor.submit(() ->
+							Linker.unlinkFile(mapping.to(), home, dryRun, verbose)))
+					.toList();
+
+			for (var task : unlinkTasks) {
+				try {
+					Linker.UnlinkOutcome outcome = task.get();
+					if (outcome == Linker.UnlinkOutcome.REMOVED)
+						removedCount++;
+					else if (outcome == Linker.UnlinkOutcome.FAILED)
+						failures++;
+				} catch (Exception _) {
+					failures++;
+				}
+			}
 		}
+
 		removedCount += Linker.cleanupLegacyTargets(home, dryRun, verbose);
 		if (verbose) {
 			if (dryRun) {
