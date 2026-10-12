@@ -1,8 +1,7 @@
 { pkgs, lib, ... }:
 
 let
-  jdk21 = pkgs.jdk21;
-  jdk17 = pkgs.jdk17;
+  jdk = pkgs.jdk25;
 
   # Helper to expose official Eclipse distributions with distinct commands & desktop files
   mkEclipseWrapper = { pkg, binName, desktopName, defaultAlias ? false }:
@@ -21,6 +20,8 @@ let
       # when the user launches Eclipse, not substituted now with the build
       # sandbox's HOME.
       makeWrapper ${pkg}/bin/eclipse $out/bin/${binName} \
+        --prefix PATH : ${jdk}/bin \
+        --add-flags "-vm ${jdk}/bin/java" \
         --add-flags "-pluginCustomization \$HOME/.config/eclipse/plugin_customization.ini" \
         --add-flags "-configuration \$HOME/.local/share/eclipse/configuration"
 
@@ -49,10 +50,9 @@ let
     pkg = pkgs.eclipses.eclipse-rcp;
     binName = "eclipse-rcp";
     desktopName = "Eclipse RCP/RAP";
-    defaultAlias = true;
   };
 
-  # 2. Official Eclipse Java EE (Enterprise Java and Web Developers 2026-12 M1)
+  # 2. Official Eclipse Java EE and Web (Enterprise Java and Web Developers 2026-12 M1)
   eclipseJeePkg = pkgs.eclipses.eclipse-jee.overrideAttrs (_old: {
     version = "2026-12-M1";
     src = pkgs.fetchurl {
@@ -64,7 +64,8 @@ let
   eclipseJee = mkEclipseWrapper {
     pkg = eclipseJeePkg;
     binName = "eclipse-jee";
-    desktopName = "Eclipse Java EE";
+    desktopName = "Eclipse Java EE and Web";
+    defaultAlias = true;
   };
 
   # 3. Official Spring Tool Suite (STS) IDE standalone release
@@ -89,7 +90,7 @@ let
         pkgs.glib
         pkgs.gsettings-desktop-schemas
         pkgs.gtk3
-        jdk21
+        jdk
         pkgs.libx11
         pkgs.libxrender
         pkgs.libxtst
@@ -124,7 +125,7 @@ let
         mkdir -p $out/bin $out/share/applications $out/share/pixmaps
 
         makeWrapper $out/lib/sts/SpringToolsForEclipse $out/bin/sts \
-          --prefix PATH : ${jdk21}/bin \
+          --prefix PATH : ${jdk}/bin \
           --prefix LD_LIBRARY_PATH : ${lib.makeLibraryPath [
             pkgs.glib
             pkgs.gtk3
@@ -158,11 +159,10 @@ let
 
   # Common JVM & build tooling
   buildTools = [
-    jdk21
-    jdk17
-    (pkgs.gradle.override { java = jdk21; })
-    (pkgs.maven.override { jdk_headless = jdk21; })
-    (pkgs.sbt.override { jre = jdk21; })
+    jdk
+    (pkgs.gradle.override { java = jdk; })
+    (pkgs.maven.override { jdk_headless = jdk; })
+    (pkgs.sbt.override { jre = jdk; })
     pkgs.lombok
     pkgs.tomcat10
   ];

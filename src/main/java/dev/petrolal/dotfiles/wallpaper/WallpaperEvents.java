@@ -21,10 +21,10 @@ public class WallpaperEvents {
      * Immutable snapshot of all event & telemetry states dispatched to the shader.
      */
     public record WallpaperState(
-        float width,
+        float width,          // Always the FULL multi-monitor desktop resolution (panorama uses one continuous uv space)
         float height,
         float time,
-        float mouseX,
+        float mouseX,         // Raw global desktop cursor position (X11 root-window coordinates)
         float mouseY,
         boolean mouseLeftDown,
         boolean mouseRightDown,

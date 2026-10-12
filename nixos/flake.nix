@@ -56,6 +56,15 @@
         default = mkConfig {
           user = "petrolal";
         };
+      }
+      # `nixos-rebuild switch --flake <dir>` (no #attr) looks up the config by
+      # this machine's actual /etc/hostname, not by the "default" key above.
+      # Alias that hostname to the same fallback config so the lookup
+      # resolves on any machine that hasn't been given a dedicated entry yet.
+      // nixpkgs.lib.optionalAttrs (detectedHostname != "abatedouro-de-anoes-PC") {
+        "${detectedHostname}" = mkConfig {
+          user = "petrolal";
+        };
       };
     };
 }

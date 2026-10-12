@@ -26,6 +26,7 @@ public class ShaderPipeline {
     private int locAudio = -1;
     private int locCpu = -1;
     private int locRam = -1;
+    private int locViewportOffset = -1;
 
     public ShaderPipeline(X11Canvas canvas, Path vertPath, Path fragPath) throws Throwable {
         this.canvas = canvas;
@@ -41,7 +42,7 @@ public class ShaderPipeline {
         canvas.glUseProgram.invokeExact(programId);
     }
 
-    public void updateUniforms(WallpaperEvents.WallpaperState state) throws Throwable {
+    public void updateUniforms(WallpaperEvents.WallpaperState state, float viewportOffsetX, float viewportOffsetY) throws Throwable {
         if (locRes >= 0) canvas.glUniform2f.invokeExact(locRes, state.width(), state.height());
         if (locTime >= 0) canvas.glUniform1f.invokeExact(locTime, state.time());
         if (locMouse >= 0) {
@@ -53,6 +54,7 @@ public class ShaderPipeline {
         if (locAudio >= 0) canvas.glUniform1f.invokeExact(locAudio, state.audioActivity());
         if (locCpu >= 0) canvas.glUniform1f.invokeExact(locCpu, state.cpu());
         if (locRam >= 0) canvas.glUniform1f.invokeExact(locRam, state.ram());
+        if (locViewportOffset >= 0) canvas.glUniform2f.invokeExact(locViewportOffset, viewportOffsetX, viewportOffsetY);
     }
 
     /**
@@ -110,6 +112,7 @@ public class ShaderPipeline {
             locAudio = (int) canvas.glGetUniformLocation.invokeExact(programId, arena.allocateFrom("u_audio"));
             locCpu = (int) canvas.glGetUniformLocation.invokeExact(programId, arena.allocateFrom("u_cpu"));
             locRam = (int) canvas.glGetUniformLocation.invokeExact(programId, arena.allocateFrom("u_ram"));
+            locViewportOffset = (int) canvas.glGetUniformLocation.invokeExact(programId, arena.allocateFrom("u_viewportOffset"));
         }
     }
 }

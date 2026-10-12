@@ -11,17 +11,17 @@ let
   templates = ../templates;
 
   # jvm-init [VERSION] --- drop the JVM shell.nix + .envrc into the current
-  # directory, pinned to JDK VERSION (default 21), and allow it in direnv.
+  # directory, pinned to JDK VERSION (default 25), and allow it in direnv.
   jvm-init = pkgs.writeShellScriptBin "jvm-init" ''
     set -eu
-    version="''${1:-21}"
+    version="''${1:-25}"
     for f in shell.nix .envrc; do
       if [ -e "$f" ]; then
         echo "jvm-init: $f already exists, refusing to overwrite" >&2
         exit 1
       fi
     done
-    ${pkgs.gnused}/bin/sed "s/java ? \"21\"/java ? \"$version\"/" \
+    ${pkgs.gnused}/bin/sed "s/java ? \"25\"/java ? \"$version\"/" \
       ${jvmTemplate}/shell.nix > shell.nix
     install -m 644 ${jvmTemplate}/.envrc .envrc
     ${pkgs.direnv}/bin/direnv allow .

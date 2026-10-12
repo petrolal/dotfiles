@@ -6,7 +6,7 @@
 # Available versions: 8, 11, 17, 21, 25 (anything nixpkgs ships as jdkNN).
 
 { pkgs ? import <nixpkgs> { }
-, java ? "21"
+, java ? "25"
 , ...
 }:
 

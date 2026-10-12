@@ -39,8 +39,8 @@ if status is-interactive
     set -g fish_pager_color_description $__abyssal_grey
     set -g fish_pager_color_selected_background --background=$__abyssal_dim
 
-    set -gx EDITOR 'emacs -nw'
-    set -gx VISUAL emacs
+    set -gx EDITOR nano
+    set -gx VISUAL nano
     set -gx PAGER less
 
     # --- dotfiles workflow shortcuts (see README.md "Day-to-Day Usage";

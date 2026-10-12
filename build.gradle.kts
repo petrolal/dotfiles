@@ -6,7 +6,7 @@ import java.nio.file.Paths
 plugins {
     java
     application
-    id("org.graalvm.buildtools.native") version "0.10.4"
+    id("org.graalvm.buildtools.native") version "0.11.5"
 }
 
 group = "dev.petrolal"
@@ -119,7 +119,28 @@ graalvmNative {
         named("main") {
             imageName.set("invoker")
             mainClass.set("dev.petrolal.dotfiles.Main")
-            buildArgs.addAll("-O3", "--gc=epsilon", "-march=native", "--enable-native-access=ALL-UNNAMED")
+            fallback.set(true)
+            // Epsilon GC never reclaims memory -- fine for a short benchmark,
+            // fatal for this long-running desktop daemon: it allocates a small
+            // state record every frame forever, so epsilon leaked unbounded
+            // native/heap memory (confirmed: >1GB RSS after ~3.5 minutes,
+            // growing linearly with no plateau). Serial GC actually collects,
+            // while still being the lowest-footprint real collector for a
+            // small, mostly single-threaded background process like this.
+            buildArgs.addAll("-O3", "--gc=serial", "-march=native", "--enable-native-access=ALL-UNNAMED")
+            environmentVariables.putAll(
+                mapOf(
+                    "NIX_BINTOOLS" to "",
+                    "NIX_BINTOOLS_WRAPPER_TARGET_HOST_x86_64_unknown_linux_gnu" to "",
+                    "NIX_BUILD_CORES" to "",
+                    "NIX_BUILD_TOP" to "",
+                    "NIX_CC" to "",
+                    "NIX_CC_WRAPPER_TARGET_HOST_x86_64_unknown_linux_gnu" to "",
+                    "NIX_CFLAGS_COMPILE" to "",
+                    "NIX_HARDENING_ENABLE" to "",
+                    "NIX_LDFLAGS" to "",
+                )
+            )
         }
     }
 }

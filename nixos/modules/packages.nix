@@ -31,7 +31,6 @@ let
   ];
 
   devTools = with pkgs; [
-    emacs
     claude-code
   ];
 

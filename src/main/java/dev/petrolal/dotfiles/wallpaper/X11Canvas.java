@@ -4,23 +4,61 @@ import java.lang.foreign.*;
 import java.lang.invoke.MethodHandle;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
- * X11Canvas manages the native X11 desktop background window and its OpenGL context.
- * Provides query methods for global mouse and workspace states.
+ * X11Canvas manages the X11 display connection and, per monitor, an
+ * independent desktop-background window + OpenGL context (see
+ * {@link #createSurface}). Each surface gets its own vsync'd
+ * {@code glXSwapBuffers} call, so every monitor's presentation is paced by
+ * its own hardware vblank -- no shared buffer swap, no assumption that two
+ * monitors share a refresh rate, and no hardcoded target FPS anywhere.
+ * Provides query methods for global mouse and workspace state.
  */
 public class X11Canvas implements AutoCloseable {
 
     public record MouseInfo(float x, float y, boolean leftDown, boolean rightDown) {}
+
+    /** One monitor's window + GL context. All surfaces share one GL object namespace. */
+    public record Surface(long window, MemorySegment glContext) {}
 
     private final MemorySegment display;
     private final int screen;
     private final long root;
     private final int width;
     private final int height;
-    private final long window;
-    private final MemorySegment glContext;
     private final long atomCurrentDesktop;
+    private final long atomWmWindowType;
+    private final long atomWmWindowTypeDesktop;
+    private final long atomWmState;
+    private final long atomWmStateBelow;
+    private final long atomTypeAtom;
+
+    private final List<Long> surfaceWindows = new ArrayList<>();
+    private MemorySegment sharedGlContext = null;
+    private int quadVbo = -1;
+
+    // Long-lived scratch buffers for the per-frame native queries below.
+    // queryMouse()/queryWorkspace() run once per frame (60x/sec, forever) --
+    // allocating a fresh Arena.ofConfined() per call here leaked native
+    // memory at several MB/sec under GraalVM native-image (confirmed via
+    // steadily climbing RSS), so these out-params are allocated once and
+    // reused instead of allocated/freed every frame.
+    private final Arena persistentArena = Arena.ofShared();
+    private final MemorySegment mouseRootRet = persistentArena.allocate(ValueLayout.JAVA_LONG);
+    private final MemorySegment mouseChildRet = persistentArena.allocate(ValueLayout.JAVA_LONG);
+    private final MemorySegment mouseRootX = persistentArena.allocate(ValueLayout.JAVA_INT);
+    private final MemorySegment mouseRootY = persistentArena.allocate(ValueLayout.JAVA_INT);
+    private final MemorySegment mouseWinX = persistentArena.allocate(ValueLayout.JAVA_INT);
+    private final MemorySegment mouseWinY = persistentArena.allocate(ValueLayout.JAVA_INT);
+    private final MemorySegment mouseMask = persistentArena.allocate(ValueLayout.JAVA_INT);
+
+    private final MemorySegment workspaceActualType = persistentArena.allocate(ValueLayout.JAVA_LONG);
+    private final MemorySegment workspaceActualFormat = persistentArena.allocate(ValueLayout.JAVA_INT);
+    private final MemorySegment workspaceNitems = persistentArena.allocate(ValueLayout.JAVA_LONG);
+    private final MemorySegment workspaceBytesAfter = persistentArena.allocate(ValueLayout.JAVA_LONG);
+    private final MemorySegment workspacePropPtr = persistentArena.allocate(ValueLayout.ADDRESS);
 
     // X11 function handles
     private static final MethodHandle XOpenDisplay;
@@ -45,27 +83,29 @@ public class X11Canvas implements AutoCloseable {
     private static final MethodHandle glXSwapBuffers;
     private static final MethodHandle glXGetProcAddress;
 
-    // Direct OpenGL function handles
-    public final MethodHandle glCreateShader;
-    public final MethodHandle glShaderSource;
-    public final MethodHandle glCompileShader;
-    public final MethodHandle glCreateProgram;
-    public final MethodHandle glAttachShader;
-    public final MethodHandle glLinkProgram;
-    public final MethodHandle glUseProgram;
-    public final MethodHandle glDeleteShader;
-    public final MethodHandle glDeleteProgram;
-    public final MethodHandle glGetUniformLocation;
-    public final MethodHandle glUniform1f;
-    public final MethodHandle glUniform2f;
-    public final MethodHandle glUniform4f;
-    public final MethodHandle glViewport;
-    public final MethodHandle glGenBuffers;
-    public final MethodHandle glBindBuffer;
-    public final MethodHandle glBufferData;
-    public final MethodHandle glEnableVertexAttribArray;
-    public final MethodHandle glVertexAttribPointer;
-    public final MethodHandle glDrawArrays;
+    // Direct OpenGL function handles -- resolved once in initGL(), after the
+    // first surface's context is current (see initGL for why this can't
+    // happen in the constructor: it needs the first monitor's real rectangle).
+    public MethodHandle glCreateShader;
+    public MethodHandle glShaderSource;
+    public MethodHandle glCompileShader;
+    public MethodHandle glCreateProgram;
+    public MethodHandle glAttachShader;
+    public MethodHandle glLinkProgram;
+    public MethodHandle glUseProgram;
+    public MethodHandle glDeleteShader;
+    public MethodHandle glDeleteProgram;
+    public MethodHandle glGetUniformLocation;
+    public MethodHandle glUniform1f;
+    public MethodHandle glUniform2f;
+    public MethodHandle glUniform4f;
+    public MethodHandle glViewport;
+    public MethodHandle glGenBuffers;
+    public MethodHandle glBindBuffer;
+    public MethodHandle glBufferData;
+    public MethodHandle glEnableVertexAttribArray;
+    public MethodHandle glVertexAttribPointer;
+    public MethodHandle glDrawArrays;
 
     private static SymbolLookup loadLibrary(String libName, Arena arena) {
         try {
@@ -162,40 +202,28 @@ public class X11Canvas implements AutoCloseable {
         width = (int) XDisplayWidth.invokeExact(display, screen);
         height = (int) XDisplayHeight.invokeExact(display, screen);
 
-        window = (long) XCreateSimpleWindow.invokeExact(display, root, 0, 0, width, height, 0, 0L, 0L);
-
-        // Mark window as X11 desktop background & layer below
         try (Arena arena = Arena.ofConfined()) {
-            long atomType = (long) XInternAtom.invokeExact(display, arena.allocateFrom("_NET_WM_WINDOW_TYPE"), 0);
-            long atomDesktop = (long) XInternAtom.invokeExact(display, arena.allocateFrom("_NET_WM_WINDOW_TYPE_DESKTOP"), 0);
-            long atomState = (long) XInternAtom.invokeExact(display, arena.allocateFrom("_NET_WM_STATE"), 0);
-            long atomBelow = (long) XInternAtom.invokeExact(display, arena.allocateFrom("_NET_WM_STATE_BELOW"), 0);
-            long atomAtom = (long) XInternAtom.invokeExact(display, arena.allocateFrom("ATOM"), 0);
+            atomWmWindowType = (long) XInternAtom.invokeExact(display, arena.allocateFrom("_NET_WM_WINDOW_TYPE"), 0);
+            atomWmWindowTypeDesktop = (long) XInternAtom.invokeExact(display, arena.allocateFrom("_NET_WM_WINDOW_TYPE_DESKTOP"), 0);
+            atomWmState = (long) XInternAtom.invokeExact(display, arena.allocateFrom("_NET_WM_STATE"), 0);
+            atomWmStateBelow = (long) XInternAtom.invokeExact(display, arena.allocateFrom("_NET_WM_STATE_BELOW"), 0);
+            atomTypeAtom = (long) XInternAtom.invokeExact(display, arena.allocateFrom("ATOM"), 0);
             atomCurrentDesktop = (long) XInternAtom.invokeExact(display, arena.allocateFrom("_NET_CURRENT_DESKTOP"), 0);
-
-            MemorySegment propType = arena.allocateFrom(ValueLayout.JAVA_LONG, atomDesktop);
-            int ignoredType = (int) XChangeProperty.invokeExact(display, window, atomType, atomAtom, 32, 0, propType, 1);
-
-            MemorySegment propBelow = arena.allocateFrom(ValueLayout.JAVA_LONG, atomBelow);
-            int ignoredBelow = (int) XChangeProperty.invokeExact(display, window, atomState, atomAtom, 32, 0, propBelow, 1);
         }
+    }
 
-        int ignoredMap = (int) XMapWindow.invokeExact(display, window);
-        int ignoredLower = (int) XLowerWindow.invokeExact(display, window);
+    /**
+     * Creates the first monitor's surface, sized to its real rectangle (not
+     * the whole virtual desktop -- each monitor needs its own window so its
+     * swapBuffers can vsync to its own vblank), resolves the GL function
+     * pointers now that a context is current, and builds the shared quad
+     * VBO every later {@link #createSurface} call reuses. Call once; use
+     * {@link #createSurface} for every monitor after the first.
+     */
+    public Surface initGL(int x, int y, int w, int h) throws Throwable {
+        Surface first = createSurface(x, y, w, h);
 
-        // Initialize OpenGL via GLX
         Linker linker = Linker.nativeLinker();
-        try (Arena arena = Arena.ofConfined()) {
-            MemorySegment glAttrs = arena.allocateFrom(ValueLayout.JAVA_INT, 4 /* GLX_RGBA */, 5 /* GLX_DOUBLEBUFFER */, 0);
-            MemorySegment visInfo = (MemorySegment) glXChooseVisual.invokeExact(display, screen, glAttrs);
-            glContext = (MemorySegment) glXCreateContext.invokeExact(display, visInfo, MemorySegment.NULL, 1);
-            int ignoredCurrent = (int) glXMakeCurrent.invokeExact(display, window, glContext);
-        }
-
-        // Explicitly disable GLX VSync blocking across display screens
-        setSwapInterval(0);
-
-        // Initialize GL function pointers
         glCreateShader = getProc(linker, "glCreateShader", FunctionDescriptor.of(ValueLayout.JAVA_INT, ValueLayout.JAVA_INT));
         glShaderSource = getProc(linker, "glShaderSource", FunctionDescriptor.ofVoid(ValueLayout.JAVA_INT, ValueLayout.JAVA_INT, ValueLayout.ADDRESS, ValueLayout.ADDRESS));
         glCompileShader = getProc(linker, "glCompileShader", FunctionDescriptor.ofVoid(ValueLayout.JAVA_INT));
@@ -217,15 +245,66 @@ public class X11Canvas implements AutoCloseable {
         glVertexAttribPointer = getProc(linker, "glVertexAttribPointer", FunctionDescriptor.ofVoid(ValueLayout.JAVA_INT, ValueLayout.JAVA_INT, ValueLayout.JAVA_INT, ValueLayout.JAVA_BYTE, ValueLayout.JAVA_INT, ValueLayout.ADDRESS));
         glDrawArrays = getProc(linker, "glDrawArrays", FunctionDescriptor.ofVoid(ValueLayout.JAVA_INT, ValueLayout.JAVA_INT, ValueLayout.JAVA_INT));
 
-        // Create fullscreen quad VBO
-        setupFullscreenQuad();
+        createSharedQuadBuffer();
+        bindQuadAttribs();
+        return first;
     }
 
     /**
-     * Disables VSync blocking by setting swap interval to 0.
+     * Creates one monitor's desktop-background window and GL context, sized
+     * and positioned to exactly cover that monitor. Every surface after the
+     * first shares the first context's GL object namespace (shaders/buffers),
+     * and gets its own vsync'd swap chain -- each monitor's presentation is
+     * then paced purely by its own hardware vblank via {@link #swapBuffers}.
+     */
+    public Surface createSurface(int x, int y, int w, int h) throws Throwable {
+        long window = (long) XCreateSimpleWindow.invokeExact(display, root, x, y, w, h, 0, 0L, 0L);
+
+        try (Arena arena = Arena.ofConfined()) {
+            MemorySegment propType = arena.allocateFrom(ValueLayout.JAVA_LONG, atomWmWindowTypeDesktop);
+            int ignoredType = (int) XChangeProperty.invokeExact(display, window, atomWmWindowType, atomTypeAtom, 32, 0, propType, 1);
+
+            MemorySegment propBelow = arena.allocateFrom(ValueLayout.JAVA_LONG, atomWmStateBelow);
+            int ignoredBelow = (int) XChangeProperty.invokeExact(display, window, atomWmState, atomTypeAtom, 32, 0, propBelow, 1);
+        }
+
+        int ignoredMap = (int) XMapWindow.invokeExact(display, window);
+        surfaceWindows.add(window);
+        lowerWindow(window);
+
+        MemorySegment glContext;
+        try (Arena arena = Arena.ofConfined()) {
+            MemorySegment glAttrs = arena.allocateFrom(ValueLayout.JAVA_INT, 4 /* GLX_RGBA */, 5 /* GLX_DOUBLEBUFFER */, 0);
+            MemorySegment visInfo = (MemorySegment) glXChooseVisual.invokeExact(display, screen, glAttrs);
+            MemorySegment shareWith = sharedGlContext == null ? MemorySegment.NULL : sharedGlContext;
+            glContext = (MemorySegment) glXCreateContext.invokeExact(display, visInfo, shareWith, 1);
+            int ignoredCurrent = (int) glXMakeCurrent.invokeExact(display, window, glContext);
+            // XVisualInfo* is server-allocated by Xlib; it's our responsibility to free it.
+            int ignoredFree = (int) XFree.invokeExact(visInfo);
+        }
+
+        if (sharedGlContext == null) {
+            sharedGlContext = glContext;
+        } else {
+            // Non-bootstrap surface: the shared quad buffer object already
+            // exists, but buffer binding + vertex attrib state is per-context.
+            bindQuadAttribs();
+        }
+
+        // Vsync per surface: each monitor's swapBuffers call blocks on THAT
+        // monitor's own vblank, so mixed refresh rates (e.g. 165Hz + 60Hz)
+        // each get correctly paced -- automatically, with no target FPS or
+        // Hz value hardcoded anywhere.
+        setSwapInterval(window, 1);
+
+        return new Surface(window, glContext);
+    }
+
+    /**
+     * Disables (0) or enables (1, the default we use) VSync for one drawable.
      * Resolves glXSwapIntervalEXT, glXSwapIntervalMESA, or glXSwapIntervalSGI dynamically.
      */
-    public void setSwapInterval(int interval) {
+    public void setSwapInterval(long drawable, int interval) {
         Linker linker = Linker.nativeLinker();
         try (Arena arena = Arena.ofConfined()) {
             // 1. Try glXSwapIntervalEXT (Display*, GLXDrawable, int)
@@ -233,11 +312,11 @@ public class X11Canvas implements AutoCloseable {
             if (!extPtr.equals(MemorySegment.NULL) && extPtr.address() != 0) {
                 MethodHandle handle = linker.downcallHandle(extPtr,
                         FunctionDescriptor.ofVoid(ValueLayout.ADDRESS, ValueLayout.JAVA_LONG, ValueLayout.JAVA_INT));
-                handle.invokeExact(display, window, interval);
+                handle.invokeExact(display, drawable, interval);
                 return;
             }
 
-            // 2. Try glXSwapIntervalMESA (int)
+            // 2. Try glXSwapIntervalMESA (int) -- process-wide, not per-drawable
             MemorySegment mesaPtr = (MemorySegment) glXGetProcAddress.invokeExact(arena.allocateFrom("glXSwapIntervalMESA"));
             if (!mesaPtr.equals(MemorySegment.NULL) && mesaPtr.address() != 0) {
                 MethodHandle handle = linker.downcallHandle(mesaPtr,
@@ -246,7 +325,7 @@ public class X11Canvas implements AutoCloseable {
                 return;
             }
 
-            // 3. Try glXSwapIntervalSGI (int)
+            // 3. Try glXSwapIntervalSGI (int) -- process-wide, not per-drawable
             MemorySegment sgiPtr = (MemorySegment) glXGetProcAddress.invokeExact(arena.allocateFrom("glXSwapIntervalSGI"));
             if (!sgiPtr.equals(MemorySegment.NULL) && sgiPtr.address() != 0) {
                 MethodHandle handle = linker.downcallHandle(sgiPtr,
@@ -256,20 +335,24 @@ public class X11Canvas implements AutoCloseable {
         } catch (Throwable ignored) {}
     }
 
-    private void setupFullscreenQuad() throws Throwable {
+    private void createSharedQuadBuffer() throws Throwable {
         float[] quadVertices = { -1.0f, -1.0f, 1.0f, -1.0f, -1.0f, 1.0f, 1.0f, 1.0f };
         try (Arena arena = Arena.ofConfined()) {
             MemorySegment vboBuf = arena.allocate(ValueLayout.JAVA_INT);
             glGenBuffers.invokeExact(1, vboBuf);
-            int vbo = vboBuf.get(ValueLayout.JAVA_INT, 0);
+            quadVbo = vboBuf.get(ValueLayout.JAVA_INT, 0);
 
-            glBindBuffer.invokeExact(0x8892 /* GL_ARRAY_BUFFER */, vbo);
+            glBindBuffer.invokeExact(0x8892 /* GL_ARRAY_BUFFER */, quadVbo);
             MemorySegment quadData = arena.allocateFrom(ValueLayout.JAVA_FLOAT, quadVertices);
             glBufferData.invokeExact(0x8892, quadVertices.length * 4L, quadData, 0x88E4 /* GL_STATIC_DRAW */);
-
-            glEnableVertexAttribArray.invokeExact(0);
-            glVertexAttribPointer.invokeExact(0, 2, 0x1406 /* GL_FLOAT */, (byte) 0, 0, MemorySegment.NULL);
         }
+    }
+
+    /** Buffer binding + vertex attrib state belongs to the context, not the shared object namespace. */
+    private void bindQuadAttribs() throws Throwable {
+        glBindBuffer.invokeExact(0x8892 /* GL_ARRAY_BUFFER */, quadVbo);
+        glEnableVertexAttribArray.invokeExact(0);
+        glVertexAttribPointer.invokeExact(0, 2, 0x1406 /* GL_FLOAT */, (byte) 0, 0, MemorySegment.NULL);
     }
 
     private MethodHandle getProc(Linker linker, String name, FunctionDescriptor desc) throws Throwable {
@@ -280,20 +363,12 @@ public class X11Canvas implements AutoCloseable {
     }
 
     public MouseInfo queryMouse() {
-        try (Arena arena = Arena.ofConfined()) {
-            MemorySegment rootRet = arena.allocate(ValueLayout.JAVA_LONG);
-            MemorySegment childRet = arena.allocate(ValueLayout.JAVA_LONG);
-            MemorySegment rootX = arena.allocate(ValueLayout.JAVA_INT);
-            MemorySegment rootY = arena.allocate(ValueLayout.JAVA_INT);
-            MemorySegment winX = arena.allocate(ValueLayout.JAVA_INT);
-            MemorySegment winY = arena.allocate(ValueLayout.JAVA_INT);
-            MemorySegment mask = arena.allocate(ValueLayout.JAVA_INT);
-
-            int ok = (int) XQueryPointer.invokeExact(display, root, rootRet, childRet, rootX, rootY, winX, winY, mask);
+        try {
+            int ok = (int) XQueryPointer.invokeExact(display, root, mouseRootRet, mouseChildRet, mouseRootX, mouseRootY, mouseWinX, mouseWinY, mouseMask);
             if (ok != 0) {
-                int rx = rootX.get(ValueLayout.JAVA_INT, 0);
-                int ry = rootY.get(ValueLayout.JAVA_INT, 0);
-                int m = mask.get(ValueLayout.JAVA_INT, 0);
+                int rx = mouseRootX.get(ValueLayout.JAVA_INT, 0);
+                int ry = mouseRootY.get(ValueLayout.JAVA_INT, 0);
+                int m = mouseMask.get(ValueLayout.JAVA_INT, 0);
                 boolean left = (m & (1 << 8)) != 0;
                 boolean right = (m & (1 << 10)) != 0;
                 return new MouseInfo((float) rx, (float) ry, left, right);
@@ -303,20 +378,14 @@ public class X11Canvas implements AutoCloseable {
     }
 
     public int queryWorkspace() {
-        try (Arena arena = Arena.ofConfined()) {
-            MemorySegment actualType = arena.allocate(ValueLayout.JAVA_LONG);
-            MemorySegment actualFormat = arena.allocate(ValueLayout.JAVA_INT);
-            MemorySegment nitems = arena.allocate(ValueLayout.JAVA_LONG);
-            MemorySegment bytesAfter = arena.allocate(ValueLayout.JAVA_LONG);
-            MemorySegment propPtr = arena.allocate(ValueLayout.ADDRESS);
-
+        try {
             int status = (int) XGetWindowProperty.invokeExact(
                 display, root, atomCurrentDesktop,
-                0L, 1L, 0, 0L, actualType, actualFormat, nitems, bytesAfter, propPtr
+                0L, 1L, 0, 0L, workspaceActualType, workspaceActualFormat, workspaceNitems, workspaceBytesAfter, workspacePropPtr
             );
 
             if (status == 0) {
-                MemorySegment data = propPtr.get(ValueLayout.ADDRESS, 0);
+                MemorySegment data = workspacePropPtr.get(ValueLayout.ADDRESS, 0);
                 if (!data.equals(MemorySegment.NULL)) {
                     long desktop = data.get(ValueLayout.JAVA_LONG, 0);
                     int ignored = (int) XFree.invokeExact(data);
@@ -327,6 +396,29 @@ public class X11Canvas implements AutoCloseable {
         return 0;
     }
 
+    private void lowerWindow(long window) {
+        try {
+            int ignored = (int) XLowerWindow.invokeExact(display, window);
+        } catch (Throwable ignored) {}
+    }
+
+    /**
+     * Re-asserts that every surface's window sits at the bottom of the stack.
+     * A single XLowerWindow call at startup isn't enough on desktops where
+     * xfdesktop (icons) or panel widgets get (re)mapped/raised after us --
+     * they can end up stacked below our windows instead of above them.
+     * Called once at startup and then periodically from the render loop.
+     */
+    public void lowerToBackground() {
+        for (long window : surfaceWindows) {
+            lowerWindow(window);
+        }
+    }
+
+    public void makeCurrent(Surface surface) throws Throwable {
+        int ignored = (int) glXMakeCurrent.invokeExact(display, surface.window(), surface.glContext());
+    }
+
     public void setViewport(int x, int y, int width, int height) throws Throwable {
         glViewport.invokeExact(x, y, width, height);
     }
@@ -335,8 +427,8 @@ public class X11Canvas implements AutoCloseable {
         glDrawArrays.invokeExact(0x0005 /* GL_TRIANGLE_STRIP */, 0, 4);
     }
 
-    public void swapBuffers() throws Throwable {
-        glXSwapBuffers.invokeExact(display, window);
+    public void swapBuffers(Surface surface) throws Throwable {
+        glXSwapBuffers.invokeExact(display, surface.window());
     }
 
     public int getWidth() { return width; }
