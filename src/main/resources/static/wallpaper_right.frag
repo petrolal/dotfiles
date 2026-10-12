@@ -100,6 +100,14 @@ float map(vec3 p) {
     float bin = sdBox(binP, vec3(0.3, 0.35, 0.3));
     if (bin < d) { d = bin; hitMat = 6; }
 
+    // 6. Wall-Mounted Specimen Telemetry Monitor (Mounted at x = -0.4, y = 0.5, z = 5.2)
+    vec3 monP = p - vec3(-0.35, 0.45, 5.0);
+    monP.xz *= rot(0.30); // Angled towards center viewer
+    float monCase = sdBox(monP, vec3(0.32, 0.22, 0.08));
+    float monScreen = sdBox(monP - vec3(0.0, 0.0, -0.075), vec3(0.28, 0.18, 0.015));
+    if (monScreen < d) { d = monScreen; hitMat = 11; }
+    if (monCase < d) { d = monCase; hitMat = 8; }
+
     return d;
 }
 
@@ -149,19 +157,21 @@ void main() {
 
     vec3 n = calcNormal(p);
 
-    // Constant, stable Flashlight (Zero blinking/strobing)
+    // Dynamic Flashlight: aims smoothly with cursor position or hovers gently
+    vec2 normMouse = (u_mouse.x >= 0.0) ? (u_mouse.xy / u_resolution.xy - 0.5) : vec2(sin(u_time * 0.4) * 0.15, cos(u_time * 0.3) * 0.1);
     vec3 lightPos = ro + vec3(-0.1, -0.1, 0.0);
-    vec3 lightDir = normalize(target - lightPos);
+    vec3 aimTarget = target + vec3(normMouse.x * 2.2, -normMouse.y * 1.8, 0.0);
+    vec3 lightDir = normalize(aimTarget - lightPos);
     vec3 toFrag = normalize(p - lightPos);
     float distToLight = length(p - lightPos);
 
     float spotCos = dot(lightDir, toFrag);
-    float spot = smoothstep(0.70, 0.94, spotCos);
+    float spot = smoothstep(0.65, 0.94, spotCos);
 
-    float atten = 1.0 / (1.0 + 0.15 * distToLight + 0.08 * distToLight * distToLight);
+    float atten = 1.0 / (1.0 + 0.12 * distToLight + 0.05 * distToLight * distToLight);
     float diffuse = max(dot(n, -toFrag), 0.0);
-    float directLight = diffuse * atten * spot * 1.35;
-    float ambient = 0.06; // Calm baseline ambient
+    float directLight = diffuse * atten * spot * 1.5;
+    float ambient = 0.07; // Clear baseline ambient visibility
 
     // --- Procedural Textures & Materials ---
     vec3 albedo = vec3(0.4);
@@ -241,6 +251,10 @@ void main() {
         // Specimen Tube Iron Caps & Hydraulic Collars
         albedo = vec3(0.28, 0.30, 0.32);
     }
+    else if (obj == 8) {
+        // Specimen Telemetry Monitor Casing (Dark matte hospital gray plastic)
+        albedo = vec3(0.20, 0.22, 0.22);
+    }
 
     vec3 col = albedo * (ambient + directLight * 1.25);
 
@@ -254,11 +268,39 @@ void main() {
         // Murky suspended shadow / silhouette inside
         float specimenCore = smoothstep(0.35, 0.05, length(vatLocal.xz));
 
-        vec3 fluidGlow = vec3(0.25, 0.85, 0.40); // Formaldehyde green
-        vec3 fluidCol = mix(fluidGlow * 0.5, fluidGlow * 1.1, specimenCore);
+        // Pulsing bioluminescent specimen glow tied to time and audio
+        float pulse = 0.95 + 0.12 * sin(u_time * 2.0) + u_audio * 0.35;
+        vec3 fluidGlow = vec3(0.25, 0.88, 0.42) * pulse; // Formaldehyde neon green
+        vec3 fluidCol = mix(fluidGlow * 0.5, fluidGlow * 1.15, specimenCore);
         fluidCol += vec3(0.3, 0.4, 0.2) * bubbles;
 
         col = fluidCol;
+    }
+
+    // 7. Wall-Mounted Telemetry Screen (Cyan/Teal digital monitor displaying live heart rate & EEG)
+    if (obj == 11) {
+        vec3 monLocal = p - vec3(-0.35, 0.45, 5.0);
+        monLocal.xz *= rot(0.30); // Align with screen face
+        vec2 sUV = monLocal.xy - vec2(0.0, 0.0);
+
+        // Animated telemetry ECG line (top)
+        float waveSpeed = u_time * 0.55;
+        float waveX = fract(sUV.x * 2.5 - waveSpeed);
+        float pulsePeak = sin(waveX * 30.0) * exp(-abs(waveX - 0.5) * 14.0) * 0.06;
+        float ecgLine = smoothstep(0.009, 0.001, abs((sUV.y - 0.04) - pulsePeak));
+
+        // Pulsing audio/activity frequency bar (bottom)
+        float barX = sUV.x + 0.12;
+        float barH = 0.04 + 0.03 * sin(barX * 20.0 + u_time * 4.0) + u_audio * 0.03;
+        float bar = step(-0.10, sUV.y) * step(sUV.y, -0.10 + barH) * step(abs(barX), 0.12);
+
+        // CRT scanline effect
+        float scanline = mix(0.85, 1.0, step(0.35, fract(monLocal.y * 140.0)));
+
+        vec3 cyanPhosphor = vec3(0.18, 0.90, 0.95);
+        vec3 screenBg = vec3(0.02, 0.06, 0.08);
+        vec3 screenCol = mix(screenBg, cyanPhosphor, clamp(ecgLine + bar * 0.9, 0.0, 1.0));
+        col = screenCol * scanline * 1.35;
     }
 
     // Specimen tube emissive light spilling onto the floor & morgue vault
@@ -266,7 +308,16 @@ void main() {
     float distToVat = length(p - vatWorldPos);
     if (obj != 10 && distToVat < 2.5) {
         float vatSpill = (2.5 - distToVat) / 2.5;
-        col += vec3(0.08, 0.32, 0.12) * vatSpill * vatSpill * 0.65;
+        float pulse = 0.95 + 0.12 * sin(u_time * 2.0) + u_audio * 0.35;
+        col += vec3(0.08, 0.34, 0.14) * vatSpill * vatSpill * 0.70 * pulse;
+    }
+
+    // Telemetry monitor emissive light spilling onto morgue wall
+    vec3 monWorldPos = vec3(-0.35, 0.45, 5.0);
+    float distToMon = length(p - monWorldPos);
+    if (obj != 11 && distToMon < 1.8) {
+        float monSpill = (1.8 - distToMon) / 1.8;
+        col += vec3(0.04, 0.25, 0.28) * monSpill * monSpill * 0.85;
     }
 
     // Distance fog

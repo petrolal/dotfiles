@@ -52,9 +52,17 @@ let
     defaultAlias = true;
   };
 
-  # 2. Official Eclipse Java EE (Enterprise Java, Jakarta EE, WTP)
+  # 2. Official Eclipse Java EE (Enterprise Java and Web Developers 2026-12 M1)
+  eclipseJeePkg = pkgs.eclipses.eclipse-jee.overrideAttrs (_old: {
+    version = "2026-12-M1";
+    src = pkgs.fetchurl {
+      url = "https://download.eclipse.org/technology/epp/downloads/release/2026-12/M1/eclipse-jee-2026-12-M1-linux-gtk-x86_64.tar.gz";
+      sha256 = "1hsdc3iwrd4921aam6fdc35m6ljswrljwlrj8naf0m20izk5g0vb";
+    };
+  });
+
   eclipseJee = mkEclipseWrapper {
-    pkg = pkgs.eclipses.eclipse-jee;
+    pkg = eclipseJeePkg;
     binName = "eclipse-jee";
     desktopName = "Eclipse Java EE";
   };

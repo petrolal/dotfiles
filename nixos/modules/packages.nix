@@ -28,7 +28,6 @@ let
   # directly.
   visualizerTools = with pkgs; [
     glava
-    conky
   ];
 
   devTools = with pkgs; [

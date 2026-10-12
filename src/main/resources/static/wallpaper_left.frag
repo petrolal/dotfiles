@@ -69,86 +69,102 @@ float map(vec3 p) {
     float leftWall = p.x + 3.8;
     if (leftWall < d) { d = leftWall; hitMat = 3; }
 
-    // 2. Medical Anesthesia Machine - Rotated to face the camera/viewer directly
+    // 2. Medical Anesthesia Machine Bounding Box Culling
     vec3 machP = p - vec3(-2.1, -0.6, 4.4);
-    machP.xz *= rot(-0.25); // Slanted slightly inward, front panel and screen face viewer
-    
-    float cart = sdBox(machP - vec3(0.0, -0.35, 0.0), vec3(0.55, 0.55, 0.45));
-    vec3 panelP = machP - vec3(0.0, 0.15, -0.05);
-    panelP.yz *= rot(0.18);
-    float panel = sdBox(panelP, vec3(0.52, 0.22, 0.42));
-    float body = min(cart, panel);
+    float machRegion = sdBox(machP, vec3(1.2, 1.1, 0.9));
+    if (machRegion - 0.2 < d) {
+        machP.xz *= rot(-0.25); // Slanted slightly inward, front panel and screen face viewer
+        
+        float cart = sdBox(machP - vec3(0.0, -0.35, 0.0), vec3(0.55, 0.55, 0.45));
+        vec3 panelP = machP - vec3(0.0, 0.15, -0.05);
+        panelP.yz *= rot(0.18);
+        float panel = sdBox(panelP, vec3(0.52, 0.22, 0.42));
+        float body = min(cart, panel);
 
-    vec3 monP = machP - vec3(-0.05, 0.6, 0.0);
-    float monitor = sdBox(monP, vec3(0.48, 0.28, 0.35));
-    float machine = min(body, monitor);
+        vec3 monP = machP - vec3(-0.05, 0.6, 0.0);
+        float monitor = sdBox(monP, vec3(0.48, 0.28, 0.35));
+        float machine = min(body, monitor);
 
-    // Front-facing Medical CRT Screen face
-    vec3 screenP = monP - vec3(-0.12, 0.02, -0.36);
-    float screen = sdBox(screenP, vec3(0.26, 0.18, 0.03));
-    if (screen < d) { d = screen; hitMat = 10; }
+        // Front-facing Medical CRT Screen face
+        vec3 screenP = monP - vec3(-0.12, 0.02, -0.36);
+        float screen = sdBox(screenP, vec3(0.26, 0.18, 0.03));
+        if (screen < d) { d = screen; hitMat = 10; }
 
-    if (machine < d) { d = machine; hitMat = 4; }
+        if (machine < d) { d = machine; hitMat = 4; }
 
-    // Front Control Dials
-    vec3 knobP1 = panelP - vec3(-0.25, 0.0, -0.44);
-    vec3 knobP2 = panelP - vec3(0.0, 0.0, -0.44);
-    vec3 knobP3 = panelP - vec3(0.25, 0.0, -0.44);
-    float knob = min(sdCylinder(knobP1.xzy, 0.04, 0.09),
-                 min(sdCylinder(knobP2.xzy, 0.04, 0.09),
-                     sdCylinder(knobP3.xzy, 0.04, 0.09)));
-    if (knob < d) { d = knob; hitMat = 6; }
+        // Front Control Dials
+        vec3 knobP1 = panelP - vec3(-0.25, 0.0, -0.44);
+        vec3 knobP2 = panelP - vec3(0.0, 0.0, -0.44);
+        vec3 knobP3 = panelP - vec3(0.25, 0.0, -0.44);
+        float knob = min(sdCylinder(knobP1.xzy, 0.04, 0.09),
+                     min(sdCylinder(knobP2.xzy, 0.04, 0.09),
+                         sdCylinder(knobP3.xzy, 0.04, 0.09)));
+        if (knob < d) { d = knob; hitMat = 6; }
 
-    // Side Oxygen Cylinders
-    vec3 tankL = machP - vec3(-0.72, -0.3, 0.0);
-    vec3 tankR = machP - vec3(0.72, -0.3, 0.0);
-    float tanks = min(sdCylinder(tankL, 0.55, 0.15), sdCylinder(tankR, 0.55, 0.15));
-    if (tanks < d) { d = tanks; hitMat = 7; }
+        // Side Oxygen Cylinders
+        vec3 tankL = machP - vec3(-0.72, -0.3, 0.0);
+        vec3 tankR = machP - vec3(0.72, -0.3, 0.0);
+        float tanks = min(sdCylinder(tankL, 0.55, 0.15), sdCylinder(tankR, 0.55, 0.15));
+        if (tanks < d) { d = tanks; hitMat = 7; }
+    } else {
+        d = min(d, machRegion);
+    }
 
-    // 3. Autopsy Examination Bed (Right corridor)
+    // 3. Autopsy Examination Bed Bounding Box Culling
     vec3 bedP = p - vec3(2.3, -0.85, 5.6);
-    bedP.xz *= rot(-0.12);
-    float bedPad = sdBox(bedP, vec3(0.65, 0.1, 1.4));
-    float bedFrame = sdBox(bedP - vec3(0.0, -0.35, 0.0), vec3(0.6, 0.25, 1.35));
-    float bed = min(bedPad, bedFrame);
-    if (bed < d) { d = bed; hitMat = 5; }
+    float bedRegion = sdBox(bedP, vec3(0.9, 0.6, 1.6));
+    if (bedRegion - 0.2 < d) {
+        bedP.xz *= rot(-0.12);
+        float bedPad = sdBox(bedP, vec3(0.65, 0.1, 1.4));
+        float bedFrame = sdBox(bedP - vec3(0.0, -0.35, 0.0), vec3(0.6, 0.25, 1.35));
+        float bed = min(bedPad, bedFrame);
+        if (bed < d) { d = bed; hitMat = 5; }
+    } else {
+        d = min(d, bedRegion);
+    }
 
     // 4. Center Office Desk with Retro White PC (Rear of room at z=6.4)
     vec3 deskP = p - vec3(0.0, -0.75, 6.4);
     
-    float deskTop = sdBox(deskP - vec3(0.0, 0.0, 0.0), vec3(1.15, 0.04, 0.65));
-    float deskLegL = sdBox(deskP - vec3(-1.05, -0.36, 0.0), vec3(0.05, 0.34, 0.55));
-    float deskLegR = sdBox(deskP - vec3(1.05, -0.36, 0.0), vec3(0.05, 0.34, 0.55));
-    float deskBack = sdBox(deskP - vec3(0.0, -0.30, 0.45), vec3(1.05, 0.28, 0.03));
-    float desk = min(min(deskTop, min(deskLegL, deskLegR)), deskBack);
-    if (desk < d) { d = desk; hitMat = 8; }
+    // Hierarchical Bounding Box Culling:
+    float deskRegion = sdBox(deskP - vec3(0.0, 0.0, 0.0), vec3(1.3, 0.9, 0.8));
+    if (deskRegion - 0.25 < d) {
+        float deskTop = sdBox(deskP - vec3(0.0, 0.0, 0.0), vec3(1.15, 0.04, 0.65));
+        float deskLegL = sdBox(deskP - vec3(-1.05, -0.36, 0.0), vec3(0.05, 0.34, 0.55));
+        float deskLegR = sdBox(deskP - vec3(1.05, -0.36, 0.0), vec3(0.05, 0.34, 0.55));
+        float deskBack = sdBox(deskP - vec3(0.0, -0.30, 0.45), vec3(1.05, 0.28, 0.03));
+        float desk = min(min(deskTop, min(deskLegL, deskLegR)), deskBack);
+        if (desk < d) { d = desk; hitMat = 8; }
 
-    // Retro Off-White PC CRT Monitor
-    vec3 pcMonP = deskP - vec3(-0.15, 0.44, 0.10);
-    float pcBezel = sdBox(pcMonP, vec3(0.44, 0.34, 0.36));
-    float pcBase = sdBox(pcMonP - vec3(0.0, -0.36, 0.0), vec3(0.24, 0.04, 0.24));
-    float pcNeck = sdCylinder(pcMonP - vec3(0.0, -0.32, 0.0), 0.04, 0.08);
-    float pcMonitorHousing = min(pcBezel, min(pcBase, pcNeck));
+        // Retro Off-White PC CRT Monitor
+        vec3 pcMonP = deskP - vec3(-0.15, 0.44, 0.10);
+        float pcBezel = sdBox(pcMonP, vec3(0.44, 0.34, 0.36));
+        float pcBase = sdBox(pcMonP - vec3(0.0, -0.36, 0.0), vec3(0.24, 0.04, 0.24));
+        float pcNeck = sdCylinder(pcMonP - vec3(0.0, -0.32, 0.0), 0.04, 0.08);
+        float pcMonitorHousing = min(pcBezel, min(pcBase, pcNeck));
 
-    // PC Screen Face
-    vec3 pcScrP = pcMonP - vec3(0.0, 0.0, -0.365);
-    float pcScreen = sdBox(pcScrP, vec3(0.35, 0.26, 0.02));
-    if (pcScreen < d) { d = pcScreen; hitMat = 11; }
+        // PC Screen Face
+        vec3 pcScrP = pcMonP - vec3(0.0, 0.0, -0.365);
+        float pcScreen = sdBox(pcScrP, vec3(0.35, 0.26, 0.02));
+        if (pcScreen < d) { d = pcScreen; hitMat = 11; }
 
-    // Retro Beige Horizontal Desktop Tower Case
-    vec3 towerP = deskP - vec3(0.70, 0.26, 0.08);
-    float tower = sdBox(towerP, vec3(0.24, 0.22, 0.46));
-    
-    // Keyboard
-    vec3 kbP = deskP - vec3(-0.15, 0.055, -0.32);
-    float keyboard = sdBox(kbP, vec3(0.42, 0.015, 0.15));
+        // Retro Beige Horizontal Desktop Tower Case
+        vec3 towerP = deskP - vec3(0.70, 0.26, 0.08);
+        float tower = sdBox(towerP, vec3(0.24, 0.22, 0.46));
+        
+        // Keyboard
+        vec3 kbP = deskP - vec3(-0.15, 0.055, -0.32);
+        float keyboard = sdBox(kbP, vec3(0.42, 0.015, 0.15));
 
-    // Mouse
-    vec3 mouseP = deskP - vec3(0.45, 0.055, -0.30);
-    float pcMouse = sdBox(mouseP, vec3(0.05, 0.015, 0.08));
+        // Mouse
+        vec3 mouseP = deskP - vec3(0.45, 0.055, -0.30);
+        float pcMouse = sdBox(mouseP, vec3(0.05, 0.015, 0.08));
 
-    float retroHardware = min(min(pcMonitorHousing, tower), min(keyboard, pcMouse));
-    if (retroHardware < d) { d = retroHardware; hitMat = 9; }
+        float retroHardware = min(min(pcMonitorHousing, tower), min(keyboard, pcMouse));
+        if (retroHardware < d) { d = retroHardware; hitMat = 9; }
+    } else {
+        d = min(d, deskRegion);
+    }
 
     return d;
 }

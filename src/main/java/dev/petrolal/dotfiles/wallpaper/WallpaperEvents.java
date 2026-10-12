@@ -44,6 +44,9 @@ public class WallpaperEvents {
     // CPU telemetry state
     private long prevIdle = 0;
     private long prevTotal = 0;
+    private long lastSysTelemetryCheck = 0;
+    private float cachedCpu = 0.0f;
+    private float cachedRam = 0.0f;
 
     public WallpaperEvents(X11Canvas canvas) {
         this.canvas = canvas;
@@ -62,9 +65,13 @@ public class WallpaperEvents {
         // 3. Audio / Media Playback Activity
         float audio = pollAudioActivity();
 
-        // 4. System Telemetry
-        float cpu = getCpuUsage();
-        float ram = getRamUsage();
+        // 4. System Telemetry (Throttled to 500ms to eliminate per-frame procfs read overhead)
+        long now = System.currentTimeMillis();
+        if (now - lastSysTelemetryCheck > 500) {
+            lastSysTelemetryCheck = now;
+            cachedCpu = getCpuUsage();
+            cachedRam = getRamUsage();
+        }
 
         return new WallpaperState(
             width,
@@ -76,8 +83,8 @@ public class WallpaperEvents {
             mouse.rightDown(),
             workspace,
             audio,
-            cpu,
-            ram
+            cachedCpu,
+            cachedRam
         );
     }
 

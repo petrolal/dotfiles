@@ -192,6 +192,9 @@ public class X11Canvas implements AutoCloseable {
             int ignoredCurrent = (int) glXMakeCurrent.invokeExact(display, window, glContext);
         }
 
+        // Explicitly disable GLX VSync blocking across display screens
+        setSwapInterval(0);
+
         // Initialize GL function pointers
         glCreateShader = getProc(linker, "glCreateShader", FunctionDescriptor.of(ValueLayout.JAVA_INT, ValueLayout.JAVA_INT));
         glShaderSource = getProc(linker, "glShaderSource", FunctionDescriptor.ofVoid(ValueLayout.JAVA_INT, ValueLayout.JAVA_INT, ValueLayout.ADDRESS, ValueLayout.ADDRESS));
@@ -216,6 +219,41 @@ public class X11Canvas implements AutoCloseable {
 
         // Create fullscreen quad VBO
         setupFullscreenQuad();
+    }
+
+    /**
+     * Disables VSync blocking by setting swap interval to 0.
+     * Resolves glXSwapIntervalEXT, glXSwapIntervalMESA, or glXSwapIntervalSGI dynamically.
+     */
+    public void setSwapInterval(int interval) {
+        Linker linker = Linker.nativeLinker();
+        try (Arena arena = Arena.ofConfined()) {
+            // 1. Try glXSwapIntervalEXT (Display*, GLXDrawable, int)
+            MemorySegment extPtr = (MemorySegment) glXGetProcAddress.invokeExact(arena.allocateFrom("glXSwapIntervalEXT"));
+            if (!extPtr.equals(MemorySegment.NULL) && extPtr.address() != 0) {
+                MethodHandle handle = linker.downcallHandle(extPtr,
+                        FunctionDescriptor.ofVoid(ValueLayout.ADDRESS, ValueLayout.JAVA_LONG, ValueLayout.JAVA_INT));
+                handle.invokeExact(display, window, interval);
+                return;
+            }
+
+            // 2. Try glXSwapIntervalMESA (int)
+            MemorySegment mesaPtr = (MemorySegment) glXGetProcAddress.invokeExact(arena.allocateFrom("glXSwapIntervalMESA"));
+            if (!mesaPtr.equals(MemorySegment.NULL) && mesaPtr.address() != 0) {
+                MethodHandle handle = linker.downcallHandle(mesaPtr,
+                        FunctionDescriptor.of(ValueLayout.JAVA_INT, ValueLayout.JAVA_INT));
+                int ignored = (int) handle.invokeExact(interval);
+                return;
+            }
+
+            // 3. Try glXSwapIntervalSGI (int)
+            MemorySegment sgiPtr = (MemorySegment) glXGetProcAddress.invokeExact(arena.allocateFrom("glXSwapIntervalSGI"));
+            if (!sgiPtr.equals(MemorySegment.NULL) && sgiPtr.address() != 0) {
+                MethodHandle handle = linker.downcallHandle(sgiPtr,
+                        FunctionDescriptor.of(ValueLayout.JAVA_INT, ValueLayout.JAVA_INT));
+                int ignored = (int) handle.invokeExact(interval);
+            }
+        } catch (Throwable ignored) {}
     }
 
     private void setupFullscreenQuad() throws Throwable {

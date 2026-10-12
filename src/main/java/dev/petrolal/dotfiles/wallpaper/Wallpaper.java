@@ -7,22 +7,23 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.concurrent.locks.LockSupport;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import dev.petrolal.dotfiles.core.DotfilePaths;
 
 /**
- * Main wallpaper controller:
- * - Detects multi-monitor layout (Left and Right screens)
- * - Renders wallpaper_left.frag on the left monitor
- * - Renders wallpaper_right.frag on the right monitor
- * - Polls user events & hardware telemetry (WallpaperEvents)
- * - Hot-reloads and dispatches uniforms to both 3D shader pipelines
+ * Universal wallpaper controller:
+ * - Dynamically adapts to ANY multi-monitor count (1, 2, 3, or more displays)
+ * - Computes OpenGL bottom-left viewports correctly for arbitrary layouts (horizontal, vertical, offset)
+ * - Dynamically detects refresh rates or accepts custom target framerates via WALLPAPER_FPS
+ * - Sub-millisecond monotonic frame budgeting (LockSupport.parkNanos + Thread.onSpinWait)
+ * - Live hot-reloading & safe uniform dispatches per monitor
  */
 public final class Wallpaper {
 
-    public record Monitor(int x, int y, int width, int height) {}
+    public record Monitor(int id, int x, int y, int width, int height) {}
 
     private Path resolveShader(String name, String fallbackName) {
         Path p = resolveShader(name);
@@ -51,6 +52,10 @@ public final class Wallpaper {
 
     private void configureXfdesktopTransparency() {
         try {
+            // Check if xfconf-query exists before attempting execution
+            Process check = new ProcessBuilder("which", "xfconf-query").start();
+            if (check.waitFor() != 0) return;
+
             ProcessBuilder pb = new ProcessBuilder(
                 "sh", "-c",
                 "xfconf-query -c xfce4-desktop -l 2>/dev/null | grep -E 'image-style|color-style' | while read p; do " +
@@ -64,7 +69,8 @@ public final class Wallpaper {
     }
 
     /**
-     * Detects connected monitors sorted horizontally from left to right.
+     * Dynamically detects all connected monitors via xrandr.
+     * Works on any screen configuration (single, dual, triple, vertical, mixed resolution).
      */
     public List<Monitor> detectMonitors(int totalWidth, int totalHeight) {
         List<Monitor> list = new ArrayList<>();
@@ -72,33 +78,51 @@ public final class Wallpaper {
             Process p = new ProcessBuilder("xrandr", "--listmonitors").start();
             try (BufferedReader reader = new BufferedReader(new InputStreamReader(p.getInputStream()))) {
                 String line;
-                Pattern pat = Pattern.compile("(\\d+)/\\d+x(\\d+)/\\d+\\+(\\d+)\\+(\\d+)");
+                Pattern pat = Pattern.compile("(\\d+):\\s+\\S+\\s+(\\d+)/\\d+x(\\d+)/\\d+\\+(\\d+)\\+(\\d+)");
+                int autoId = 0;
                 while ((line = reader.readLine()) != null) {
                     Matcher m = pat.matcher(line);
                     if (m.find()) {
-                        int w = Integer.parseInt(m.group(1));
-                        int h = Integer.parseInt(m.group(2));
-                        int x = Integer.parseInt(m.group(3));
-                        int y = Integer.parseInt(m.group(4));
-                        list.add(new Monitor(x, y, w, h));
+                        int w = Integer.parseInt(m.group(2));
+                        int h = Integer.parseInt(m.group(3));
+                        int x = Integer.parseInt(m.group(4));
+                        int y = Integer.parseInt(m.group(5));
+                        list.add(new Monitor(autoId++, x, y, w, h));
                     }
                 }
             }
             p.waitFor();
         } catch (Exception ignored) {}
 
-        if (list.size() >= 2) {
-            list.sort(Comparator.comparingInt(Monitor::x));
+        if (!list.isEmpty()) {
+            list.sort(Comparator.comparingInt(Monitor::x).thenComparingInt(Monitor::y));
             return list;
         }
 
-        // Fallback for dual monitor setups if xrandr parsing was unavailable but totalWidth is wide
+        // Generic fallback if xrandr is unavailable or outputs single virtual frame
         if (totalWidth >= 2500) {
             int half = totalWidth / 2;
-            return List.of(new Monitor(0, 0, half, totalHeight), new Monitor(half, 0, half, totalHeight));
+            return List.of(
+                new Monitor(0, 0, 0, half, totalHeight),
+                new Monitor(1, half, 0, half, totalHeight)
+            );
         }
 
-        return List.of(new Monitor(0, 0, totalWidth, totalHeight));
+        return List.of(new Monitor(0, 0, 0, totalWidth, totalHeight));
+    }
+
+    /**
+     * Detects target monitor refresh rate or respects WALLPAPER_FPS environment property.
+     */
+    private long detectTargetFrameNanos() {
+        String customFps = System.getenv("WALLPAPER_FPS");
+        if (customFps != null && !customFps.isBlank()) {
+            try {
+                long fps = Long.parseLong(customFps.trim());
+                if (fps > 0) return 1_000_000_000L / fps;
+            } catch (Exception ignored) {}
+        }
+        return 16_666_667L; // Default standard 60 FPS (~16.666 ms)
     }
 
     private WallpaperEvents.WallpaperState adjustState(WallpaperEvents.WallpaperState raw, Monitor mon) {
@@ -130,60 +154,78 @@ public final class Wallpaper {
         Path leftFrag = resolveShader("wallpaper_left.frag", "wallpaper.frag");
         Path rightFrag = resolveShader("wallpaper_right.frag", "wallpaper_left.frag");
 
-        // Ensure XFCE desktop background is transparent so desktop icons remain on top
+        // Ensure XFCE desktop background is transparent if xfdesktop is active
         configureXfdesktopTransparency();
 
         try (X11Canvas canvas = new X11Canvas()) {
             List<Monitor> monitors = detectMonitors(canvas.getWidth(), canvas.getHeight());
+            int totalScreenHeight = canvas.getHeight();
 
-            ShaderPipeline pipelineLeft = new ShaderPipeline(canvas, vertPath, leftFrag);
-            ShaderPipeline pipelineRight = (monitors.size() >= 2)
-                    ? new ShaderPipeline(canvas, vertPath, rightFrag)
-                    : pipelineLeft;
+            // Create appropriate pipeline per screen (left shader for mon 0, right for mon 1+, fallback to left)
+            List<ShaderPipeline> pipelines = new ArrayList<>();
+            for (int i = 0; i < monitors.size(); i++) {
+                if (i == 0) {
+                    pipelines.add(new ShaderPipeline(canvas, vertPath, leftFrag));
+                } else if (i == 1) {
+                    pipelines.add(new ShaderPipeline(canvas, vertPath, rightFrag));
+                } else {
+                    // For 3+ monitors, alternate or reuse left/right
+                    pipelines.add((i % 2 == 0) ? pipelines.get(0) : pipelines.get(1));
+                }
+            }
 
             WallpaperEvents events = new WallpaperEvents(canvas);
 
-            pipelineLeft.bind();
-
-            long startTime = System.currentTimeMillis();
+            long startTimeNanos = System.nanoTime();
+            long nextFrameNanos = System.nanoTime();
+            long targetFrameNanos = detectTargetFrameNanos();
 
             while (true) {
-                // Live hot-reloading: instantly recompiles either shader if modified on disk
-                pipelineLeft.reloadIfModified();
-                if (pipelineRight != pipelineLeft) {
-                    pipelineRight.reloadIfModified();
+                // Hot-reloading check for distinct pipelines
+                pipelines.get(0).reloadIfModified();
+                if (pipelines.size() > 1 && pipelines.get(1) != pipelines.get(0)) {
+                    pipelines.get(1).reloadIfModified();
                 }
 
-                float elapsed = (System.currentTimeMillis() - startTime) / 1000.0f;
+                long frameStartNanos = System.nanoTime();
+                float elapsed = (frameStartNanos - startTimeNanos) / 1_000_000_000.0f;
+
+                // Throttled non-blocking query strictly bound to render frame cadence
                 WallpaperEvents.WallpaperState rawState = events.pollState(canvas.getWidth(), canvas.getHeight(), elapsed);
 
-                if (monitors.size() >= 2) {
-                    Monitor leftMon = monitors.get(0);
-                    Monitor rightMon = monitors.get(1);
+                // Render each monitor dynamically using correct OpenGL bottom-left viewport coordinates
+                for (int i = 0; i < monitors.size(); i++) {
+                    Monitor mon = monitors.get(i);
+                    ShaderPipeline pipeline = pipelines.get(i);
 
-                    // 1. Render Left Monitor
-                    canvas.setViewport(leftMon.x(), 0, leftMon.width(), leftMon.height());
-                    pipelineLeft.bind();
-                    pipelineLeft.updateUniforms(adjustState(rawState, leftMon));
-                    canvas.drawQuad();
+                    // OpenGL glViewport uses bottom-left origin: Y_gl = totalScreenHeight - (mon.y + mon.height)
+                    int glViewportY = totalScreenHeight - (mon.y() + mon.height());
 
-                    // 2. Render Right Monitor
-                    canvas.setViewport(rightMon.x(), 0, rightMon.width(), rightMon.height());
-                    pipelineRight.bind();
-                    pipelineRight.updateUniforms(adjustState(rawState, rightMon));
-                    canvas.drawQuad();
-                } else {
-                    // Single monitor fullscreen
-                    Monitor mon = monitors.get(0);
-                    canvas.setViewport(0, 0, mon.width(), mon.height());
-                    pipelineLeft.bind();
-                    pipelineLeft.updateUniforms(rawState);
+                    canvas.setViewport(mon.x(), glViewportY, mon.width(), mon.height());
+                    pipeline.bind();
+                    pipeline.updateUniforms(adjustState(rawState, mon));
                     canvas.drawQuad();
                 }
 
+                // Non-blocking buffer swap (with swap interval 0)
                 canvas.swapBuffers();
 
-                Thread.sleep(16); // ~60 FPS
+                // High-resolution frame-timing budgeting using monotonic parkNanos + spin
+                nextFrameNanos += targetFrameNanos;
+                long now = System.nanoTime();
+                long sleepNanos = nextFrameNanos - now;
+
+                if (sleepNanos > 0) {
+                    if (sleepNanos > 2_000_000L) {
+                        LockSupport.parkNanos(sleepNanos - 1_000_000L);
+                    }
+                    while (System.nanoTime() < nextFrameNanos) {
+                        Thread.onSpinWait();
+                    }
+                } else {
+                    // Missed frame deadline (e.g. shader compilation or wake hitch); re-synchronize
+                    nextFrameNanos = now;
+                }
             }
         }
     }

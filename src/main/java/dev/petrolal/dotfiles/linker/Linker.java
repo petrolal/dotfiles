@@ -64,7 +64,9 @@ public final class Linker {
             ".themes/Abyssal-Biopunk",
             ".themes/Infernal-Retro",
             ".config/gtk-3.0/gtk.css",
-            ".config/gtk-4.0/gtk.css"
+            ".config/gtk-4.0/gtk.css",
+            ".config/autostart/conky.desktop",
+            ".config/conky/conky.conf"
     );
 
     /** Directories that were mirrored file-by-file from deleted repo sources. */
