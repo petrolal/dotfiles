@@ -72,7 +72,7 @@ public final class Orchestrator {
 		Linker.cleanupLegacyTargets(home, dryRun, verbose);
 		for (Linker.Mapping mapping : Linker.collectAllMappings(root)) {
 			Result<Void> r = Linker.linkFile(mapping.from(), mapping.to(), root, home, dryRun, verbose);
-			if (r instanceof Result.Ok<Void>)
+			if (r.isOk())
 				successes++;
 			else
 				failures++;
@@ -123,24 +123,24 @@ public final class Orchestrator {
 	}
 
 	public static WallpaperResult set3DWallpaper(boolean dryRun, boolean verbose) {
-		if (verbose)
+		if (verbose) {
 			System.out.println("=== Applying 3D Wallpaper ===");
-		
-		int failures = 0;
+		}
 
-		// Logic to apply the wallpaper
+		if (dryRun) {
+			if (verbose) {
+				System.out.println("[DRY-RUN] Would start OpenGL 3D wallpaper daemon.");
+			}
+			return new WallpaperResult(true, 0);
+		}
+
+		int failures = 0;
 		try {
 			Wallpaper wallpaper = new Wallpaper();
 			wallpaper.start();
 		} catch (Throwable ex) {
 			failures++;
-			System.out.println("Error on wallpaper application: " + ex);
-		}
-
-		if (verbose) {
-			if (dryRun) {
-				System.out.println("Dry-run completed");
-			} else {}
+			System.err.println("Error on wallpaper application: " + ex.getMessage());
 		}
 		return new WallpaperResult(failures == 0, failures);
 	}

@@ -18,6 +18,21 @@ import java.util.List;
  */
 public class X11Canvas implements AutoCloseable {
 
+    // OpenGL & GLX Constants
+    public static final int GL_VERTEX_SHADER = 0x8B31;
+    public static final int GL_FRAGMENT_SHADER = 0x8B30;
+    public static final int GL_ARRAY_BUFFER = 0x8892;
+    public static final int GL_STATIC_DRAW = 0x88E4;
+    public static final int GL_FLOAT = 0x1406;
+    public static final int GL_TRIANGLE_STRIP = 0x0005;
+
+    public static final int GLX_RGBA = 4;
+    public static final int GLX_DOUBLEBUFFER = 5;
+
+    // X11 Mouse button bitmasks (Button 1 = Left, Button 3 = Right)
+    public static final int MOUSE_BUTTON1_MASK = 1 << 8;
+    public static final int MOUSE_BUTTON3_MASK = 1 << 10;
+
     public record MouseInfo(float x, float y, boolean leftDown, boolean rightDown) {}
 
     /** One monitor's window + GL context. All surfaces share one GL object namespace. */
@@ -274,7 +289,7 @@ public class X11Canvas implements AutoCloseable {
 
         MemorySegment glContext;
         try (Arena arena = Arena.ofConfined()) {
-            MemorySegment glAttrs = arena.allocateFrom(ValueLayout.JAVA_INT, 4 /* GLX_RGBA */, 5 /* GLX_DOUBLEBUFFER */, 0);
+            MemorySegment glAttrs = arena.allocateFrom(ValueLayout.JAVA_INT, GLX_RGBA, GLX_DOUBLEBUFFER, 0);
             MemorySegment visInfo = (MemorySegment) glXChooseVisual.invokeExact(display, screen, glAttrs);
             MemorySegment shareWith = sharedGlContext == null ? MemorySegment.NULL : sharedGlContext;
             glContext = (MemorySegment) glXCreateContext.invokeExact(display, visInfo, shareWith, 1);
@@ -342,17 +357,17 @@ public class X11Canvas implements AutoCloseable {
             glGenBuffers.invokeExact(1, vboBuf);
             quadVbo = vboBuf.get(ValueLayout.JAVA_INT, 0);
 
-            glBindBuffer.invokeExact(0x8892 /* GL_ARRAY_BUFFER */, quadVbo);
+            glBindBuffer.invokeExact(GL_ARRAY_BUFFER, quadVbo);
             MemorySegment quadData = arena.allocateFrom(ValueLayout.JAVA_FLOAT, quadVertices);
-            glBufferData.invokeExact(0x8892, quadVertices.length * 4L, quadData, 0x88E4 /* GL_STATIC_DRAW */);
+            glBufferData.invokeExact(GL_ARRAY_BUFFER, quadVertices.length * 4L, quadData, GL_STATIC_DRAW);
         }
     }
 
     /** Buffer binding + vertex attrib state belongs to the context, not the shared object namespace. */
     private void bindQuadAttribs() throws Throwable {
-        glBindBuffer.invokeExact(0x8892 /* GL_ARRAY_BUFFER */, quadVbo);
+        glBindBuffer.invokeExact(GL_ARRAY_BUFFER, quadVbo);
         glEnableVertexAttribArray.invokeExact(0);
-        glVertexAttribPointer.invokeExact(0, 2, 0x1406 /* GL_FLOAT */, (byte) 0, 0, MemorySegment.NULL);
+        glVertexAttribPointer.invokeExact(0, 2, GL_FLOAT, (byte) 0, 0, MemorySegment.NULL);
     }
 
     private MethodHandle getProc(Linker linker, String name, FunctionDescriptor desc) throws Throwable {
@@ -369,8 +384,8 @@ public class X11Canvas implements AutoCloseable {
                 int rx = mouseRootX.get(ValueLayout.JAVA_INT, 0);
                 int ry = mouseRootY.get(ValueLayout.JAVA_INT, 0);
                 int m = mouseMask.get(ValueLayout.JAVA_INT, 0);
-                boolean left = (m & (1 << 8)) != 0;
-                boolean right = (m & (1 << 10)) != 0;
+                boolean left = (m & MOUSE_BUTTON1_MASK) != 0;
+                boolean right = (m & MOUSE_BUTTON3_MASK) != 0;
                 return new MouseInfo((float) rx, (float) ry, left, right);
             }
         } catch (Throwable ignored) {}
@@ -424,7 +439,7 @@ public class X11Canvas implements AutoCloseable {
     }
 
     public void drawQuad() throws Throwable {
-        glDrawArrays.invokeExact(0x0005 /* GL_TRIANGLE_STRIP */, 0, 4);
+        glDrawArrays.invokeExact(GL_TRIANGLE_STRIP, 0, 4);
     }
 
     public void swapBuffers(Surface surface) throws Throwable {
@@ -438,6 +453,9 @@ public class X11Canvas implements AutoCloseable {
     public void close() {
         try {
             int ignored = (int) XCloseDisplay.invokeExact(display);
+        } catch (Throwable ignored) {}
+        try {
+            persistentArena.close();
         } catch (Throwable ignored) {}
     }
 }

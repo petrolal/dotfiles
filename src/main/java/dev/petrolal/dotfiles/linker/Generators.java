@@ -16,23 +16,25 @@ public final class Generators {
     public static Result<Void> ensureFileContent(Path target, String content, boolean dryRun, boolean verbose) {
         if (dryRun) {
             System.out.println("[DRY-RUN] Would generate " + target);
-            return new Result.Ok<>(null);
+            return Result.ok(null);
         }
         try {
             if (Files.exists(target)) {
                 String existing = Files.readString(target);
                 if (existing.equals(content)) {
                     if (verbose) System.out.println("[UP-TO-DATE] Generated config unchanged: " + target);
-                    return new Result.Ok<>(null);
+                    return Result.ok(null);
                 }
             }
-            Files.createDirectories(target.getParent());
+            if (target.getParent() != null) {
+                Files.createDirectories(target.getParent());
+            }
             Files.writeString(target, content);
             if (verbose) System.out.println("[GEN] Generated: " + target);
-            return new Result.Ok<>(null);
+            return Result.ok(null);
         } catch (IOException e) {
             System.err.println("[FAIL] Failed generating " + target + ": " + e.getMessage());
-            return new Result.Err<>(new DotfileError.IoError(e.getMessage()));
+            return Result.err(new DotfileError.IoError(e.getMessage()));
         }
     }
 

@@ -79,8 +79,8 @@ public class ShaderPipeline {
 
     private int compileProgram() throws Throwable {
         try (Arena arena = Arena.ofConfined()) {
-            int vs = compileShader(vertPath, 0x8B31 /* GL_VERTEX_SHADER */, arena);
-            int fs = compileShader(fragPath, 0x8B30 /* GL_FRAGMENT_SHADER */, arena);
+            int vs = compileShader(vertPath, X11Canvas.GL_VERTEX_SHADER, arena);
+            int fs = compileShader(fragPath, X11Canvas.GL_FRAGMENT_SHADER, arena);
 
             int prog = (int) canvas.glCreateProgram.invokeExact();
             canvas.glAttachShader.invokeExact(prog, vs);

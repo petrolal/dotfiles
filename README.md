@@ -49,8 +49,8 @@ above also has a fish abbreviation that runs from anywhere, no `cd` needed:
 ```
 dotfiles/
 ├── bootstrap.sh                    # First-time setup script
-├── build.gradle                    # Gradle build & orchestration tasks
-├── settings.gradle                 # Gradle settings
+├── build.gradle.kts                # Gradle build & orchestration tasks
+├── settings.gradle.kts             # Gradle settings
 ├── gradlew                         # Gradle wrapper script
 ├── shell.nix                       # Nix dev shell (Gradle, GraalVM, git)
 │
@@ -74,6 +74,7 @@ dotfiles/
 │   ├── desktop/                    # Display, XFCE settings & XML replay (Display, Xfconf, XfconfXml)
 │   ├── domain/                     # Functional domain types (Result, DotfileError)
 │   ├── linker/                     # Symlink engine & config generation (Linker, Generators)
+│   ├── wallpaper/                  # 3D OpenGL wallpaper engine (Wallpaper, X11Canvas, ShaderPipeline)
 │   └── system/                     # Subprocess execution (ProcessRunner)
 │
 ├── src/test/java/dev/petrolal/dotfiles/  # JUnit 5 tests (mirrored package structure)
@@ -83,7 +84,6 @@ dotfiles/
 │   ├── gtk-2.0/gtkrc
 │   ├── gtk-3.0/settings.ini
 │   ├── gtk-4.0/settings.ini
-│   ├── conky/conky.conf            # System stats overlay
 │   ├── glava/                      # Audio-reactive GLSL visualizer
 │   └── picom/picom.conf            # Compositor
 │

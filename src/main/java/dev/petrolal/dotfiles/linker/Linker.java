@@ -29,8 +29,7 @@ public final class Linker {
      * matching prefix wins, so a more specific entry can override a general one. */
     static final List<Mapping> ROOT_TARGETS = List.of(
             new Mapping("config/applications", ".local/share/applications"),
-            new Mapping("config", ".config"),
-            new Mapping("fonts", ".local/share/fonts")
+            new Mapping("config", ".config")
     );
 
     /** Source paths skipped entirely during auto-discovery; a listed directory
@@ -262,11 +261,11 @@ public final class Linker {
         Path dest = home.resolve(targetRel);
         if (!Files.exists(src)) {
             if (verbose) System.err.println("[SKIP] Source missing: " + src);
-            return new Result.Err<>(new DotfileError.FileNotFound(src));
+            return Result.err(new DotfileError.FileNotFound(src));
         }
         if (dryRun) {
             System.out.println("[DRY-RUN] Would link: " + dest + " -> " + src);
-            return new Result.Ok<>(null);
+            return Result.ok(null);
         }
         try {
             ensureRealDirectory(dest.getParent(), home);
@@ -275,10 +274,10 @@ public final class Linker {
             }
             atomicSymlink(dest, src);
             if (verbose) System.out.println("[OK] Linked: " + dest + " -> " + src);
-            return new Result.Ok<>(null);
+            return Result.ok(null);
         } catch (IOException e) {
             System.err.println("[FAIL] Failed to link " + dest + " -> " + src);
-            return new Result.Err<>(new DotfileError.IoError(e.getMessage()));
+            return Result.err(new DotfileError.IoError(e.getMessage()));
         }
     }
 

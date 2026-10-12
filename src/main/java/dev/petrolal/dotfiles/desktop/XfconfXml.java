@@ -1,14 +1,21 @@
-// XfconfXml.java --- Hand-rolled xfce-perchannel-xml parser
+// XfconfXml.java --- Standard StAX-based xfce-perchannel-xml parser
 // License: GPL-3.0-or-later
 package dev.petrolal.dotfiles.desktop;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Deque;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import javax.xml.stream.XMLInputFactory;
+import javax.xml.stream.XMLStreamConstants;
+import javax.xml.stream.XMLStreamException;
+import javax.xml.stream.XMLStreamReader;
 
 final class XfconfXml {
     private XfconfXml() {}
@@ -24,93 +31,62 @@ final class XfconfXml {
         record Array(String path, String type, List<String> values) implements Setting {}
     }
 
-    private static final String[][] ENTITIES = {
-            {"&lt;", "<"}, {"&gt;", ">"}, {"&quot;", "\""}, {"&apos;", "'"}, {"&amp;", "&"}
-    };
+    private static class NodeBuilder {
+        final String name;
+        final Map<String, String> attrs;
+        final List<Node> children = new ArrayList<>();
 
-    /** xfconf's own exporter escapes attribute values on write, so they must be
-     * unescaped before being replayed via xfconf-query, or the escaped form is
-     * written back verbatim. */
-    private static String decodeEntities(String s) {
-        for (String[] pair : ENTITIES) {
-            s = s.replace(pair[0], pair[1]);
+        NodeBuilder(String name, Map<String, String> attrs) {
+            this.name = name;
+            this.attrs = attrs;
         }
-        return s;
+
+        Node build() {
+            return new Node(name, attrs, List.copyOf(children));
+        }
     }
 
-    private static int skipWs(String s, int i) {
-        while (i < s.length() && Character.isWhitespace(s.charAt(i))) i++;
-        return i;
-    }
-
-    private record AttrsResult(Map<String, String> attrs, int end, boolean selfClosing) {}
-
-    private static AttrsResult parseAttrs(String s, int i) {
-        Map<String, String> attrs = new LinkedHashMap<>();
-        boolean selfClosing = false;
-        while (true) {
-            i = skipWs(s, i);
-            if (i + 1 < s.length() && s.charAt(i) == '/' && s.charAt(i + 1) == '>') {
-                selfClosing = true;
-                i += 2;
-                break;
-            }
-            if (s.charAt(i) == '>') {
-                i++;
-                break;
-            }
-            int eqPos = s.indexOf('=', i);
-            String name = s.substring(i, eqPos).trim();
-            char quoteChar = s.charAt(eqPos + 1);
-            int valStart = eqPos + 2;
-            int valEnd = s.indexOf(quoteChar, valStart);
-            attrs.put(name, decodeEntities(s.substring(valStart, valEnd)));
-            i = valEnd + 1;
-        }
-        return new AttrsResult(attrs, i, selfClosing);
-    }
-
-    private record ParseResult(Node node, int end) {}
-
-    private static ParseResult parseElement(String s, int i) {
-        int nameStart = i + 1;
-        int nameEnd = nameStart;
-        while (nameEnd < s.length() && " \t\n\r>/".indexOf(s.charAt(nameEnd)) < 0) nameEnd++;
-        String name = s.substring(nameStart, nameEnd);
-        AttrsResult attrsResult = parseAttrs(s, nameEnd);
-        if (attrsResult.selfClosing()) {
-            return new ParseResult(new Node(name, attrsResult.attrs(), List.of()), attrsResult.end());
-        }
-        List<Node> children = new ArrayList<>();
-        int pos = attrsResult.end();
-        while (true) {
-            pos = skipWs(s, pos);
-            int lt = s.indexOf('<', pos);
-            if (lt < 0) {
-                throw new IllegalStateException("Malformed xfconf export XML: unterminated element " + name);
-            }
-            if (s.charAt(lt + 1) == '/') {
-                int closeEnd = s.indexOf('>', lt);
-                pos = closeEnd + 1;
-                break;
-            }
-            ParseResult child = parseElement(s, lt);
-            children.add(child.node());
-            pos = child.end();
-        }
-        return new ParseResult(new Node(name, attrsResult.attrs(), children), pos);
-    }
-
-    /** Parses an xfce-perchannel-xml file. Returns the root <channel> node, skipping
-     * the <?xml ...?> prolog. */
+    /** Parses an xfce-perchannel-xml file into a Node tree using standard StAX. */
     static Node loadXfconfXml(Path path) throws IOException {
-        String text = Files.readString(path);
-        int start = text.indexOf('<');
-        if (start >= 0 && start + 1 < text.length() && text.charAt(start + 1) == '?') {
-            int end = text.indexOf("?>", start);
-            start = text.indexOf('<', end + 2);
+        XMLInputFactory factory = XMLInputFactory.newFactory();
+        factory.setProperty(XMLInputFactory.SUPPORT_DTD, false);
+        factory.setProperty(XMLInputFactory.IS_SUPPORTING_EXTERNAL_ENTITIES, false);
+
+        try (InputStream in = Files.newInputStream(path)) {
+            XMLStreamReader reader = factory.createXMLStreamReader(in);
+            Deque<NodeBuilder> stack = new ArrayDeque<>();
+            Node root = null;
+
+            while (reader.hasNext()) {
+                int event = reader.next();
+                if (event == XMLStreamConstants.START_ELEMENT) {
+                    String name = reader.getLocalName();
+                    Map<String, String> attrs = new LinkedHashMap<>();
+                    int attrCount = reader.getAttributeCount();
+                    for (int i = 0; i < attrCount; i++) {
+                        attrs.put(reader.getAttributeLocalName(i), reader.getAttributeValue(i));
+                    }
+                    NodeBuilder builder = new NodeBuilder(name, attrs);
+                    stack.push(builder);
+                } else if (event == XMLStreamConstants.END_ELEMENT) {
+                    if (!stack.isEmpty()) {
+                        NodeBuilder builder = stack.pop();
+                        Node node = builder.build();
+                        if (stack.isEmpty()) {
+                            root = node;
+                        } else {
+                            stack.peek().children.add(node);
+                        }
+                    }
+                }
+            }
+            if (root == null) {
+                throw new IOException("Empty or invalid xfconf XML: " + path);
+            }
+            return root;
+        } catch (XMLStreamException e) {
+            throw new IOException("Malformed xfconf XML in " + path + ": " + e.getMessage(), e);
         }
-        return parseElement(text, start).node();
     }
 
     /** Accumulates SETTINGS by walking NODE's own value (if any) and recursing into

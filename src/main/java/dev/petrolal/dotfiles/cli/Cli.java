@@ -48,6 +48,10 @@ public final class Cli {
 	}
 
 	public static void main(String[] argv) {
+		System.exit(run(argv));
+	}
+
+	public static int run(String[] argv) {
 		boolean dryRun = false;
 		boolean verbose = true;
 		boolean reload = true;
@@ -59,11 +63,11 @@ public final class Cli {
 			switch (arg) {
 			case "-h", "--help" -> {
 				printHelp();
-				System.exit(0);
+				return 0;
 			}
 			case "-v", "--version" -> {
 				printVersion();
-				System.exit(0);
+				return 0;
 			}
 			case "-n", "--dry-run" -> dryRun = true;
 			case "-q", "--quiet" -> verbose = false;
@@ -82,7 +86,7 @@ public final class Cli {
 			default -> {
 				System.err.println(PROGRAM_NAME + ": unrecognized option '" + arg + "'");
 				System.err.println("Try '" + PROGRAM_NAME + " --help' for more information.");
-				System.exit(1);
+				return 1;
 			}
 			}
 		}
@@ -91,7 +95,7 @@ public final class Cli {
 		case UNINSTALL -> {
 			Orchestrator.UninstallResult result = Orchestrator.uninstall(dryRun, verbose);
 			if (!result.ok())
-				System.exit(1);
+				return 1;
 		}
 		case SCALE -> {
 			Xfconf.applyDynamicResolutionScaling(dryRun, verbose);
@@ -100,20 +104,20 @@ public final class Cli {
 		}
 		case GENERATE -> {
 			if (!Generators.generateAllConfigs(verbose))
-				System.exit(1);
+				return 1;
 		}
 		case DEPLOY -> {
 			Orchestrator.DeployResult result = Orchestrator.deploy(dryRun, verbose, reload, applySettings,
 					generateConfigs);
 			if (!result.ok())
-				System.exit(1);
+				return 1;
 		}
 		case WALLPAPER -> {
 			Orchestrator.WallpaperResult result = Orchestrator.set3DWallpaper(dryRun, verbose);
 			if (!result.ok())
-				System.exit(1);
+				return 1;
 		}
 		}
-		System.exit(0);
+		return 0;
 	}
 }
