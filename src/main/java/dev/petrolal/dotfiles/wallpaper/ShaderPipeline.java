@@ -11,7 +11,7 @@ import java.nio.file.attribute.FileTime;
  */
 public class ShaderPipeline {
 
-    private final GlCanvas canvas;
+    private final X11Canvas canvas;
     private final Path vertPath;
     private final Path fragPath;
 
@@ -27,7 +27,7 @@ public class ShaderPipeline {
     private int locCpu = -1;
     private int locRam = -1;
 
-    public ShaderPipeline(GlCanvas canvas, Path vertPath, Path fragPath) throws Throwable {
+    public ShaderPipeline(X11Canvas canvas, Path vertPath, Path fragPath) throws Throwable {
         this.canvas = canvas;
         this.vertPath = vertPath;
         this.fragPath = fragPath;

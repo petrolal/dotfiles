@@ -66,18 +66,14 @@ public final class Linker {
             ".config/gtk-3.0/gtk.css",
             ".config/gtk-4.0/gtk.css",
             ".config/autostart/conky.desktop",
-            ".config/conky/conky.conf",
-            ".config/autostart/glava.desktop",
-            ".local/share/applications/xfce-display-settings.desktop"
+            ".config/conky/conky.conf"
     );
 
     /** Directories that were mirrored file-by-file from deleted repo sources. */
     static final List<String> LEGACY_TARGET_DIRS = List.of(
             ".local/share/themes/imp98",
             ".local/share/imp98",
-            ".config/quickshell",
-            ".config/picom",
-            ".config/glava"
+            ".config/quickshell"
     );
 
     /** Removes every symlink found under DIR (bottom-up), then DIR itself and any

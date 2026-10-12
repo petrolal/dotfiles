@@ -109,11 +109,6 @@ val wrapperSrc = layout.projectDirectory.file("config/gtk-3.0/wrapper-menu-fix.c
 val wrapperModule = layout.projectDirectory.file("config/gtk-3.0/libwrapper-menu-fix.so").asFile
 val gtk3ModDir = File(System.getenv("HOME") ?: System.getProperty("user.home"), ".local/state/nix/profile/lib/gtk-3.0/modules")
 
-val wlshimDir = layout.projectDirectory.dir("src/main/native/wayland-shim").asFile
-val wlshimGenDir = File(wlshimDir, "generated")
-val wlshimLib = layout.projectDirectory.file("bin/libwlshim.so").asFile
-val wlrLayerShellProtocolAttr = "wlr-protocols" // nixpkgs attr providing wlr-layer-shell-unstable-v1.xml
-
 // ---------------------------------------------------------------------------
 // Native Image Configuration
 // ---------------------------------------------------------------------------
@@ -151,33 +146,6 @@ tasks.named<BuildNativeImageTask>("nativeCompile") {
 // Build & Modules Tasks
 // ---------------------------------------------------------------------------
 
-tasks.register<Exec>("compileWlshim") {
-    group = "Build"
-    description = "Generates the zwlr_layer_shell_v1 protocol glue and compiles libwlshim.so " +
-            "(the Wayland layer-shell/pointer bridge the FFM WaylandCanvas loads at runtime)."
-    inputs.file(File(wlshimDir, "wlshim.c"))
-    outputs.file(wlshimLib)
-    workingDir = wlshimDir
-    doFirst { wlshimGenDir.mkdirs() }
-    commandLine(
-        "sh", "-c",
-        """
-        set -e
-        XML=$(nix-build --no-out-link '<nixpkgs>' -A $wlrLayerShellProtocolAttr)/share/wlr-protocols/unstable/wlr-layer-shell-unstable-v1.xml
-        nix-shell -p wayland-scanner --run "
-          wayland-scanner client-header '${'$'}XML' generated/wlr-layer-shell-unstable-v1-client-protocol.h
-          wayland-scanner private-code  '${'$'}XML' generated/wlr-layer-shell-unstable-v1-protocol.c
-        "
-        nix-shell -p wayland wayland-egl pkg-config gcc --run '
-          gcc -shared -fPIC -O2 -I. $(pkg-config --cflags wayland-client wayland-egl) \
-              wlshim.c generated/wlr-layer-shell-unstable-v1-protocol.c \
-              $(pkg-config --libs wayland-client wayland-egl) \
-              -o "${wlshimLib.absolutePath}"
-        '
-        """
-    )
-}
-
 tasks.register<Exec>("compileWrapperModule") {
     group = "Build"
     description = "Compiles GTK wrapper menu fix module (libwrapper-menu-fix.so)."
@@ -210,10 +178,6 @@ tasks.register("all") {
     group = "Build"
     description = "Compile the native GraalVM invoker and GTK module (default goal)."
     dependsOn("nativeCompile", "compileWrapperModule")
-}
-
-tasks.named("nativeCompile") {
-    dependsOn("compileWlshim")
 }
 
 // NOTE: An Emacs+ Eclipse plugin install step was attempted here (p2 director,
@@ -297,7 +261,7 @@ tasks.register("scale") {
 tasks.register<JavaExec>("quick-deploy") {
     group = "Deploy"
     description = "Deploy via the JVM directly, without a native-image build."
-    dependsOn("classes", "compileWlshim")
+    dependsOn("classes")
     classpath = sourceSets.main.get().runtimeClasspath
     mainClass.set("dev.petrolal.dotfiles.Main")
     environment("DOTFILES_DIR", projectDir.absolutePath)

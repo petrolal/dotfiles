@@ -34,7 +34,7 @@ public class WallpaperEvents {
         float ram            // 0.0 to 1.0
     ) {}
 
-    private final GlCanvas canvas;
+    private final X11Canvas canvas;
 
     // Audio envelope
     private float smoothedAudio = 0.0f;
@@ -48,7 +48,7 @@ public class WallpaperEvents {
     private float cachedCpu = 0.0f;
     private float cachedRam = 0.0f;
 
-    public WallpaperEvents(GlCanvas canvas) {
+    public WallpaperEvents(X11Canvas canvas) {
         this.canvas = canvas;
     }
 
@@ -57,7 +57,7 @@ public class WallpaperEvents {
      */
     public WallpaperState pollState(float width, float height, float elapsedSeconds) {
         // 1. Mouse Events (Global X11 cursor & click state)
-        GlCanvas.MouseInfo mouse = canvas.queryMouse();
+        X11Canvas.MouseInfo mouse = canvas.queryMouse();
 
         // 2. Active Virtual Workspace
         int workspace = canvas.queryWorkspace();
