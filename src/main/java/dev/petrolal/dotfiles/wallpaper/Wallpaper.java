@@ -154,6 +154,74 @@ public final class Wallpaper {
         Path leftFrag = resolveShader("wallpaper_left.frag", "wallpaper.frag");
         Path rightFrag = resolveShader("wallpaper_right.frag", "wallpaper_left.frag");
 
+        if (System.getenv("WAYLAND_DISPLAY") != null) {
+            startWayland(vertPath, leftFrag, rightFrag);
+        } else {
+            startX11(vertPath, leftFrag, rightFrag);
+        }
+    }
+
+    /**
+     * Wayland path: zwlr_layer_shell_v1 has no shared "root window" spanning every
+     * monitor the way X11 did, so each output gets its own WaylandCanvas (own EGL
+     * context, own shader pipeline), run from the same frame loop.
+     */
+    private void startWayland(Path vertPath, Path leftFrag, Path rightFrag) throws Throwable {
+        int outputCount = Math.max(1, WaylandCanvas.detectOutputCount());
+
+        List<WaylandCanvas> canvases = new ArrayList<>();
+        List<ShaderPipeline> pipelines = new ArrayList<>();
+        List<WallpaperEvents> events = new ArrayList<>();
+        try {
+            for (int i = 0; i < outputCount; i++) {
+                WaylandCanvas canvas = new WaylandCanvas(i);
+                canvases.add(canvas);
+                pipelines.add(new ShaderPipeline(canvas, vertPath, i == 0 ? leftFrag : rightFrag));
+                events.add(new WallpaperEvents(canvas));
+            }
+
+            long startTimeNanos = System.nanoTime();
+            long nextFrameNanos = System.nanoTime();
+            long targetFrameNanos = detectTargetFrameNanos();
+
+            while (true) {
+                for (ShaderPipeline pipeline : pipelines) pipeline.reloadIfModified();
+
+                long frameStartNanos = System.nanoTime();
+                float elapsed = (frameStartNanos - startTimeNanos) / 1_000_000_000.0f;
+
+                for (int i = 0; i < canvases.size(); i++) {
+                    WaylandCanvas canvas = canvases.get(i);
+                    WallpaperEvents.WallpaperState state =
+                            events.get(i).pollState(canvas.getWidth(), canvas.getHeight(), elapsed);
+
+                    canvas.setViewport(0, 0, canvas.getWidth(), canvas.getHeight());
+                    pipelines.get(i).bind();
+                    pipelines.get(i).updateUniforms(state);
+                    canvas.drawQuad();
+                    canvas.swapBuffers();
+                }
+
+                nextFrameNanos += targetFrameNanos;
+                long now = System.nanoTime();
+                long sleepNanos = nextFrameNanos - now;
+                if (sleepNanos > 0) {
+                    if (sleepNanos > 2_000_000L) {
+                        LockSupport.parkNanos(sleepNanos - 1_000_000L);
+                    }
+                    while (System.nanoTime() < nextFrameNanos) {
+                        Thread.onSpinWait();
+                    }
+                } else {
+                    nextFrameNanos = now;
+                }
+            }
+        } finally {
+            for (WaylandCanvas canvas : canvases) canvas.close();
+        }
+    }
+
+    private void startX11(Path vertPath, Path leftFrag, Path rightFrag) throws Throwable {
         // Ensure XFCE desktop background is transparent if xfdesktop is active
         configureXfdesktopTransparency();
 

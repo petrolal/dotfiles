@@ -16,37 +16,29 @@
     LC_TIME = "pt_BR.UTF-8";
   };
 
-  # X11 & XFCE
-  services.xserver.enable = true;
-  services.xserver.displayManager.lightdm = {
+  # Pure Wayland session: X11 server, XFCE, lightdm, and picom are gone.
+  # greetd (text greeter) -> Wayfire (wlroots compositor) is the only session.
+  services.xserver.enable = false;
+
+  services.greetd = {
     enable = true;
-    greeters.gtk = {
-      theme = {
-        name = "Adwaita-dark";
-        package = pkgs.gnome-themes-extra;
+    settings = {
+      default_session = {
+        command = "${pkgs.tuigreet}/bin/tuigreet --time --remember --cmd wayfire";
+        user = "greeter";
       };
-      iconTheme = {
-        name = "Adwaita";
-        package = pkgs.adwaita-icon-theme;
-      };
-      cursorTheme = {
-        name = "Adwaita";
-        size = 24;
-      };
-      extraConfig = ''
-        user-background = false
-      '';
     };
   };
-  services.xserver.desktopManager.xfce.enable = true;
-  services.xserver.desktopManager.xterm.enable = false;
-  services.xserver.excludePackages = [ pkgs.xterm ];
 
-  services.xserver.xkb = {
-    layout = "us";
-    variant = "intl";
+  programs.wayfire = {
+    enable = true;
+    xwayland.enable = true; # keep Xwayland for legacy X11-only apps, not the host session
   };
+
+  # xkb now lives at the compositor/console layer, not an X server.
   console.keyMap = "us-acentos";
+  environment.sessionVariables.XKB_DEFAULT_LAYOUT = "us";
+  environment.sessionVariables.XKB_DEFAULT_VARIANT = "intl";
 
   # Pipewire Sound
   services.printing.enable = true;

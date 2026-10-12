@@ -1,33 +1,26 @@
 { pkgs, ... }:
 
 let
+  # Native deps for the Wayland layer-shell OpenGL wallpaper renderer
+  # (java.lang.foreign bindings in src/main/java/.../wallpaper): a hand-rolled
+  # wl_display/zwlr_layer_shell_v1 client plus EGL/GL, no GLFW/LWJGL (neither
+  # exposes the layer-shell protocol).
   dynamicLibs = with pkgs; [
-    libx11
-    libGL
+    wayland
+    libglvnd # libEGL + libGL dispatch
   ];
 
   buildTools = with pkgs; [
     gnumake
     git
+    jdk21
     graalvmPackages.graalvm-ce
+    wayland-protocols
+    wayland-scanner
   ] ++ dynamicLibs;
 
   wallpaperTools = with pkgs; [
     mpv
-    xwinwrap
-    feh
-  ];
-
-  # GLSL/OpenGL audio-reactive rice layer: glava renders audio-reactive GLSL
-  # shaders (via xwinwrap, same tool as wallpaperTools, as a desktop-level
-  # window) and conky overlays system/clock widgets on top. Both read their
-  # config from config/glava and config/conky (symlinked by the invoker, see
-  # Linker.ROOT_TARGETS); only the packages themselves are installed here.
-  # Audio capture goes through pipewire's pulse-compat socket (desktop.nix:
-  # services.pipewire.pulse.enable), which glava's libpulse backend talks to
-  # directly.
-  visualizerTools = with pkgs; [
-    glava
   ];
 
   devTools = with pkgs; [
@@ -68,7 +61,7 @@ let
     pciutils
     htop
     fastfetch
-    xclip
+    wl-clipboard
     curl
     wget
     zip
@@ -97,7 +90,6 @@ in {
   environment.systemPackages =
     buildTools
     ++ wallpaperTools
-    ++ visualizerTools
     ++ devTools
     ++ searchTools
     ++ languageTools
@@ -110,4 +102,12 @@ in {
   # polluting every process on the system via a global LD_LIBRARY_PATH.
   programs.nix-ld.enable = true;
   programs.nix-ld.libraries = dynamicLibs;
+
+  # Gradle 8.14's bundled Kotlin DSL compiler can't parse GraalVM's "25.0.2"
+  # java.version string, so whatever runs `./gradlew` itself (bootstrap.sh,
+  # an interactive shell) must default to a boring JDK. build.gradle.kts
+  # forks actual compilation and native-image into GRAALVM_HOME regardless of
+  # which JVM launched Gradle, so this only changes Gradle's own runtime.
+  environment.variables.JAVA_HOME = "${pkgs.jdk21}";
+  environment.variables.GRAALVM_HOME = "${pkgs.graalvmPackages.graalvm-ce}";
 }
