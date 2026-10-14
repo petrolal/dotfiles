@@ -1,0 +1,109 @@
+{
+    "$schema": "https://github.com/fastfetch-cli/fastfetch/raw/dev/doc/json_schema.json",
+    "logo": {
+        "type": "small",
+        "padding": {
+            "top": 1,
+            "right": 2
+        }
+    },
+    "display": {
+        "separator": " 󰅂 ",
+        "color": {
+            "separator": "#6F3646"
+        },
+        "key": {
+            "width": 14
+        }
+    },
+    "modules": [
+        {
+            "type": "title",
+            "format": "{user-name}@{host-name}",
+            "color": {
+                "user": "#BD7B2A",
+                "at": "#6F3646",
+                "host": "#9E2A2B"
+            }
+        },
+        {
+            "type": "separator",
+            "string": "─",
+            "outputColor": "#6F3646"
+        },
+        {
+            "type": "os",
+            "key": " OS",
+            "keyColor": "#BD7B2A"
+        },
+        {
+            "type": "host",
+            "key": "󰌢 Host",
+            "keyColor": "#BD7B2A"
+        },
+        {
+            "type": "kernel",
+            "key": " Kernel",
+            "keyColor": "#BD7B2A"
+        },
+        {
+            "type": "uptime",
+            "key": "󰅐 Uptime",
+            "keyColor": "#BD7B2A"
+        },
+        {
+            "type": "packages",
+            "key": "󰏖 Packages",
+            "keyColor": "#BD7B2A"
+        },
+        {
+            "type": "shell",
+            "key": " Shell",
+            "keyColor": "#BD7B2A"
+        },
+        {
+            "type": "de",
+            "key": "󰇄 DE",
+            "keyColor": "#BD7B2A"
+        },
+        {
+            "type": "wm",
+            "key": " WM",
+            "keyColor": "#BD7B2A"
+        },
+        {
+            "type": "terminal",
+            "key": " Terminal",
+            "keyColor": "#BD7B2A"
+        },
+        {
+            "type": "cpu",
+            "key": "󰍛 CPU",
+            "keyColor": "#9E2A2B",
+            "showPeCoreCount": true
+        },
+        {
+            "type": "gpu",
+            "key": "󰾲 GPU",
+            "keyColor": "#9E2A2B"
+        },
+        {
+            "type": "memory",
+            "key": " Memory",
+            "keyColor": "#9E2A2B"
+        },
+        {
+            "type": "disk",
+            "key": "󰉉 Disk",
+            "keyColor": "#9E2A2B",
+            "folders": "/"
+        },
+        {
+            "type": "break"
+        },
+        {
+            "type": "colors",
+            "symbol": "square"
+        }
+    ]
+}
