@@ -1,4 +1,9 @@
-{ config, pkgs, lib, ... }:
+{
+  config,
+  pkgs,
+  lib,
+  ...
+}:
 
 let
   # hardware-configuration.nix is inherently per-machine (disk UUIDs, fs
@@ -31,4 +36,20 @@ in
   hardware.enableRedistributableFirmware = true;
   hardware.enableAllFirmware = true;
   nixpkgs.config.allowUnfree = true;
+
+  # WebHID / QMK / VIA keyboard configurators (e.g. qmk.top, usevia.app)
+  services.udev.extraRules = ''
+    KERNEL=="hidraw*", SUBSYSTEM=="hidraw", MODE="0666", TAG+="uaccess", TAG+="udev-acl"
+  '';
+  hardware.keyboard.qmk.enable = true;
+
+  # jetbrains.idea-oss (see modules/jetbrains.nix) carries known,
+  # currently-unpatched vulnerabilities in nixpkgs (tracked as
+  # NIXPKGS-2026-2269; nixpkgs itself no longer updates this package, see
+  # https://tracker.security.nixos.org/issues/NIXPKGS-2026-2269 for exactly
+  # what they are). Allowlisted here as an explicit, visible decision rather
+  # than silently building anyway.
+  nixpkgs.config.permittedInsecurePackages = [
+    "intellij-idea-oss-2025.3.4"
+  ];
 }

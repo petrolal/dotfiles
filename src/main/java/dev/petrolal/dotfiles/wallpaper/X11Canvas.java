@@ -6,6 +6,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * X11Canvas manages the X11 display connection and, per monitor, an
@@ -460,8 +461,14 @@ public class X11Canvas implements AutoCloseable {
     public int getWidth() { return width; }
     public int getHeight() { return height; }
 
+    private final AtomicBoolean closed = new AtomicBoolean(false);
+
+    /** Idempotent and safe to call from both the normal try-with-resources
+     * path and a JVM shutdown hook racing it on SIGINT/SIGTERM -- only the
+     * first caller actually tears down the X11 connection and native arena. */
     @Override
     public void close() {
+        if (!closed.compareAndSet(false, true)) return;
         try {
             int ignored = (int) XCloseDisplay.invokeExact(display);
         } catch (Throwable ignored) {}

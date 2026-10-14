@@ -11,6 +11,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import dev.petrolal.dotfiles.core.DotfilePaths;
+import dev.petrolal.dotfiles.domain.Result;
+import dev.petrolal.dotfiles.system.ProcessRunner;
 
 /**
  * Universal wallpaper controller:
@@ -50,22 +52,29 @@ public final class Wallpaper {
         return direct;
     }
 
+    /** Forces every xfce4-desktop image-style/color-style property to "none"
+     * (0) / "solid" (3) so the OpenGL wallpaper shows through instead of
+     * being painted over by xfdesktop's own background. Driven entirely from
+     * Java so each xfconf-query call's exit code is individually visible,
+     * rather than as one opaque shell pipeline. */
     private void configureXfdesktopTransparency() {
-        try {
-            // Check if xfconf-query exists before attempting execution
-            Process check = new ProcessBuilder("which", "xfconf-query").start();
-            if (check.waitFor() != 0) return;
+        if (!DotfilePaths.commandExists("xfconf-query")) return;
 
-            ProcessBuilder pb = new ProcessBuilder(
-                "sh", "-c",
-                "xfconf-query -c xfce4-desktop -l 2>/dev/null | grep -E 'image-style|color-style' | while read p; do " +
-                "  if echo \"$p\" | grep -q 'image-style'; then xfconf-query -c xfce4-desktop -p \"$p\" -s 0 2>/dev/null; fi; " +
-                "  if echo \"$p\" | grep -q 'color-style'; then xfconf-query -c xfce4-desktop -p \"$p\" -s 3 2>/dev/null; fi; " +
-                "done; xfdesktop --reload 2>/dev/null || true"
-            );
-            Process p = pb.start();
-            p.waitFor();
-        } catch (Exception ignored) {}
+        Result<String> listResult = ProcessRunner.captureOutput(
+                List.of("xfconf-query", "-c", "xfce4-desktop", "-l"));
+        listResult.ifOk(output -> {
+            for (String property : output.lines().toList()) {
+                if (property.contains("image-style")) {
+                    ProcessRunner.run(List.of("xfconf-query", "-c", "xfce4-desktop", "-p", property, "-s", "0"));
+                } else if (property.contains("color-style")) {
+                    ProcessRunner.run(List.of("xfconf-query", "-c", "xfce4-desktop", "-p", property, "-s", "3"));
+                }
+            }
+        });
+
+        if (DotfilePaths.commandExists("xfdesktop")) {
+            ProcessRunner.run(List.of("xfdesktop", "--reload"));
+        }
     }
 
     /**
@@ -177,51 +186,63 @@ public final class Wallpaper {
             ShaderPipeline sharedPipeline = new ShaderPipeline(canvas, vertPath, panoramaFrag);
 
             try (WallpaperEvents events = new WallpaperEvents(canvas)) {
+                // SIGINT/SIGTERM halt the JVM via shutdown hooks, not by
+                // unwinding the stack -- the try-with-resources close() calls
+                // below never run on that path. Release the X11/GL state
+                // explicitly so a killed daemon doesn't leak the display
+                // connection, GLX contexts, and override-redirect windows.
+                Thread shutdownHook = new Thread(canvas::close, "wallpaper-shutdown");
+                Runtime.getRuntime().addShutdownHook(shutdownHook);
+
                 long startTimeNanos = System.nanoTime();
                 long lastLowerNanos = System.nanoTime();
                 final long lowerIntervalNanos = 3_000_000_000L;
                 long lastReloadCheckNanos = System.nanoTime();
                 final long reloadCheckIntervalNanos = 1_000_000_000L;
 
-                while (true) {
-                    // Hot-reload is a developer convenience, not a per-frame need:
-                    // stat()-ing the shader file 60x/sec forever is wasted syscalls.
-                    long nowForReload = System.nanoTime();
-                    if (nowForReload - lastReloadCheckNanos > reloadCheckIntervalNanos) {
-                        sharedPipeline.reloadIfModified();
-                        lastReloadCheckNanos = nowForReload;
+                try {
+                    while (true) {
+                        // Hot-reload is a developer convenience, not a per-frame need:
+                        // stat()-ing the shader file 60x/sec forever is wasted syscalls.
+                        long nowForReload = System.nanoTime();
+                        if (nowForReload - lastReloadCheckNanos > reloadCheckIntervalNanos) {
+                            sharedPipeline.reloadIfModified();
+                            lastReloadCheckNanos = nowForReload;
+                        }
+
+                        // Desktop icons / panel widgets can get (re)mapped above us after
+                        // startup; periodically re-assert that we stay at the bottom of
+                        // the window stack instead of covering them.
+                        long nowForLower = System.nanoTime();
+                        if (nowForLower - lastLowerNanos > lowerIntervalNanos) {
+                            canvas.lowerToBackground();
+                            lastLowerNanos = nowForLower;
+                        }
+
+                        long frameStartNanos = System.nanoTime();
+                        float elapsed = (frameStartNanos - startTimeNanos) / 1_000_000_000.0f;
+
+                        // Throttled non-blocking query strictly bound to render frame cadence
+                        WallpaperEvents.WallpaperState rawState = events.pollState(canvas.getWidth(), canvas.getHeight(), elapsed);
+
+                        // Render + present each monitor independently, on its own surface.
+                        for (int i = 0; i < monitors.size(); i++) {
+                            Monitor mon = monitors.get(i);
+                            X11Canvas.Surface surface = surfaces.get(i);
+
+                            float viewportOffsetX = mon.x();
+                            float viewportOffsetY = totalScreenHeight - (mon.y() + mon.height());
+
+                            canvas.makeCurrent(surface);
+                            canvas.setViewport(0, 0, mon.width(), mon.height());
+                            sharedPipeline.bind();
+                            sharedPipeline.updateUniforms(rawState, viewportOffsetX, viewportOffsetY);
+                            canvas.drawQuad();
+                            canvas.swapBuffers(surface);
+                        }
                     }
-
-                    // Desktop icons / panel widgets can get (re)mapped above us after
-                    // startup; periodically re-assert that we stay at the bottom of
-                    // the window stack instead of covering them.
-                    long nowForLower = System.nanoTime();
-                    if (nowForLower - lastLowerNanos > lowerIntervalNanos) {
-                        canvas.lowerToBackground();
-                        lastLowerNanos = nowForLower;
-                    }
-
-                    long frameStartNanos = System.nanoTime();
-                    float elapsed = (frameStartNanos - startTimeNanos) / 1_000_000_000.0f;
-
-                    // Throttled non-blocking query strictly bound to render frame cadence
-                    WallpaperEvents.WallpaperState rawState = events.pollState(canvas.getWidth(), canvas.getHeight(), elapsed);
-
-                    // Render + present each monitor independently, on its own surface.
-                    for (int i = 0; i < monitors.size(); i++) {
-                        Monitor mon = monitors.get(i);
-                        X11Canvas.Surface surface = surfaces.get(i);
-
-                        float viewportOffsetX = mon.x();
-                        float viewportOffsetY = totalScreenHeight - (mon.y() + mon.height());
-
-                        canvas.makeCurrent(surface);
-                        canvas.setViewport(0, 0, mon.width(), mon.height());
-                        sharedPipeline.bind();
-                        sharedPipeline.updateUniforms(rawState, viewportOffsetX, viewportOffsetY);
-                        canvas.drawQuad();
-                        canvas.swapBuffers(surface);
-                    }
+                } finally {
+                    Runtime.getRuntime().removeShutdownHook(shutdownHook);
                 }
             }
         }

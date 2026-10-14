@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import dev.petrolal.dotfiles.core.DotfilePaths;
+import dev.petrolal.dotfiles.domain.Result;
 import dev.petrolal.dotfiles.system.ProcessRunner;
 
 public final class Xfconf {
@@ -60,7 +61,16 @@ public final class Xfconf {
             new XfceSetting("xfce4-keyboard-shortcuts", "/xfwm4/custom/<Shift><Super>1", "string", "move_window_workspace_1_key"),
             new XfceSetting("xfce4-keyboard-shortcuts", "/xfwm4/custom/<Shift><Super>2", "string", "move_window_workspace_2_key"),
             new XfceSetting("xfce4-keyboard-shortcuts", "/xfwm4/custom/<Shift><Super>3", "string", "move_window_workspace_3_key"),
-            new XfceSetting("xfce4-keyboard-shortcuts", "/xfwm4/custom/<Shift><Super>4", "string", "move_window_workspace_4_key")
+            new XfceSetting("xfce4-keyboard-shortcuts", "/xfwm4/custom/<Shift><Super>4", "string", "move_window_workspace_4_key"),
+
+            // Multimedia & Volume Keys (PipeWire / wpctl with native OSD notifications & playerctl)
+            new XfceSetting("xfce4-keyboard-shortcuts", "/commands/custom/XF86AudioRaiseVolume", "string", "~/.config/xfce4/scripts/volume.sh up"),
+            new XfceSetting("xfce4-keyboard-shortcuts", "/commands/custom/XF86AudioLowerVolume", "string", "~/.config/xfce4/scripts/volume.sh down"),
+            new XfceSetting("xfce4-keyboard-shortcuts", "/commands/custom/XF86AudioMute", "string", "~/.config/xfce4/scripts/volume.sh mute"),
+            new XfceSetting("xfce4-keyboard-shortcuts", "/commands/custom/XF86AudioMicMute", "string", "~/.config/xfce4/scripts/volume.sh mic-mute"),
+            new XfceSetting("xfce4-keyboard-shortcuts", "/commands/custom/XF86AudioPlay", "string", "playerctl play-pause"),
+            new XfceSetting("xfce4-keyboard-shortcuts", "/commands/custom/XF86AudioNext", "string", "playerctl next"),
+            new XfceSetting("xfce4-keyboard-shortcuts", "/commands/custom/XF86AudioPrev", "string", "playerctl previous")
     );
 
     static final List<GnomeSetting> GNOME_SETTINGS = List.of(
@@ -108,17 +118,25 @@ public final class Xfconf {
         }
     }
 
-    static void setXfconf(String channel, String property, String type, String value, boolean dryRun) {
+    /** Logs the DotfileError on a failed Result, prefixed with CONTEXT, so the
+     * failure actually reaches the user instead of being silently dropped. */
+    private static boolean logIfFailed(String context, Result<Integer> result) {
+        result.ifErr(err -> System.err.println("[FAIL] " + context + ": " + err.describe()));
+        return result.isOk();
+    }
+
+    static boolean setXfconf(String channel, String property, String type, String value, boolean dryRun) {
         String valStr = expandHomeTilde(value);
         if (dryRun) {
             System.out.printf("[DRY-RUN] xfconf-query -c %s -p %s -t %s -s %s%n", channel, property, type, valStr);
-        } else {
-            ProcessRunner.run(List.of("xfconf-query", "-c", channel, "-p", property, "-s", valStr, "--create", "-t", type));
+            return true;
         }
+        return logIfFailed(channel + " " + property,
+                ProcessRunner.run(List.of("xfconf-query", "-c", channel, "-p", property, "-s", valStr, "--create", "-t", type)));
     }
 
-    static void setXfconfArray(String channel, String property, String type, List<String> values,
-                                boolean dryRun, boolean verbose) {
+    static boolean setXfconfArray(String channel, String property, String type, List<String> values,
+                                   boolean dryRun, boolean verbose) {
         List<String> cmd = new ArrayList<>(List.of("xfconf-query", "-c", channel, "-p", property, "--create", "-a"));
         for (String v : values) {
             cmd.add("-t");
@@ -128,32 +146,34 @@ public final class Xfconf {
         }
         if (dryRun) {
             System.out.println("[DRY-RUN] " + String.join(" ", cmd));
-        } else {
-            if (verbose) System.out.println("[OK] Setting " + channel + " " + property + " to " + values);
-            ProcessRunner.run(cmd);
+            return true;
         }
+        if (verbose) System.out.println("[OK] Setting " + channel + " " + property + " to " + values);
+        return logIfFailed(channel + " " + property, ProcessRunner.run(cmd));
     }
 
     /** Detects the current display resolution and enforces 0px window manager
-     * margins via xfconf. */
-    public static void applyDynamicResolutionScaling(boolean dryRun, boolean verbose) {
+     * margins via xfconf. Returns the number of xfconf-query calls that failed. */
+    public static int applyDynamicResolutionScaling(boolean dryRun, boolean verbose) {
         Display.PrimaryResolution res = Display.determinePrimaryResolution();
         if (verbose) {
             System.out.printf("Display detection: %dx%d%s -> WM margins: 0px%n",
                     res.width(), res.height(), res.output() != null ? " (" + res.output() + ")" : "");
         }
-        setXfconf("xfwm4", "/general/margin_bottom", "int", "0", dryRun);
-        setXfconf("xfwm4", "/general/margin_left", "int", "0", dryRun);
-        setXfconf("xfwm4", "/general/margin_right", "int", "0", dryRun);
-        setXfconf("xfwm4", "/general/margin_top", "int", "0", dryRun);
+        int failures = 0;
+        if (!setXfconf("xfwm4", "/general/margin_bottom", "int", "0", dryRun)) failures++;
+        if (!setXfconf("xfwm4", "/general/margin_left", "int", "0", dryRun)) failures++;
+        if (!setXfconf("xfwm4", "/general/margin_right", "int", "0", dryRun)) failures++;
+        if (!setXfconf("xfwm4", "/general/margin_top", "int", "0", dryRun)) failures++;
+        return failures;
     }
 
-    private static void runGsettings(String schema, String key, String value, boolean dryRun) {
+    private static boolean runGsettings(String schema, String key, String value, boolean dryRun) {
         if (dryRun) {
             System.out.printf("[DRY-RUN] gsettings set %s %s '%s'%n", schema, key, value);
-        } else {
-            ProcessRunner.run(List.of("gsettings", "set", schema, key, value));
+            return true;
         }
+        return logIfFailed(schema + " " + key, ProcessRunner.run(List.of("gsettings", "set", schema, key, value)));
     }
 
     private static final List<GnomeSetting> GNOME_RESETS = List.of(
@@ -162,8 +182,11 @@ public final class Xfconf {
             new GnomeSetting("org.gnome.desktop.wm.preferences", "button-layout", "")
     );
 
-    static void applyGnomeSettings(boolean dryRun, boolean verbose) {
-        if (!DotfilePaths.commandExists("gsettings")) return;
+    /** Returns the number of gsettings "set" calls that failed. Resets are
+     * best-effort (a schema/key not present on this system is expected, not
+     * a failure) and are not counted. */
+    static int applyGnomeSettings(boolean dryRun, boolean verbose) {
+        if (!DotfilePaths.commandExists("gsettings")) return 0;
         if (verbose) System.out.println("Syncing GSettings for GNOME/GTK apps...");
         for (GnomeSetting s : GNOME_RESETS) {
             if (dryRun) {
@@ -172,25 +195,33 @@ public final class Xfconf {
                 ProcessRunner.run(List.of("gsettings", "reset", s.schema(), s.key()));
             }
         }
+        int failures = 0;
         for (GnomeSetting s : GNOME_SETTINGS) {
-            runGsettings(s.schema(), s.key(), s.value(), dryRun);
+            if (!runGsettings(s.schema(), s.key(), s.value(), dryRun)) failures++;
         }
+        return failures;
     }
 
-    public static void applyXfceSettings(Path root, boolean dryRun, boolean verbose) {
+    /** Applies every XFCE/GNOME desktop setting and returns the number of
+     * underlying subprocess calls that failed (resets are best-effort and
+     * excluded). A deploy that reports success no longer does so while every
+     * xfconf-query call silently failed underneath it. */
+    public static int applyXfceSettings(Path root, boolean dryRun, boolean verbose) {
         if (!DotfilePaths.commandExists("xfconf-query")) {
             if (verbose) System.out.println("[SKIP] xfconf-query not found, skipping desktop theme configuration.");
-            return;
+            return 0;
         }
         if (verbose) System.out.println("Applying XFCE desktop settings...");
         for (XfceReset r : XFCE_RESETS) {
             resetXfconf(r.channel(), r.property(), dryRun);
         }
+        int failures = 0;
         for (XfceSetting s : XFCE_SETTINGS) {
-            setXfconf(s.channel(), s.property(), s.type(), s.value(), dryRun);
+            if (!setXfconf(s.channel(), s.property(), s.type(), s.value(), dryRun)) failures++;
         }
-        XfconfXml.applyExportedXfconfFiles(root, dryRun, verbose);
-        applyDynamicResolutionScaling(dryRun, verbose);
-        applyGnomeSettings(dryRun, verbose);
+        failures += XfconfXml.applyExportedXfconfFiles(root, dryRun, verbose);
+        failures += applyDynamicResolutionScaling(dryRun, verbose);
+        failures += applyGnomeSettings(dryRun, verbose);
+        return failures;
     }
 }

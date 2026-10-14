@@ -127,15 +127,38 @@ let
     user_shell="''${SHELL:-${pkgs.fish}/bin/fish}"
     exec nix-shell ${templates}/full/shell.nix "$@" --command "exec $user_shell"
   '';
+
+  # General-purpose JVM build tooling, independent of any specific IDE or
+  # project template above. Pinned to pkgs.jdk21, the one global JDK this
+  # system exposes (see modules/jetbrains.nix, which sets JAVA_HOME/PATH to
+  # it) -- not to a project's own `jvm-init <version>` pin.
+  buildTools = [
+    (pkgs.gradle.override { java = pkgs.jdk21; })
+    (pkgs.maven.override { jdk_headless = pkgs.jdk21; })
+    (pkgs.sbt.override { jre = pkgs.jdk21; })
+    pkgs.lombok
+    pkgs.tomcat10
+  ];
 in
 {
   # `<nixpkgs>` resolves through the flake registry (pinned to this system's
   # nixpkgs), so nix-shell needs flakes enabled.
-  nix.settings.experimental-features = [ "nix-command" "flakes" ];
+  nix.settings.experimental-features = [
+    "nix-command"
+    "flakes"
+  ];
 
   # Hooks into fish, bash, and zsh automatically; nix-direnv is enabled by default
   # and provides `use nix` with caching.
   programs.direnv.enable = true;
 
-  environment.systemPackages = [ jvm-init node-init go-init python-init dev-init devshell ];
+  environment.systemPackages = [
+    jvm-init
+    node-init
+    go-init
+    python-init
+    dev-init
+    devshell
+  ]
+  ++ buildTools;
 }

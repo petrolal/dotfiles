@@ -1,15 +1,24 @@
 #version 330 core
 
-uniform vec2 u_resolution;     // Full multi-monitor desktop resolution (shared panorama uv space)
+uniform vec2 u_resolution;      // Full multi-monitor desktop resolution (shared panorama space)
 uniform float u_time;
-uniform vec4 u_mouse;          // xy: global cursor pos, z: left click, w: right click
-uniform float u_workspace;     // Virtual workspace index
-uniform float u_audio;         // Media/playback indicator (0.0 or 1.0)
-uniform float u_cpu;           // CPU load (0.0 to 1.0)
-uniform float u_ram;           // RAM consumption (0.0 to 1.0)
-uniform vec2 u_viewportOffset; // This monitor's pixel offset within the full desktop (bottom-left origin)
+uniform vec4 u_mouse;           // xy: global cursor pos, z: left click, w: right click
+uniform float u_workspace;      // Virtual workspace index
+uniform float u_audio;          // Media/playback indicator
+uniform float u_cpu;            // CPU load (0.0 to 1.0)
+uniform float u_ram;            // RAM consumption (0.0 to 1.0)
+uniform vec2 u_viewportOffset;  // This monitor's pixel offset within full desktop
 
+in vec2 v_uv;
 out vec4 fragColor;
+
+// 4x4 Bayer ordered-dither matrix (constant file-scope to eliminate per-fragment allocation)
+const float bayer[16] = float[16](
+     0.0,  8.0,  2.0, 10.0,
+    12.0,  4.0, 14.0,  6.0,
+     3.0, 11.0,  1.0,  9.0,
+    15.0,  7.0, 13.0,  5.0
+);
 
 // 2D Rotation matrix
 mat2 rot(float a) {
@@ -20,6 +29,10 @@ mat2 rot(float a) {
 // Pseudo-random noise functions
 float hash(vec2 p) {
     return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123);
+}
+
+float hash3D(vec3 p) {
+    return fract(sin(dot(p, vec3(127.1, 311.7, 74.7))) * 43758.5453123);
 }
 
 float noise(vec2 p) {
@@ -52,17 +65,24 @@ float sdCylinder(vec3 p, float h, float r) {
     return min(max(d.x, d.y), 0.0) + length(max(d, 0.0));
 }
 
+float sdSphere(vec3 p, float s) {
+    return length(p) - s;
+}
+
+float sdEllipsoid(vec3 p, vec3 r) {
+    float k0 = length(p / r);
+    float k1 = length(p / (r * r));
+    return k0 * (k0 - 1.0) / k1;
+}
+
 int hitMat = 0;
 
-// Scene Definition: one continuous morgue/examination room spanning the whole
-// panorama. Left-hand furniture (anesthesia machine, autopsy bed) sits toward
-// -x, the body-locker vault and specimen vat toward +x, with the desk/PC
-// shared near the back wall straddling the seam between monitors.
+// Scene SDF: Oppressive Bio-Horror Laboratory Examination Room
 float map(vec3 p) {
     hitMat = 0;
     float d = 1e5;
 
-    // 1. Room Shell
+    // 1. Room Shell (Heavy, claustrophobic bunker walls & degraded tiled floor)
     float floorDist = p.y + 1.5;
     if (floorDist < d) { d = floorDist; hitMat = 1; }
 
@@ -75,7 +95,80 @@ float map(vec3 p) {
     float rightWall = 5.5 - p.x;
     if (rightWall < d) { d = rightWall; hitMat = 3; }
 
-    // 2. Medical Anesthesia Machine (far left)
+    // 2. Overhead Infrastructure (Ceiling Pipes, Catenary Cables, Light Fixture)
+    // Strictly spatially bounded above y > 0.85 to keep ground-level rays fast
+    if (p.y > 0.85) {
+        // Main overhead heavy conduit along X at back ceiling
+        vec3 pipe1P = p - vec3(0.0, 1.82, 8.5);
+        float pipe1 = sdCylinder(vec3(pipe1P.y, pipe1P.z, pipe1P.x), 5.5, 0.085);
+        float collarX = mod(p.x + 3.0, 2.5) - 1.25;
+        float pipe1Collar = sdCylinder(vec3(pipe1P.y, pipe1P.z, collarX), 0.05, 0.11);
+        float conduitSystem = min(pipe1, pipe1Collar);
+
+        // Secondary chemical supply line along X (mid-ceiling)
+        vec3 pipe2P = p - vec3(0.0, 1.95, 5.8);
+        float pipe2 = sdCylinder(vec3(pipe2P.y, pipe2P.z, pipe2P.x), 5.5, 0.055);
+        conduitSystem = min(conduitSystem, pipe2);
+
+        // Cross-conduit along Z on left side
+        vec3 pipeZP = p - vec3(-2.8, 1.88, 7.5);
+        float pipeZ = sdCylinder(vec3(pipeZP.x, pipeZP.y, pipeZP.z), 3.5, 0.045);
+        conduitSystem = min(conduitSystem, pipeZ);
+
+        if (conduitSystem < d) { d = conduitSystem; hitMat = 16; }
+
+        // Hanging Catenary High-Voltage Power Cables (Parabolic Sag: y = y0 - sag * (1 - x^2))
+        // Cable 1: Drooping from (-4.2, 1.85, 6.6) across to (1.5, 1.85, 6.6)
+        if (p.x >= -4.2 && p.x <= 1.5) {
+            float ux = (p.x - (-1.35)) / 2.85;
+            float sagY = 1.85 - 0.38 * (1.0 - ux * ux);
+            float cable1 = length(vec2(p.y - sagY, p.z - 6.6)) - 0.024;
+            if (cable1 < d) { d = cable1; hitMat = 17; }
+        }
+
+        // Cable 2: Drooping from (-1.0, 1.88, 5.2) across to (3.8, 1.88, 5.2)
+        if (p.x >= -1.0 && p.x <= 3.8) {
+            float ux = (p.x - 1.4) / 2.4;
+            float sagY = 1.88 - 0.32 * (1.0 - ux * ux);
+            float cable2 = length(vec2(p.y - sagY, p.z - 5.2)) - 0.020;
+            if (cable2 < d) { d = cable2; hitMat = 17; }
+        }
+
+        // Vertical supply cable down left wall to Anesthesia machine
+        vec3 drop1P = p - vec3(-3.85, 1.1, 6.2);
+        float drop1 = sdCylinder(drop1P, 0.75, 0.02);
+        if (drop1 < d) { d = drop1; hitMat = 17; }
+
+        // Overhead Industrial Fluorescent Fixture
+        vec3 fixtureP = p - vec3(-0.3, 1.76, 6.8);
+        float fixtureHousing = sdBox(fixtureP, vec3(1.15, 0.05, 0.22));
+        float fixtureStemL = sdCylinder(p - vec3(-1.1, 1.95, 6.8), 0.15, 0.015);
+        float fixtureStemR = sdCylinder(p - vec3(0.5, 1.95, 6.8), 0.15, 0.015);
+        float fixture = min(fixtureHousing, min(fixtureStemL, fixtureStemR));
+        if (fixture < d) { d = fixture; hitMat = 18; }
+
+        // Fluorescent glass tube diffuser
+        vec3 tubeP = fixtureP - vec3(0.0, -0.06, 0.0);
+        float fluorTube = sdCylinder(vec3(tubeP.y, tubeP.z, tubeP.x), 1.0, 0.035);
+        if (fluorTube < d) { d = fluorTube; hitMat = 19; }
+    }
+
+    // 3. Floor Clutter: Thick rubber drainage & hydraulic hoses
+    if (p.y < -1.25) {
+        // Hose snaking along morgue vault base
+        vec3 hose1P = p - vec3(3.0, -1.45, 6.6);
+        float zHose = sin(hose1P.x * 2.0) * 0.18;
+        float hose1 = length(vec2(hose1P.z - zHose, hose1P.y)) - 0.038;
+        if (hose1 < d) { d = hose1; hitMat = 17; }
+
+        // Hose snaking from autopsy bed base toward left wall
+        vec3 hose2P = p - vec3(-2.2, -1.45, 7.2);
+        float xHose = cos(hose2P.z * 1.8) * 0.20;
+        float hose2 = length(vec2(hose2P.x - xHose, hose2P.y)) - 0.035;
+        if (hose2 < d) { d = hose2; hitMat = 17; }
+    }
+
+    // 4. Medical Anesthesia Machine Cart (far left)
     vec3 machP = p - vec3(-3.9, -0.6, 6.2);
     float machRegion = sdBox(machP, vec3(1.2, 1.1, 0.9));
     if (machRegion - 0.2 < d) {
@@ -113,25 +206,25 @@ float map(vec3 p) {
         d = min(d, machRegion);
     }
 
-    // 3. Autopsy Examination Bed (left-of-center)
+    // 5. Autopsy Examination Bed (left-of-center)
     vec3 bedP = p - vec3(-0.8, -0.85, 7.8);
     float bedRegion = sdBox(bedP, vec3(0.9, 0.6, 1.6));
     if (bedRegion - 0.2 < d) {
         bedP.xz *= rot(-0.12);
         float bedPad = sdBox(bedP, vec3(0.65, 0.1, 1.4));
         float bedFrame = sdBox(bedP - vec3(0.0, -0.35, 0.0), vec3(0.6, 0.25, 1.35));
-        float bed = min(bedPad, bedFrame);
+        float bedDrainTrough = sdBox(bedP - vec3(0.0, 0.08, -1.35), vec3(0.55, 0.04, 0.08));
+        float bed = min(min(bedPad, bedFrame), bedDrainTrough);
         if (bed < d) { d = bed; hitMat = 5; }
     } else {
         d = min(d, bedRegion);
     }
 
-    // 4. Center Office Desk with Retro White PC (shared seam, back of room)
+    // 6. Center Office Desk with Retro White/Beige PC (shared back wall)
     vec3 deskP = p - vec3(0.26, -0.75, 9.2);
-
-    float deskRegion = sdBox(deskP - vec3(0.0, 0.0, 0.0), vec3(1.3, 0.9, 0.8));
+    float deskRegion = sdBox(deskP, vec3(1.3, 0.9, 0.8));
     if (deskRegion - 0.25 < d) {
-        float deskTop = sdBox(deskP - vec3(0.0, 0.0, 0.0), vec3(1.15, 0.04, 0.65));
+        float deskTop = sdBox(deskP, vec3(1.15, 0.04, 0.65));
         float deskLegL = sdBox(deskP - vec3(-1.05, -0.36, 0.0), vec3(0.05, 0.34, 0.55));
         float deskLegR = sdBox(deskP - vec3(1.05, -0.36, 0.0), vec3(0.05, 0.34, 0.55));
         float deskBack = sdBox(deskP - vec3(0.0, -0.30, 0.45), vec3(1.05, 0.28, 0.03));
@@ -163,33 +256,30 @@ float map(vec3 p) {
         d = min(d, deskRegion);
     }
 
-    // 5-8. Right-hand cluster: morgue vault, specimen vat, IV pole, biohazard
-    // bin. Bounding-box culled as one group (like the machine/bed/desk above)
-    // so the raymarch only pays for these ~9 sub-primitives when the ray is
-    // actually near them, instead of on every step across the whole room.
-    vec3 clusterP = p - vec3(2.7, 0.0, 5.4);
-    float clusterRegion = sdBox(clusterP, vec3(2.3, 1.7, 2.5));
+    // 7-9. Right-Hand Cluster: Morgue Vault, IV Pole, Biohazard Bin
+    vec3 clusterP = p - vec3(2.8, 0.0, 5.8);
+    float clusterRegion = sdBox(clusterP, vec3(2.0, 1.7, 2.2));
     if (clusterRegion - 0.3 < d) {
-        // 5. Morgue Body Locker Vault wall (right-of-center)
+        // 7. Morgue Body Locker Vault Wall with OPEN TRAY
         vec3 vaultP = p - vec3(3.1, -0.1, 7.4);
         float vaultCabinet = sdBox(vaultP, vec3(1.8, 1.35, 0.35));
-        if (vaultCabinet < d) { d = vaultCabinet; hitMat = 12; }
 
-        // 6. Cylindrical Specimen Incubation Vat (right, glowing lantern effect)
-        vec3 vatP = p - vec3(1.3, -0.1, 5.6);
-        float vatBound = sdCylinder(vatP, 1.45, 0.7);
-        if (vatBound < d) {
-            float vatBase = sdCylinder(vatP - vec3(0.0, -1.25, 0.0), 0.15, 0.65);
-            float vatCap  = sdCylinder(vatP - vec3(0.0, 1.25, 0.0), 0.15, 0.65);
-            float vatGlass = sdCylinder(vatP, 1.1, 0.52);
-            float vatHardware = min(vatBase, vatCap);
+        // Open pull-out body tray extending forward along -Z
+        vec3 trayP = vaultP - vec3(0.65, -0.12, -0.38);
+        float trayBody = sdBox(trayP, vec3(0.45, 0.04, 0.40));
+        float trayRimL = sdBox(trayP - vec3(-0.43, 0.05, 0.0), vec3(0.02, 0.05, 0.40));
+        float trayRimR = sdBox(trayP - vec3(0.43, 0.05, 0.0), vec3(0.02, 0.05, 0.40));
+        float trayHandle = sdBox(trayP - vec3(0.0, 0.06, -0.42), vec3(0.18, 0.03, 0.02));
+        float openTray = min(trayBody, min(min(trayRimL, trayRimR), trayHandle));
 
-            if (vatGlass < d) { d = vatGlass; hitMat = 13; } // Glowing fluid core
-            if (vatHardware < d) { d = vatHardware; hitMat = 7; }
-        }
+        // Hollow wall cavity where the drawer pulled out from
+        vec3 cavityP = vaultP - vec3(0.65, -0.12, -0.05);
+        float cavity = sdBox(cavityP, vec3(0.46, 0.16, 0.32));
+        float vaultStructure = max(vaultCabinet, -cavity);
+        float vaultFinal = min(vaultStructure, openTray);
+        if (vaultFinal < d) { d = vaultFinal; hitMat = 12; }
 
-        // 7. Medical IV Drip Pole (far right foreground)
-        // Wrapped with a tight bounding box to prevent thin cylinder micro-stepping trap
+        // 8. Medical IV Drip Pole (Tight bounding box to eliminate micro-stepping trap)
         vec3 poleP = p - vec3(2.9, -0.4, 4.0);
         float poleBound = sdBox(poleP, vec3(0.25, 1.15, 0.25));
         if (poleBound < d) {
@@ -200,7 +290,7 @@ float map(vec3 p) {
             if (ivStand < d) { d = ivStand; hitMat = 14; }
         }
 
-        // 8. Biohazard Disposal Bin (right, near vault)
+        // 9. Biohazard Disposal Bin (Tight bounding box)
         vec3 binP = p - vec3(2.3, -1.15, 6.2);
         float binBound = sdBox(binP, vec3(0.48, 0.4, 0.48));
         if (binBound < d) {
@@ -228,34 +318,16 @@ vec3 calcNormal(vec3 p) {
     );
 }
 
-// 4x4 Bayer ordered-dither matrix (file-scope constant to avoid per-fragment stack allocation)
-const float bayer[16] = float[16](
-     0.0,  8.0,  2.0, 10.0,
-    12.0,  4.0, 14.0,  6.0,
-     3.0, 11.0,  1.0,  9.0,
-    15.0,  7.0, 13.0,  5.0
-);
-
 void main() {
-    // Each monitor now has its own window, so gl_FragCoord is local to it
-    // (0..monitor width/height). Add this monitor's desktop position back in
-    // to reconstruct one continuous global pixel coordinate across every
-    // monitor -- that's what keeps the single wide panorama camera seamless
-    // at the bezel, independent of each monitor's own refresh rate.
+    // Continuous global pixel coordinate across multi-monitor setup
     vec2 globalPx = gl_FragCoord.xy + u_viewportOffset;
 
-    // Chunky low-res PS1-style pixelation: snap to a block grid *before*
-    // generating the camera ray, so every pixel in a block raymarches the
-    // identical ray and gets the identical color -- a true blocky low
-    // internal resolution, not just a blur or filter over the full-res image.
+    // Chunky low-res PS1-style pixelation: snap camera rays to a 2x2 block grid
     const float pixelBlock = 2.0;
     vec2 blockPx = (floor(globalPx / pixelBlock) + 0.5) * pixelBlock;
-
     vec2 uv = (blockPx - 0.5 * u_resolution) / u_resolution.y;
 
-    // One wide panorama camera shared by the whole desktop, pulled back and
-    // with a narrower lens so the room reads as larger/more distant instead
-    // of feeling cramped up against the furniture.
+    // Wide panorama examination camera
     vec3 ro = vec3(0.0, 0.65, -1.2);
     vec3 target = vec3(0.2, -0.15, 8.5);
     vec3 fwd = normalize(target - ro);
@@ -263,137 +335,174 @@ void main() {
     vec3 up = cross(fwd, right);
     vec3 rd = normalize(fwd + uv.x * right * 0.62 + uv.y * up * 0.62);
 
-    // Raymarching
+    // Bounded Raymarching
     float t = 0.05;
     int obj = 0;
     vec3 p;
     bool hit = false;
 
-    for (int i = 0; i < 52; i++) {
+    for (int i = 0; i < 56; i++) {
         p = ro + rd * t;
         float dist = map(p);
         obj = hitMat;
-        if (dist < 0.0055) {
+        if (dist < 0.005) {
             hit = true;
             break;
         }
         t += dist;
-        if (t > 24.0) break;
+        if (t > 22.0) break;
     }
 
     if (!hit) {
-        fragColor = vec4(0.03, 0.02, 0.02, 1.0);
+        fragColor = vec4(0.015, 0.012, 0.015, 1.0);
         return;
     }
 
     vec3 n = calcNormal(p);
+    vec3 viewDir = normalize(ro - p);
 
-    // Dynamic Flashlight: aims smoothly with cursor position (global desktop
-    // space, consistent across all monitors) or hovers gently when idle.
-    vec2 normMouse = (u_mouse.x >= 0.0) ? (u_mouse.xy / u_resolution.xy - 0.5) : vec2(sin(u_time * 0.4) * 0.15, cos(u_time * 0.3) * 0.1);
-    vec3 lightPos = ro + vec3(-0.1, -0.1, 0.0);
+    // =========================================================================
+    // LIGHTING PIPELINE: Steady, Atmospheric, Crushed Shadows (NO FLICKERING)
+    // =========================================================================
+
+    // 1. Crushed Ambient: Upper corners and far room edges recede into oppressive darkness
+    float roomVignette = smoothstep(11.0, 3.5, length(p.xy - vec2(0.0, 0.2)));
+    float ambientCoeff = 0.030 * roomVignette;
+
+    // 2. Primary Overhead Fluorescent Light Fixture (Cold industrial hospital hue)
+    vec3 fluorPos = vec3(-0.3, 1.70, 6.8);
+    vec3 toFluor = fluorPos - p;
+    float distFluor = length(toFluor);
+    vec3 lFluorDir = normalize(toFluor);
+    float attenFluor = 1.0 / (1.0 + 0.16 * distFluor + 0.045 * distFluor * distFluor);
+    float diffFluorRaw = max(dot(n, lFluorDir), 0.0);
+    float diffFluor = floor(diffFluorRaw * 6.0) / 6.0; // Faceted retro quantization
+    vec3 fluorColor = vec3(0.75, 0.82, 0.88);
+    vec3 lightFluor = fluorColor * diffFluor * attenFluor * 2.2;
+
+    // 3. Dynamic Cursor Flashlight (Smooth, stable aiming - zero strobe)
+    vec2 normMouse = (u_mouse.x >= 0.0)
+        ? (u_mouse.xy / u_resolution.xy - 0.5)
+        : vec2(sin(u_time * 0.25) * 0.14, cos(u_time * 0.20) * 0.08);
+    vec3 flashPos = ro + vec3(-0.1, -0.1, 0.0);
     vec3 aimTarget = target + vec3(normMouse.x * 2.2, -normMouse.y * 1.8, 0.0);
-    vec3 lightDir = normalize(aimTarget - lightPos);
-    vec3 toFrag = normalize(p - lightPos);
-    float distToLight = length(p - lightPos);
-
-    float spotCos = dot(lightDir, toFrag);
+    vec3 lightDirFlash = normalize(aimTarget - flashPos);
+    vec3 toFrag = normalize(p - flashPos);
+    float distFlash = length(p - flashPos);
+    float spotCos = dot(lightDirFlash, toFrag);
     float spot = smoothstep(0.65, 0.94, spotCos);
+    float attenFlash = 1.0 / (1.0 + 0.12 * distFlash + 0.05 * distFlash * distFlash);
+    float diffFlashRaw = max(dot(n, -toFrag), 0.0);
+    float diffFlash = floor(diffFlashRaw * 5.0) / 5.0;
+    vec3 lightFlash = vec3(0.95, 0.92, 0.85) * diffFlash * attenFlash * spot * 1.8;
 
-    float atten = 1.0 / (1.0 + 0.12 * distToLight + 0.05 * distToLight * distToLight);
-    // Quantized into a handful of flat bands instead of a smooth gradient --
-    // PS1 had no per-pixel lighting, just flat-shaded low-poly facets, so a
-    // stepped diffuse term reads as that same blocky, faceted look.
-    float diffuseRaw = max(dot(n, -toFrag), 0.0);
-    float diffuse = floor(diffuseRaw * 5.0) / 5.0;
-    float directLight = diffuse * atten * spot * 1.8;
-    float ambient = 0.18;
+    // Blinn-Phong Specular Vectors
+    vec3 halfFluor = normalize(lFluorDir + viewDir);
+    vec3 halfFlash = normalize(-toFrag + viewDir);
 
-    // --- Procedural Textures & Materials ---
-    vec3 albedo = vec3(0.4);
+    // =========================================================================
+    // MATERIAL PALETTES & ENVIRONMENTAL FILTH
+    // =========================================================================
+    vec3 albedo = vec3(0.35);
+    float wetness = 0.0; // Drives specular reflectivity and darkened absorption
 
     if (obj == 1) {
-        // Checkerboard Tile Floor
+        // Floor: Degraded Hospital Tiles with Blood & Chemical Seepage Puddles
         vec2 tileUV = p.xz * 1.05;
         vec2 tileID = floor(tileUV);
         vec2 tileFract = fract(tileUV);
         float check = mod(tileID.x + tileID.y, 2.0);
 
-        float grout = step(0.03, tileFract.x) * step(0.03, tileFract.y) *
-                      step(tileFract.x, 0.97) * step(tileFract.y, 0.97);
+        // Broken/chipped grout seams using domain noise
+        float chip = noise(p.xz * 14.0) * 0.02;
+        float grout = step(0.035 + chip, tileFract.x) * step(0.035 + chip, tileFract.y) *
+                      step(tileFract.x, 0.965 - chip) * step(tileFract.y, 0.965 - chip);
 
-        vec3 colLight = vec3(0.78, 0.74, 0.65);
-        vec3 colDark  = vec3(0.24, 0.26, 0.22);
+        vec3 colLight = vec3(0.55, 0.52, 0.46);
+        vec3 colDark  = vec3(0.18, 0.19, 0.17);
         vec3 tileColor = mix(colDark, colLight, check);
 
+        // Accumulated dirt and floor grime
         float dirt = fbm(p.xz * 3.5);
-        tileColor = mix(tileColor, vec3(0.18, 0.14, 0.10), dirt * 0.65);
+        tileColor = mix(tileColor, vec3(0.12, 0.10, 0.08), dirt * 0.65);
 
-        float bloodMask = smoothstep(0.70, 0.86, fbm(p.xz * 3.8 + vec2(4.1, -1.8)));
-        vec3 bloodCol = vec3(0.36, 0.03, 0.02);
-        tileColor = mix(tileColor, bloodCol, bloodMask);
+        // Blood stains and chemical spill puddles
+        float bloodPuddle = smoothstep(0.68, 0.86, fbm(p.xz * 3.8 + vec2(4.1, -1.8)));
+        vec3 bloodCol = vec3(0.24, 0.02, 0.02);
+        tileColor = mix(tileColor, bloodCol, bloodPuddle);
 
-        albedo = tileColor * mix(0.18, 1.0, grout);
+        // Wetness mask: puddles reflect direct specular light
+        float chemPuddle = smoothstep(0.62, 0.82, fbm(p.xz * 2.8 - vec2(1.2, 3.4)));
+        wetness = clamp(bloodPuddle * 1.2 + chemPuddle * 0.8, 0.0, 1.0);
+
+        // Wet surfaces darken naturally
+        tileColor *= mix(1.0, 0.45, wetness);
+        albedo = tileColor * mix(0.12, 1.0, grout);
     }
     else if (obj == 2 || obj == 3) {
-        // Hospital Plaster & Grout Tile Wall
+        // Walls: Saltpeter, Water Seepage Streaks & Grout Decay
         vec2 wallUV = (obj == 2) ? p.xy : p.zy;
         wallUV *= 2.2;
         vec2 wFract = fract(wallUV);
         float grout = step(0.04, wFract.x) * step(0.04, wFract.y);
 
-        vec3 wallCol = vec3(0.70, 0.67, 0.60);
-        float stains = fbm(p.xy * 2.5);
-        wallCol = mix(wallCol, vec3(0.32, 0.24, 0.18), stains * 0.7);
+        vec3 wallCol = vec3(0.48, 0.46, 0.42);
 
-        float wallBlood = smoothstep(0.72, 0.88, fbm(p.xy * 3.2 - vec2(0.5, 1.2)));
-        wallCol = mix(wallCol, vec3(0.42, 0.04, 0.03), wallBlood);
+        // Vertical seepage streaks running down tiles
+        float streaks = fbm(vec2(wallUV.x * 2.5, wallUV.y * 0.35 + fbm(wallUV * 1.5) * 0.3));
+        wallCol = mix(wallCol, vec3(0.16, 0.13, 0.10), smoothstep(0.40, 0.82, streaks) * 0.75);
 
-        albedo = wallCol * mix(0.25, 1.0, grout);
+        // Dried wall blood smears
+        float wallBlood = smoothstep(0.74, 0.90, fbm(p.xy * 3.2 - vec2(0.5, 1.2)));
+        wallCol = mix(wallCol, vec3(0.26, 0.02, 0.02), wallBlood);
+
+        wetness = smoothstep(0.72, 0.92, streaks) * 0.6;
+        albedo = wallCol * mix(0.18, 1.0, grout);
     }
     else if (obj == 4) {
-        // Medical Machine Enclosure (Aged metal with rust)
-        vec3 metalCol = vec3(0.62, 0.60, 0.54);
+        // Anesthesia Machine Cart: Oxidized, rust-pitted medical metal
+        vec3 metalCol = vec3(0.42, 0.41, 0.38);
         float rust = fbm(p.xy * 7.0 + p.z * 4.0);
-        vec3 rustCol = vec3(0.38, 0.20, 0.12);
+        vec3 rustCol = vec3(0.28, 0.14, 0.08);
         albedo = mix(metalCol, rustCol, smoothstep(0.45, 0.75, rust));
     }
     else if (obj == 5) {
-        // Autopsy Bed
+        // Autopsy Examination Bed: Stained rubber pad & drain trough
         if (p.y > -0.85) {
-            vec3 mattress = vec3(0.48, 0.44, 0.38);
+            vec3 mattress = vec3(0.32, 0.30, 0.27);
             float stain = fbm(p.xz * 3.0);
-            albedo = mix(mattress, vec3(0.22, 0.16, 0.12), stain * 0.6);
+            albedo = mix(mattress, vec3(0.14, 0.10, 0.08), stain * 0.65);
+            wetness = smoothstep(0.60, 0.85, stain) * 0.7;
         } else {
-            albedo = vec3(0.20, 0.19, 0.18);
+            albedo = vec3(0.22, 0.21, 0.20);
         }
     }
     else if (obj == 6) {
         // Machine Dial Knobs
-        albedo = vec3(0.22, 0.24, 0.22);
+        albedo = vec3(0.15, 0.16, 0.15);
     }
     else if (obj == 7) {
-        // Specimen Tube Iron Caps & Hydraulic Collars / Oxygen Gas Cylinders
+        // Heavy Cast-Iron Flanges, Collars, Pressure Valves & Gas Cylinders
         float scratches = noise(p.xy * vec2(2.0, 30.0));
-        albedo = mix(vec3(0.42, 0.44, 0.42), vec3(0.65), scratches * 0.35);
+        vec3 castIron = vec3(0.28, 0.29, 0.28);
+        albedo = mix(castIron, vec3(0.42), scratches * 0.35);
     }
     else if (obj == 8) {
-        // Dark Laminate Rear Desk
-        vec3 woodCol = vec3(0.42, 0.36, 0.30);
+        // Dark Laminate Rear Desk (Dirty wood grain)
+        vec3 woodCol = vec3(0.28, 0.22, 0.18);
         float woodGrain = noise(p.xz * vec2(22.0, 2.0));
-        woodCol = mix(woodCol, vec3(0.28, 0.22, 0.18), woodGrain * 0.5);
-        float stains = fbm(p.xz * 5.0);
-        albedo = mix(woodCol, vec3(0.18, 0.14, 0.12), stains * 0.45);
+        woodCol = mix(woodCol, vec3(0.18, 0.14, 0.11), woodGrain * 0.5);
+        albedo = woodCol;
     }
     else if (obj == 9) {
         // Aged 90s Off-White / Beige PC Hardware
-        vec3 beigeCol = vec3(0.85, 0.82, 0.72);
+        vec3 beigeCol = vec3(0.70, 0.66, 0.56);
         float grime = fbm(p.xy * 12.0 + p.z * 10.0);
-        vec3 darkGrime = vec3(0.45, 0.42, 0.34);
-        albedo = mix(beigeCol, darkGrime, grime * 0.42);
+        vec3 darkGrime = vec3(0.32, 0.28, 0.22);
+        albedo = mix(beigeCol, darkGrime, grime * 0.45);
     }
     else if (obj == 12) {
-        // Stainless Steel Morgue Body Locker Wall
+        // Stainless Steel Morgue Body Locker Wall & Open Pull-out Tray
         vec2 vaultUV = (p.xy - vec2(3.1, -0.1)) * vec2(1.4, 1.8);
         vec2 cellFract = fract(vaultUV);
 
@@ -401,31 +510,72 @@ void main() {
                          step(cellFract.x, 0.96) * step(cellFract.y, 0.96);
 
         float grain = noise(p.xy * vec2(1.0, 45.0));
-        vec3 steelCol = mix(vec3(0.50, 0.52, 0.54), vec3(0.68, 0.70, 0.72), grain * 0.35);
+        vec3 steelCol = mix(vec3(0.42, 0.44, 0.46), vec3(0.58, 0.60, 0.62), grain * 0.35);
 
         float rust = fbm(p.xy * 6.0 + vec2(1.5, 0.5));
-        vec3 rustCol = vec3(0.38, 0.20, 0.12);
-        steelCol = mix(steelCol, rustCol, smoothstep(0.52, 0.78, rust));
+        steelCol = mix(steelCol, vec3(0.28, 0.14, 0.08), smoothstep(0.52, 0.78, rust));
 
         float handle = step(abs(cellFract.x - 0.5), 0.18) * step(abs(cellFract.y - 0.5), 0.05);
-        steelCol = mix(steelCol, vec3(0.85, 0.88, 0.90), handle);
+        steelCol = mix(steelCol, vec3(0.78, 0.80, 0.82), handle);
 
-        albedo = steelCol * mix(0.20, 1.0, doorSeam);
+        // Pulled-out autopsy tray has fluid staining
+        if (p.z < 7.1) {
+            float trayStain = fbm(p.xz * 5.0);
+            steelCol = mix(steelCol, vec3(0.18, 0.04, 0.03), smoothstep(0.45, 0.75, trayStain));
+            wetness = smoothstep(0.55, 0.85, trayStain) * 0.8;
+        }
+
+        albedo = steelCol * mix(0.15, 1.0, doorSeam);
     }
     else if (obj == 14) {
         // IV Stand & Fluid Bag
-        albedo = vec3(0.55, 0.58, 0.55);
+        albedo = vec3(0.40, 0.42, 0.40);
     }
     else if (obj == 15) {
-        // Biohazard Disposal Bin (Hazard yellow/orange paint stained with grime)
-        vec3 binCol = vec3(0.72, 0.55, 0.18);
+        // Biohazard Disposal Bin (Hazard orange/yellow stained with filth)
+        vec3 binCol = vec3(0.58, 0.42, 0.12);
         float grime = fbm(p.xz * 8.0);
-        albedo = mix(binCol, vec3(0.22, 0.16, 0.12), grime * 0.6);
+        albedo = mix(binCol, vec3(0.16, 0.12, 0.08), grime * 0.65);
+    }
+    else if (obj == 16) {
+        // Overhead Industrial Conduits & Steel Pipes
+        vec3 pipeCol = vec3(0.32, 0.33, 0.34);
+        float rust = fbm(p.xz * 6.0 + p.y * 3.0);
+        albedo = mix(pipeCol, vec3(0.22, 0.12, 0.07), smoothstep(0.40, 0.70, rust));
+    }
+    else if (obj == 17) {
+        // Heavy Hanging Catenary Power Cables & Floor Hoses (Matte Rubber)
+        albedo = vec3(0.12, 0.12, 0.11);
+    }
+    else if (obj == 18) {
+        // Fluorescent Fixture Housing (Aged sheet metal)
+        albedo = vec3(0.45, 0.48, 0.46);
+    }
+    else if (obj == 19) {
+        // Fluorescent Lamp Tube Emitter (Cold white fixture lamp - NO FLICKER)
+        albedo = vec3(0.88, 0.94, 0.98);
     }
 
-    vec3 col = albedo * (ambient + directLight * 1.25);
+    // =========================================================================
+    // SPECULAR REFLECTIONS (Blinn-Phong Term with Grime Mask)
+    // =========================================================================
+    float specFluor = pow(max(dot(n, halfFluor), 0.0), 28.0) * wetness * 1.5;
+    float specFlash = pow(max(dot(n, halfFlash), 0.0), 32.0) * wetness * spot * 1.8;
+    vec3 specularLight = fluorColor * specFluor + vec3(0.95) * specFlash;
 
-    // Front-Facing Medical CRT Screen (anesthesia machine)
+    // Compose Diffuse, Ambient and Specular
+    vec3 col = albedo * (ambientCoeff + lightFluor + lightFlash) + specularLight;
+
+    // =========================================================================
+    // STEADY EMISSIVE SOURCES & RADIANCE BLEED (STRICTLY NO STROBING)
+    // =========================================================================
+
+    // Overhead Fluorescent Lamp Tube surface
+    if (obj == 19) {
+        col = vec3(0.92, 0.96, 1.0);
+    }
+
+    // Front-Facing Medical CRT Screen (Steady phosphor green ECG)
     if (obj == 10) {
         vec3 machScreenOrigin = vec3(-3.9, -0.6, 6.2);
         vec3 localP = p - machScreenOrigin;
@@ -436,87 +586,55 @@ void main() {
         float beat = sin(heartX * 25.0) * exp(-abs(heartX - 0.5) * 12.0) * 0.08;
         float ecg = smoothstep(0.015, 0.002, abs(scrUV.y - beat));
 
-        vec3 phosphor = vec3(0.72, 0.98, 0.70);
-        vec3 screenCol = phosphor * (0.85 + ecg * 0.45);
+        vec3 phosphor = vec3(0.45, 0.92, 0.50);
+        vec3 screenCol = phosphor * (0.80 + ecg * 0.50);
         screenCol *= mix(0.85, 1.0, step(0.3, fract(p.y * 120.0)));
         col = screenCol;
     }
 
-    // Rear Retro PC Amber/DOS Terminal Screen (shared desk)
+    // Rear Retro PC Amber/DOS Terminal Screen (Steady phosphor amber scanlines)
     if (obj == 11) {
         vec3 pcScreenPos = vec3(0.11, -0.31, 9.28);
         vec2 scrUV = (p.xy - pcScreenPos.xy);
 
         float textLines = step(0.45, fract(scrUV.y * 24.0)) * step(0.12, hash(floor(scrUV * vec2(2.0, 24.0))));
-        float cursorBlink = step(0.5, fract(u_time * 1.5));
+        float cursorBlink = step(0.5, fract(u_time * 1.0)); // Stable 1 Hz terminal cursor
         float cursorBox = step(abs(scrUV.x - 0.10), 0.022) * step(abs(scrUV.y + 0.04), 0.015) * cursorBlink;
 
-        vec3 amberCol = vec3(1.0, 0.72, 0.20);
-        vec3 screenCol = mix(vec3(0.08, 0.05, 0.02), amberCol, clamp(textLines + cursorBox, 0.0, 1.0));
+        vec3 amberCol = vec3(1.0, 0.65, 0.15);
+        vec3 screenCol = mix(vec3(0.06, 0.04, 0.02), amberCol, clamp(textLines + cursorBox, 0.0, 1.0));
         screenCol *= mix(0.80, 1.0, step(0.35, fract(p.y * 130.0)));
         col = screenCol;
     }
 
-    // Glowing Biohazard Specimen Incubation Fluid (lantern effect)
-    if (obj == 13) {
-        vec3 vatLocal = p - vec3(1.3, -0.1, 5.6);
-        vec2 bCoord = vatLocal.xy * vec2(4.0, 8.0) - vec2(0.0, u_time * 1.2);
-        float bubbles = step(0.82, hash(floor(bCoord)));
-
-        float specimenCore = smoothstep(0.35, 0.05, length(vatLocal.xz));
-
-        float pulse = 0.95 + 0.12 * sin(u_time * 2.0) + u_audio * 0.35;
-        vec3 fluidGlow = vec3(0.25, 0.88, 0.42) * pulse; // Formaldehyde neon green
-        vec3 fluidCol = mix(fluidGlow * 0.5, fluidGlow * 1.15, specimenCore);
-        fluidCol += vec3(0.3, 0.4, 0.2) * bubbles;
-
-        col = fluidCol;
-    }
-
-    // Emissive Spill from Medical Screen
+    // Emissive Bleed 1: Steady CRT Monitor Glow onto anesthesia cart
     vec3 medScreenWorld = vec3(-3.9, 0.0, 6.2);
     float distToMedScreen = length(p - medScreenWorld);
     if (obj != 10 && distToMedScreen < 1.6) {
         float medGlow = (1.6 - distToMedScreen) / 1.6;
-        col += vec3(0.12, 0.35, 0.15) * medGlow * medGlow * 0.65;
+        col += vec3(0.08, 0.22, 0.10) * (medGlow * medGlow) * 0.55;
     }
 
-    // Emissive Amber Spill from Rear PC Screen
+    // Emissive Bleed 2: Steady Amber Glow onto desk
     vec3 pcScreenWorld = vec3(0.11, -0.31, 9.28);
     float distToPcScreen = length(p - pcScreenWorld);
     if (obj != 11 && distToPcScreen < 1.4) {
         float pcGlow = (1.4 - distToPcScreen) / 1.4;
-        col += vec3(0.42, 0.22, 0.04) * pcGlow * pcGlow * 0.75;
+        col += vec3(0.35, 0.18, 0.03) * (pcGlow * pcGlow) * 0.65;
     }
 
-    // Specimen tube emissive light spilling onto the floor & morgue vault
-    vec3 vatWorldPos = vec3(1.3, -0.1, 5.6);
-    float distToVat = length(p - vatWorldPos);
-    if (obj != 13 && distToVat < 2.5) {
-        float vatSpill = (2.5 - distToVat) / 2.5;
-        float pulse = 0.95 + 0.12 * sin(u_time * 2.0) + u_audio * 0.35;
-        col += vec3(0.08, 0.34, 0.14) * vatSpill * vatSpill * 0.70 * pulse;
-    }
+    // Distance fog: peripheral boundaries recede into cold, damp darkness
+    col *= exp(-0.038 * t);
 
-    // Distance fog
-    col *= exp(-0.035 * t);
-
-    // --- Post-process only (room/materials/lighting above are untouched):
-    // PS1-era retro look (Buckshot Roulette's style) -- the chunky low-res
-    // pixelation already happened above by snapping the camera ray itself to
-    // blockPx; this is just the classic ordered-dither color banding that
-    // comes with it, kept gentle so it doesn't darken or muddy the image.
-
-    // 4x4 Bayer ordered-dither matrix, indexed by pixel BLOCK (not raw pixel)
-    // so the dither pattern matches the chunky resolution instead of fighting it.
+    // =========================================================================
+    // POST-PROCESS: Retro PS1 Ordered-Dither & Color Quantization
+    // =========================================================================
     int bx = int(mod(blockPx.x / pixelBlock, 4.0));
     int by = int(mod(blockPx.y / pixelBlock, 4.0));
     float dither = (bayer[by * 4 + bx] + 0.5) / 16.0 - 0.5;
 
-    // Limited color depth per channel, broken up by the dither pattern
-    // instead of flat banding -- the defining PS1 look, without crushing
-    // brightness the way a contrast curve or vignette would.
-    float levels = 20.0;
+    // Authentic retro color depth with dither transition
+    float levels = 22.0;
     col = floor(col * levels + dither + 0.5) / levels;
 
     fragColor = vec4(clamp(col, 0.0, 1.0), 1.0);

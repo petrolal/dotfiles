@@ -31,7 +31,9 @@ let
   ];
 
   devTools = with pkgs; [
+    emacs
     claude-code
+    bruno
   ];
 
   # Fast search, used by Hell Emacs' consult-ripgrep/consult-find (C-c s p / C-c s f).
@@ -83,6 +85,7 @@ let
     nomacs      # image viewer
     celluloid   # GTK frontend for mpv, used as the default video viewer
     spotify
+    playerctl
   ];
 
   # General-purpose apps reached for daily, outside any dev/media workflow.

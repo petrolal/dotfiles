@@ -10,7 +10,7 @@
     ./modules/users.nix
     ./modules/packages.nix
     ./modules/development.nix
-    ./modules/eclipse.nix
+    ./modules/jetbrains.nix
     ./modules/containers.nix
   ];
 

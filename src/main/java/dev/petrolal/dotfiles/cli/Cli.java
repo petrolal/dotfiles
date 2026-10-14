@@ -98,9 +98,11 @@ public final class Cli {
 				return 1;
 		}
 		case SCALE -> {
-			Xfconf.applyDynamicResolutionScaling(dryRun, verbose);
+			int failures = Xfconf.applyDynamicResolutionScaling(dryRun, verbose);
 			if (reload)
 				Orchestrator.reloadDesktopServices(dryRun, verbose);
+			if (failures > 0)
+				return 1;
 		}
 		case GENERATE -> {
 			if (!Generators.generateAllConfigs(verbose))

@@ -126,18 +126,23 @@ final class XfconfXml {
         return new Extracted(channelNode.attr("name"), settings);
     }
 
-    static void applyExportedXfconfFile(Path path, boolean dryRun, boolean verbose) {
+    /** Returns the number of settings in PATH that failed to apply (including
+     * 1 if the file itself couldn't be parsed). */
+    static int applyExportedXfconfFile(Path path, boolean dryRun, boolean verbose) {
         try {
             Extracted extracted = extractXfconfSettings(loadXfconfXml(path));
+            int failures = 0;
             for (Setting s : extracted.settings()) {
                 if (s instanceof Setting.Scalar sc) {
-                    Xfconf.setXfconf(extracted.channelName(), sc.path(), sc.type(), sc.value(), dryRun);
+                    if (!Xfconf.setXfconf(extracted.channelName(), sc.path(), sc.type(), sc.value(), dryRun)) failures++;
                 } else if (s instanceof Setting.Array arr) {
-                    Xfconf.setXfconfArray(extracted.channelName(), arr.path(), arr.type(), arr.values(), dryRun, verbose);
+                    if (!Xfconf.setXfconfArray(extracted.channelName(), arr.path(), arr.type(), arr.values(), dryRun, verbose)) failures++;
                 }
             }
+            return failures;
         } catch (IOException e) {
             System.err.println("[FAIL] Failed parsing exported xfconf file " + path + ": " + e.getMessage());
+            return 1;
         }
     }
 
@@ -160,10 +165,12 @@ final class XfconfXml {
         return out;
     }
 
-    static void applyExportedXfconfFiles(Path root, boolean dryRun, boolean verbose) {
+    static int applyExportedXfconfFiles(Path root, boolean dryRun, boolean verbose) {
+        int failures = 0;
         for (Path f : findExportedXfconfFiles(root)) {
             if (verbose) System.out.println("Applying exported xfconf settings: " + f);
-            applyExportedXfconfFile(f, dryRun, verbose);
+            failures += applyExportedXfconfFile(f, dryRun, verbose);
         }
+        return failures;
     }
 }

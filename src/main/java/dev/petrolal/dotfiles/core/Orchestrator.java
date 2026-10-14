@@ -96,7 +96,7 @@ public final class Orchestrator {
 		}
 
 		if (applySettings) {
-			Xfconf.applyXfceSettings(root, dryRun, verbose);
+			failures += Xfconf.applyXfceSettings(root, dryRun, verbose);
 		}
 		if (reload && applySettings) {
 			reloadDesktopServices(dryRun, verbose);

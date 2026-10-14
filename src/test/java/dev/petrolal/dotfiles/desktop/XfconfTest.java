@@ -13,6 +13,7 @@ class XfconfTest {
         String home = DotfilePaths.userHomeDirectory().toString();
         String trimmedHome = home.endsWith("/") ? home.substring(0, home.length() - 1) : home;
         assertEquals(trimmedHome + "/Pictures/wallpaper.png", Xfconf.expandHomeTilde("~/Pictures/wallpaper.png"));
+        assertEquals(trimmedHome + "/.config/xfce4/scripts/volume.sh up", Xfconf.expandHomeTilde("~/.config/xfce4/scripts/volume.sh up"));
     }
 
     @Test

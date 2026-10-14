@@ -24,7 +24,11 @@
         then nixpkgs.lib.strings.trim (builtins.readFile /etc/hostname)
         else "nixos";
 
-      mkConfig = { hostname ? detectedHostname, user ? "petrolal", extraModules ? [] }:
+      # `user` defaults to null here deliberately: modules/users.nix's
+      # `dotfiles.username` option default is the single source of truth for
+      # "petrolal" as the normal account name. Duplicating that default here
+      # would let the two silently diverge.
+      mkConfig = { hostname ? detectedHostname, user ? null, extraModules ? [] }:
         nixpkgs.lib.nixosSystem {
           modules = [
             { nixpkgs.hostPlatform = system; }
@@ -33,38 +37,63 @@
             ({ pkgs, ... }: {
               # allowUnfree lives in modules/hardware.nix (single source of truth).
               networking.hostName = hostname;
-              dotfiles.username = user;
 
               environment.systemPackages = [
                 antigravity-nix.packages.${pkgs.stdenv.hostPlatform.system}.google-antigravity-cli
               ];
             })
-          ] ++ extraModules;
+          ] ++ nixpkgs.lib.optional (user != null) { dotfiles.username = user; }
+            ++ extraModules;
         };
+      # Primary (and, for now, only real) workstation host: has a discrete
+      # NVIDIA GPU with Intel/NVIDIA PRIME offload, so dotfiles.nvidia is
+      # enabled only here (see modules/nvidia.nix) -- the bus IDs are this
+      # machine's PCI topology and must never apply to another host built
+      # from this same flake. `mkConfig` forces `networking.hostName` to this
+      # literal regardless of what detectedHostname currently reads, so
+      # switching to it also self-heals a drifted /etc/hostname rather than
+      # perpetuating it (see the 2026-10-14 hostname-reverted-to-"nixos"
+      # incident: `nixos-rebuild switch` with no #attr resolves by the *live*
+      # hostname command, so once it ever drifted to the installer's generic
+      # "nixos", a bare switch kept matching the old generic fallback config
+      # below and re-setting hostName back to "nixos" forever).
+      primary = mkConfig {
+        hostname = "abatedouro-de-anoes-PC";
+        extraModules = [
+          {
+            dotfiles.nvidia = {
+              enable = true;
+              prime = {
+                intelBusId = "PCI:0:2:0";
+                nvidiaBusId = "PCI:1:0:0";
+              };
+            };
+          }
+        ];
+      };
     in
     {
       nixosConfigurations = {
-        # Primary workstation host
-        "abatedouro-de-anoes-PC" = mkConfig {
-          hostname = "abatedouro-de-anoes-PC";
-          user = "petrolal";
-        };
+        "abatedouro-de-anoes-PC" = primary;
 
-        # Generic / portable fallback host: hostname is whatever this specific
-        # install's /etc/hostname already says (see detectedHostname above),
-        # never a hardcoded literal.
-        default = mkConfig {
-          user = "petrolal";
-        };
-      }
-      # `nixos-rebuild switch --flake <dir>` (no #attr) looks up the config by
-      # this machine's actual /etc/hostname, not by the "default" key above.
-      # Alias that hostname to the same fallback config so the lookup
-      # resolves on any machine that hasn't been given a dedicated entry yet.
-      // nixpkgs.lib.optionalAttrs (detectedHostname != "abatedouro-de-anoes-PC") {
-        "${detectedHostname}" = mkConfig {
-          user = "petrolal";
-        };
+        # `nixos-rebuild switch --flake <dir>` (no #attr) looks up the config
+        # by this machine's *actual*, live hostname -- not by this "default"
+        # key. Since this flake only has one real host, both `default` and
+        # whatever hostname this install currently reports (correct or
+        # drifted) alias to the same `primary` config: a correct hostname
+        # resolves it directly, and a drifted one gets corrected back to it
+        # on the next switch instead of reinforcing the drift.
+        default = primary;
+      } // nixpkgs.lib.optionalAttrs (detectedHostname != "abatedouro-de-anoes-PC") {
+        "${detectedHostname}" = primary;
       };
+
+      formatter.${system} = nixpkgs.legacyPackages.${system}.nixfmt;
+
+      checks.${system}.statix =
+        nixpkgs.legacyPackages.${system}.runCommand "statix-check" { } ''
+          ${nixpkgs.legacyPackages.${system}.statix}/bin/statix check --config ${./.} ${./.}
+          touch $out
+        '';
     };
 }

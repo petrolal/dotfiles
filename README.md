@@ -42,15 +42,15 @@ Default login shell is [fish](https://fishshell.com/) (`nixos/modules/users.nix`
 configured in `config/fish/` (prompt, theme, abbreviations). Each command
 above also has a fish abbreviation that runs from anywhere, no `cd` needed:
 `dfdeploy`, `dfdry`, `dfinstall`, `dfuninstall`, `dfswitch`, `dfupdate`,
-`dfupgrade`, `dfscale`, `dfreload`, plus `dotfiles` to `cd ~/dotfiles`.
+`dfupgrade`, `dfscale`, `dfreload`, `ff` (fastfetch), plus `dotfiles` to `cd ~/dotfiles`.
 
 ## Project Structure
 
 ```
 dotfiles/
 ├── bootstrap.sh                    # First-time setup script
-├── build.gradle.kts                # Gradle build & orchestration tasks
-├── settings.gradle.kts             # Gradle settings
+├── build.gradle                    # Gradle build & orchestration tasks
+├── settings.gradle                 # Gradle settings
 ├── gradlew                         # Gradle wrapper script
 ├── shell.nix                       # Nix dev shell (Gradle, GraalVM, git)
 │
@@ -81,6 +81,7 @@ dotfiles/
 │
 ├── config/                         # Dotfiles (symlinked to ~/.config/)
 │   ├── fish/                       # Default shell: prompt, abbreviations, theme
+│   ├── fastfetch/                  # Fastfetch system info configuration
 │   ├── gtk-2.0/gtkrc
 │   ├── gtk-3.0/settings.ini
 │   ├── gtk-4.0/settings.ini

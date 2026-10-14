@@ -5,6 +5,9 @@
 
 if status is-interactive
     set -g fish_greeting
+    if type -q fastfetch
+        fastfetch
+    end
 
     # --- Abyssal Biopunk palette (same hexes as config/picom/picom.conf,
     # config/xfce4/terminal/terminalrc, config/conky/conky.conf and
@@ -60,4 +63,5 @@ if status is-interactive
     abbr -a g  git
     abbr -a gs 'git status'
     abbr -a gd 'git diff'
+    abbr -a ff 'fastfetch'
 end
