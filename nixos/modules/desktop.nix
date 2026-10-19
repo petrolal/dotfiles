@@ -44,7 +44,8 @@ in
         package = pkgs.chicago95;
       };
       cursorTheme = {
-        name = "Adwaita";
+        name = "Chicago95_Cursor_Black";
+        package = pkgs.chicago95;
         size = 24;
       };
       extraConfig = ''
@@ -75,14 +76,11 @@ in
 
   # Global Theme & Toolkit Overrides (Windows 98 / Imp98)
   environment.variables = {
-    GTK_THEME = "Imp98";
     GTK_OVERLAY_SCROLLING = "0";
     QT_STYLE_OVERRIDE = "Windows";
   };
 
   environment.systemPackages = with pkgs; [
-    adwaita-icon-theme
-    gnome-themes-extra
     chicago95
     imp98
     xfce4-whiskermenu-plugin

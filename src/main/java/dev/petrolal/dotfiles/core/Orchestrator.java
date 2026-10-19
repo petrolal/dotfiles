@@ -7,8 +7,6 @@ import java.util.List;
 import dev.petrolal.dotfiles.wallpaper.Wallpaper;
 
 import dev.petrolal.dotfiles.desktop.Xfconf;
-import dev.petrolal.dotfiles.domain.Result;
-import dev.petrolal.dotfiles.linker.Generators;
 import dev.petrolal.dotfiles.linker.Linker;
 import dev.petrolal.dotfiles.system.ProcessRunner;
 
@@ -26,11 +24,10 @@ public final class Orchestrator {
 	}
 
 	private static final List<List<String>> RELOAD_COMMANDS = List.of(
-			List.of("dbus-update-activation-environment", "--systemd", "GTK_THEME=Imp98",
-					"GTK_OVERLAY_SCROLLING=0", "QT_STYLE_OVERRIDE=Windows"),
 			List.of("xfsettingsd", "--replace"),
+			List.of("sh", "-c",
+					"if pgrep -x xfce4-panel >/dev/null 2>&1; then xfce4-panel -r; else env GTK_THEME=Imp98 GTK_OVERLAY_SCROLLING=0 xfce4-panel & fi"),
 			List.of("xfwm4", "--replace"),
-			List.of("sh", "-c", "sleep 0.6; xfce4-panel -r"),
 			List.of("pkill", "-f", "xfce4-notifyd"),
 			List.of("thunar", "-q"));
 
@@ -61,10 +58,9 @@ public final class Orchestrator {
 		}
 	}
 
-	public static DeployResult deploy(boolean dryRun, boolean verbose, boolean reload, boolean applySettings,
-			boolean generateConfigs) {
+	public static DeployResult deploy(boolean dryRun, boolean verbose, boolean reload, boolean applySettings) {
 		if (verbose)
-			System.out.println("=== Deploying Abyssal Biopunk / Infernal Retro Dotfiles ===");
+			System.out.println("=== Deploying Imp98 Dotfiles ===");
 		Path root = DotfilePaths.findDotfilesRoot();
 		Path home = DotfilePaths.userHomeDirectory();
 		int failures = 0;
@@ -72,12 +68,6 @@ public final class Orchestrator {
 		if (verbose) {
 			System.out.println("Root:   " + root);
 			System.out.println("Target: " + home);
-		}
-		if (generateConfigs) {
-			if (Generators.generateAllConfigs(verbose))
-				successes++;
-			else
-				failures++;
 		}
 		Linker.cleanupLegacyTargets(home, dryRun, verbose);
 
@@ -118,7 +108,7 @@ public final class Orchestrator {
 
 	public static UninstallResult uninstall(boolean dryRun, boolean verbose) {
 		if (verbose)
-			System.out.println("=== Removing Abyssal Biopunk / Infernal Retro Dotfiles Symlinks ===");
+			System.out.println("=== Removing Imp98 Dotfiles Symlinks ===");
 		Path root = DotfilePaths.findDotfilesRoot();
 		Path home = DotfilePaths.userHomeDirectory();
 		int failures = 0;

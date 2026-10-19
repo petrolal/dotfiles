@@ -4,7 +4,6 @@ package dev.petrolal.dotfiles.cli;
 
 import dev.petrolal.dotfiles.core.Orchestrator;
 import dev.petrolal.dotfiles.desktop.Xfconf;
-import dev.petrolal.dotfiles.linker.Generators;
 
 public final class Cli {
 	private Cli() {
@@ -15,36 +14,33 @@ public final class Cli {
 
 	private static void printHelp() {
 		System.out.printf("Usage: %s [COMMAND|OPTION]...%n%n", PROGRAM_NAME);
-		System.out.println("Deploy Abyssal Biopunk dotfiles symlinks and configure desktop settings.\n");
+		System.out.println("Deploy Imp98 dotfiles symlinks and configure desktop settings.\n");
 		System.out.println("Commands:");
-		System.out.println("  deploy            perform full deployment (generate, link, configure, reload) [default]");
+		System.out.println("  deploy            perform full deployment (link, configure, reload) [default]");
 		System.out.println("  uninstall         remove all deployed dotfile symlinks safely");
 		System.out.println("  scale             query display resolution and reset WM margins");
-		System.out.println("  generate          generate and verify templated configuration assets");
 		System.out.println("  wallpaper         start OpenGL 3D wallpaper\n");
 		System.out.println("Options:");
 		System.out.println("  -u, --uninstall   remove all deployed dotfile symlinks safely");
 		System.out.println("  -s, --scale       detect resolution and reset WM margins");
-		System.out.println("  -g, --generate    generate/ensure templated configuration assets");
 		System.out.println("  -n, --dry-run     simulate actions without modifying filesystem or xfconf");
 		System.out.println("  -q, --quiet       suppress non-error output");
 		System.out.println("      --links-only  only symlink dotfiles (implies --no-xfconf --no-reload)");
 		System.out.println("      --no-xfconf   do not apply XFCE desktop settings via xfconf");
-		System.out.println("      --no-generate do not generate templated configuration assets");
 		System.out.println("      --no-reload   do not reload XFCE desktop services");
 		System.out.println("  -h, --help        display this help text and exit");
 		System.out.println("  -v, --version     display version information and exit");
 	}
 
 	private static void printVersion() {
-		System.out.printf("%s %s (Abyssal Biopunk / Mac OS 9.2 Platinum)%n", PROGRAM_NAME, VERSION);
+		System.out.printf("%s %s (Imp98 / Windows 98)%n", PROGRAM_NAME, VERSION);
 		System.out.println("License GPLv3+: GNU GPL version 3 or later <https://gnu.org/licenses/gpl.html>.");
 		System.out.println("This is free software: you are free to change and redistribute it.");
 		System.out.println("There is NO WARRANTY, to the extent permitted by law.");
 	}
 
 	private enum Action {
-		DEPLOY, UNINSTALL, SCALE, GENERATE, WALLPAPER
+		DEPLOY, UNINSTALL, SCALE, WALLPAPER
 	}
 
 	public static void main(String[] argv) {
@@ -56,7 +52,6 @@ public final class Cli {
 		boolean verbose = true;
 		boolean reload = true;
 		boolean applySettings = true;
-		boolean generateConfigs = true;
 		Action action = Action.DEPLOY;
 
 		for (String arg : argv) {
@@ -76,11 +71,9 @@ public final class Cli {
 				reload = false;
 			}
 			case "--no-xfconf" -> applySettings = false;
-			case "--no-generate" -> generateConfigs = false;
 			case "--no-reload" -> reload = false;
 			case "-u", "--uninstall", "uninstall" -> action = Action.UNINSTALL;
 			case "-s", "--scale", "scale" -> action = Action.SCALE;
-			case "-g", "--generate", "generate" -> action = Action.GENERATE;
 			case "deploy" -> action = Action.DEPLOY;
 			case "wallpaper" -> action = Action.WALLPAPER;
 			default -> {
@@ -104,13 +97,8 @@ public final class Cli {
 			if (failures > 0)
 				return 1;
 		}
-		case GENERATE -> {
-			if (!Generators.generateAllConfigs(verbose))
-				return 1;
-		}
 		case DEPLOY -> {
-			Orchestrator.DeployResult result = Orchestrator.deploy(dryRun, verbose, reload, applySettings,
-					generateConfigs);
+			Orchestrator.DeployResult result = Orchestrator.deploy(dryRun, verbose, reload, applySettings);
 			if (!result.ok())
 				return 1;
 		}

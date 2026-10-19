@@ -36,9 +36,7 @@ public final class Linker {
     /** Source paths skipped entirely during auto-discovery; a listed directory
      * is not descended into. */
     static final List<String> EXCLUDES = List.of(
-            "config/gtk-2.0/gtkrc",
-            "config/gtk-3.0/libwrapper-menu-fix.so",
-            "config/gtk-3.0/wrapper-menu-fix.c"
+            "config/gtk-2.0/gtkrc"
     );
 
     /** Explicit (source -> target) pairs for paths that don't fit the generic
@@ -57,6 +55,8 @@ public final class Linker {
             ".icons/Abyssal-Biopunk",
             ".icons/Infernal-Retro",
             ".themes/imp98",
+            ".themes/Redmond97",
+            ".local/share/themes/Redmond97",
             ".themes/retro-infernal",
             ".themes/Abyssal-Biopunk",
             ".themes/Infernal-Retro",

@@ -14,7 +14,6 @@ build/
 bin/
 
 # Compiled C shared libraries & object files
-config/gtk-3.0/libwrapper-menu-fix.so
 *.so
 *.o
 *.a

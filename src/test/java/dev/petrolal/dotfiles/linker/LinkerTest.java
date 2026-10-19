@@ -23,7 +23,6 @@ class LinkerTest {
     @Test
     void isExcludedMatchesListedFileAndSkipsUnrelatedOnes() {
         assertTrue(Linker.isExcluded("config/gtk-2.0/gtkrc"));
-        assertTrue(Linker.isExcluded("config/gtk-3.0/wrapper-menu-fix.c"));
         assertFalse(Linker.isExcluded("config/gtk-3.0/settings.ini"));
     }
 
