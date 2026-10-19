@@ -11,6 +11,7 @@
 
 #whiskermenu-button {
   font-weight: bold;
+  padding: 1px 5px;
   margin-left: 2px;
   margin-top: 2px;
   margin-bottom: 2px;
@@ -38,11 +39,11 @@
   box-shadow: 1px 1px @dark_shadow inset, -1px -1px @button_bg_color inset,
   0 -2px @light_shadow, 0 -1px @bg_color;
   background-image: url("assets/scrollbar_trough.png");
-  color: @toolbar_fg_color;
+  color: #ffffff;
   background-color: @button_bg_color; }
 
 #whiskermenu-button box > image {
-  margin: 2px; }
+  margin: 1px 3px 1px 1px; }
 
 
 #whiskermenu-window scrolledwindow {
@@ -83,6 +84,7 @@
   margin-right: 2px; }
 
 
+#whiskermenu-window scrolledwindow:not(.launchers-pane),
 #whiskermenu-window box > scrolledwindow:first-child {
   border: none;
   box-shadow: none;
@@ -141,11 +143,16 @@
 /* Add gradient to top of whisker-menu window
    Note: @active_title_color is not a standard GTK3 reference
    and is configured in the gtk.css file */
+#whiskermenu-window .title-area,
 #whiskermenu-window > frame > stack > box > box:first-child {
   padding: 2px;
   margin: 0;
   color: @active_title_text;
   background-image: linear-gradient(to right, @active_title_color1, @active_title_color); }
+
+#whiskermenu-window .title-area label {
+  color: @active_title_text;
+  font-weight: bold; }
 
 #whiskermenu-window entry {
   margin: 0; }

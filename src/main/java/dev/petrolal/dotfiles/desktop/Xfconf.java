@@ -50,11 +50,31 @@ public final class Xfconf {
             new XfceSetting("xfwm4", "/general/margin_right", "int", "0"),
             new XfceSetting("xfwm4", "/general/margin_top", "int", "0"),
 
-            // Panel global & Start Button (Windows 98 style)
+            // Panel global & Start Button (Windows 98 style via Whisker Menu)
             new XfceSetting("xfce4-panel", "/panels/dark-mode", "bool", "false"),
+            new XfceSetting("xfce4-panel", "/plugins/plugin-1", "string", "whiskermenu"),
             new XfceSetting("xfce4-panel", "/plugins/plugin-1/button-title", "string", "Start"),
-            new XfceSetting("xfce4-panel", "/plugins/plugin-1/button-icon", "string", "start-here"),
+            new XfceSetting("xfce4-panel", "/plugins/plugin-1/button-icon", "string", "~/.themes/Redmond97/gtk-3.0/assets/start-here.png"),
             new XfceSetting("xfce4-panel", "/plugins/plugin-1/show-button-title", "bool", "true"),
+            new XfceSetting("xfce4-panel", "/plugins/plugin-1/show-button-icon", "bool", "true"),
+            new XfceSetting("xfce4-panel", "/plugins/plugin-1/view-mode", "int", "1"),
+            new XfceSetting("xfce4-panel", "/plugins/plugin-1/launcher-show-name", "bool", "true"),
+            new XfceSetting("xfce4-panel", "/plugins/plugin-1/launcher-show-description", "bool", "true"),
+            new XfceSetting("xfce4-panel", "/plugins/plugin-1/launcher-icon-size", "int", "2"),
+            new XfceSetting("xfce4-panel", "/plugins/plugin-1/category-icon-size", "int", "1"),
+            new XfceSetting("xfce4-panel", "/plugins/plugin-1/position-categories-alternate", "bool", "true"),
+            new XfceSetting("xfce4-panel", "/plugins/plugin-1/position-categories-horizontal", "bool", "false"),
+            new XfceSetting("xfce4-panel", "/plugins/plugin-1/position-search-alternate", "bool", "false"),
+            new XfceSetting("xfce4-panel", "/plugins/plugin-1/position-commands-alternate", "bool", "true"),
+            new XfceSetting("xfce4-panel", "/plugins/plugin-1/position-profile-alternate", "bool", "false"),
+            new XfceSetting("xfce4-panel", "/plugins/plugin-1/menu-width", "int", "450"),
+            new XfceSetting("xfce4-panel", "/plugins/plugin-1/menu-height", "int", "500"),
+
+            // Quick Launch favorite application icons on bottom taskbar (File Manager, Web Browser, App Finder, Terminal)
+            new XfceSetting("xfce4-panel", "/plugins/plugin-19", "string", "launcher"),
+            new XfceSetting("xfce4-panel", "/plugins/plugin-20", "string", "launcher"),
+            new XfceSetting("xfce4-panel", "/plugins/plugin-21", "string", "launcher"),
+            new XfceSetting("xfce4-panel", "/plugins/plugin-22", "string", "launcher"),
 
             // Taskbar plugins: classic ungrouped 3D window buttons, 1-row workspace buttons, and 1-line tray clock
             new XfceSetting("xfce4-panel", "/plugins/plugin-2/grouping", "uint", "0"),
@@ -261,9 +281,14 @@ public final class Xfconf {
         for (XfceSetting s : XFCE_SETTINGS) {
             if (!setXfconf(s.channel(), s.property(), s.type(), s.value(), dryRun)) failures++;
         }
-        // Panel 1 plugin order: Start (1), Workspaces (4), Window Buttons (2), Expanding Spacer (3), Systray (6), Clock (8)
+        // Quick Launch favorite application launcher items on Panel 1
+        if (!setXfconfArray("xfce4-panel", "/plugins/plugin-19/items", "string", List.of("filemanager.desktop"), dryRun, verbose)) failures++;
+        if (!setXfconfArray("xfce4-panel", "/plugins/plugin-20/items", "string", List.of("webbrowser.desktop"), dryRun, verbose)) failures++;
+        if (!setXfconfArray("xfce4-panel", "/plugins/plugin-21/items", "string", List.of("appfinder.desktop"), dryRun, verbose)) failures++;
+        if (!setXfconfArray("xfce4-panel", "/plugins/plugin-22/items", "string", List.of("terminal.desktop"), dryRun, verbose)) failures++;
+        // Panel 1 plugin order: Start (1), Quick Launch (19, 20, 21, 22), Window Buttons (2), Expanding Spacer (3), Systray (6), Clock (8)
         if (!setXfconfArray("xfce4-panel", "/panels/panel-1/plugin-ids", "int",
-                List.of("1", "4", "2", "3", "6", "8"), dryRun, verbose)) {
+                List.of("1", "19", "20", "21", "22", "2", "3", "6", "8"), dryRun, verbose)) {
             failures++;
         }
         // Dark Retro Teal (#183c42) desktop color arrays

@@ -31,16 +31,27 @@
    border-bottom: 1px solid @light_shadow;
    border-right: 1px solid @light_shadow;
    box-shadow: 1px 1px @dark_shadow inset, -1px -1px @button_bg_color inset;
-   background-image: none;
+   background-image: url("assets/scrollbar_trough.png");
    color: #ffffff;
-   background-color: #262626; }
+   background-color: @button_bg_color; }
 
-#XfcePanelWindow #launcher-arrow, 
+#XfcePanelWindow #launcher-arrow {
+   border-radius: 0;
+   margin: 0;
+   margin-top: 1px;
+   padding: 3px;
+   border: transparent solid;
+   box-shadow: none;
+   background-color: transparent;
+   background-image: none; }
+
 #XfcePanelWindow #launcher-arrow:hover {
    border-radius: 0;
    margin: 0;
    margin-top: 1px;
-   padding: 3px; }
+   padding: 3px;
+   border: transparent solid;
+   box-shadow: 1px 1px @light_shadow inset, -1px -1px @dark_shadow inset; }
 
 #XfcePanelWindow #launcher-arrow:active {
    box-shadow: 1px 1px @dark_shadow inset, -1px -1px @light_shadow inset;
@@ -104,9 +115,9 @@
    border-right: 1px solid @light_shadow;
    box-shadow: 1px 1px @dark_shadow inset, -1px -1px @button_bg_color inset,
    0 -2px @light_shadow, 0 -1px @bg_color;
-   background-image: none;
+   background-image: url("assets/scrollbar_trough.png");
    color: #ffffff;
-   background-color: #262626; }
+   background-color: @button_bg_color; }
 
 #applicationmenu-button box {
    padding: 1px 2px; }

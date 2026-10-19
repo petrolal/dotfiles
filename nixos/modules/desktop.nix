@@ -91,6 +91,7 @@ in
     gnome-themes-extra
     chicago95
     redmond97
+    xfce4-whiskermenu-plugin
     wofi
     waybar
   ];
