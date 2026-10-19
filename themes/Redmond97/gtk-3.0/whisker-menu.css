@@ -76,12 +76,22 @@
   background-color: @bg_color; }
 
 
+#whiskermenu-window .search-area {
+  margin-top: 2px;
+  margin-bottom: 1px;
+  margin-left: 1px;
+  margin-right: 1px; }
+
 #whiskermenu-window entry {
-  border: 1px solid @dark_shadow;
-  box-shadow: none;
-  margin-bottom: 2px;
-  margin-left: 2px;
-  margin-right: 2px; }
+  border-top: 1px solid @dark_shadow;
+  border-left: 1px solid @dark_shadow;
+  border-bottom: 1px solid @light_shadow;
+  border-right: 1px solid @light_shadow;
+  box-shadow: 1px 1px @borders inset;
+  margin-top: 2px;
+  margin-bottom: 1px;
+  margin-left: 1px;
+  margin-right: 1px; }
 
 
 #whiskermenu-window scrolledwindow:not(.launchers-pane),
@@ -125,13 +135,35 @@
   background-color: @selected_bg_color;
   color: @selected_fg_color; }
 
-/* Style menu window logout buttons */
+/* Style menu window top header command buttons (Settings, Lock, Log Out) */
+#whiskermenu-window .commands-area button,
+#whiskermenu-window button.command-button,
+#whiskermenu-window .commands-area button:focus,
+#whiskermenu-window button.command-button:focus,
 #whiskermenu-window > frame > stack > box.vertical > box.horizontal button.flat {
   background-color: transparent;
-  border: transparent;
+  background-image: none;
+  border: 1px solid transparent;
   box-shadow: none;
+  outline: none;
   margin: 0;
   padding: 2px; }
+
+#whiskermenu-window .commands-area button:hover,
+#whiskermenu-window button.command-button:hover {
+  background-color: transparent;
+  background-image: none;
+  border: 1px solid transparent;
+  box-shadow: 1px 1px @light_shadow inset, -1px -1px @dark_shadow inset; }
+
+#whiskermenu-window .commands-area button:active,
+#whiskermenu-window .commands-area button:checked,
+#whiskermenu-window button.command-button:active,
+#whiskermenu-window button.command-button:checked {
+  background-color: transparent;
+  background-image: none;
+  border: 1px solid transparent;
+  box-shadow: 1px 1px @dark_shadow inset, -1px -1px @light_shadow inset; }
 
 /* Style menu separators */
 #whiskermenu-window separator {
@@ -153,6 +185,3 @@
 #whiskermenu-window .title-area label {
   color: @active_title_text;
   font-weight: bold; }
-
-#whiskermenu-window entry {
-  margin: 0; }

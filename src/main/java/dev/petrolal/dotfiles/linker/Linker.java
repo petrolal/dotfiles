@@ -29,6 +29,7 @@ public final class Linker {
      * matching prefix wins, so a more specific entry can override a general one. */
     static final List<Mapping> ROOT_TARGETS = List.of(
             new Mapping("config/applications", ".local/share/applications"),
+            new Mapping("config/icons", ".local/share/icons"),
             new Mapping("config", ".config")
     );
 
