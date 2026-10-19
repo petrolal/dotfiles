@@ -1,46 +1,54 @@
-# IntelliJ IDEA Community replaces the previous Eclipse IDE / Spring Tool
-# Suite setup entirely (see git history for the old mkEclipseWrapper-based
-# eclipse.nix, which this file replaces one-for-one).
-#
-# jetbrains.idea-community was discontinued by JetBrains in 2025 and removed
-# from nixpkgs; jetbrains.idea-oss is nixpkgs' current free/open-source
-# equivalent, built from the same IntelliJ Community sources (see
-# modules/hardware.nix for the required permittedInsecurePackages entry --
-# nixpkgs no longer updates this package, so it carries known CVEs).
+# JetBrains Toolbox manages JetBrains IDEs (IntelliJ IDEA, etc.) in user space
+# (~/.local/share/JetBrains/Toolbox), replacing the nixpkgs-packaged
+# jetbrains.idea-oss installation.
 { pkgs, ... }:
 
 let
-  # vmopts can't be overridden through pkgs.jetbrains.idea-oss / .override
-  # (neither forwards the args mkJetBrainsProduct actually accepts), so the
-  # bundled idea64.vmoptions is appended to in place instead -- this keeps
-  # the Nix-specific lines the real build already put there (jna.library.path
-  # etc.), rather than replacing the whole file and silently losing them.
-  #
-  # $out/share/applications is a *symlink* into a separate, already-built
-  # makeDesktopItem derivation (verified: `readlink`/`stat` on a built
-  # package shows it pointing at .../intellij-idea-oss.desktop/share/...),
-  # so substituteInPlace/cp on the .desktop file inside it fails with
-  # "Operation not permitted" -- it belongs to a different, immutable store
-  # path, not this one. Read it (reads work, /nix/store is world-readable),
-  # then replace the whole symlink with a real directory of our own.
-  idea = pkgs.jetbrains.idea-oss.overrideAttrs (old: {
-    postFixup = (old.postFixup or "") + ''
-            sed 's/^Categories=Development$/Categories=Development;IDE;Java;/' \
-              "$out/share/applications/intellij-idea-oss.desktop" > "$TMPDIR/intellij-idea-oss.desktop"
-            rm "$out/share/applications"
-            mkdir -p "$out/share/applications"
-            install -m 444 "$TMPDIR/intellij-idea-oss.desktop" "$out/share/applications/intellij-idea-oss.desktop"
-
-            cat >> $out/intellij-idea-oss/bin/idea64.vmoptions <<'VMOPTS'
-      -Dawt.useSystemAAFontSettings=on
-      -Dsun.java2d.renderer=sun.java2d.marlin.MarlinRenderingEngine
-      VMOPTS
-    '';
-  });
+  # 1. nixpkgs' jetbrains-toolbox hardcodes `https://download-cdn.jetbrains.com/...`,
+  #    which returns HTTP 404 without the CloudFront query-string signature that
+  #    `https://download.jetbrains.com/...` attaches via 302 redirect. Rewrite
+  #    the host in `fetchzip` so fresh builds fetch through the redirecting
+  #    endpoint.
+  # 2. nixpkgs' default `runScript` executes `${src}/bin/jetbrains-toolbox`
+  #    directly from `/nix/store`. Because `/nix/store` is read-only, Toolbox
+  #    displays a "Cannot install the update. The Toolbox App is installed in a
+  #    directory /nix/store/... that cannot be modified" warning whenever a
+  #    newer Toolbox release exists upstream. Staging `${src}/bin` into
+  #    `~/.local/share/JetBrains/Toolbox/bin` (Toolbox's own standard Linux
+  #    install path) gives it a user-writable installation directory so self-
+  #    updates succeed cleanly inside the FHS environment.
+  jetbrains-toolbox = pkgs.jetbrains-toolbox.override {
+    fetchzip =
+      args:
+      pkgs.fetchzip (
+        args
+        // {
+          url = builtins.replaceStrings [
+            "https://download-cdn.jetbrains.com/"
+          ] [ "https://download.jetbrains.com/" ] args.url;
+        }
+      );
+    buildFHSEnv =
+      args:
+      pkgs.buildFHSEnv (
+        args
+        // {
+          runScript = pkgs.writeShellScript "jetbrains-toolbox-wrapper" ''
+            toolbox_dir="''${XDG_DATA_HOME:-$HOME/.local/share}/JetBrains/Toolbox/bin"
+            if [ ! -x "$toolbox_dir/jetbrains-toolbox" ]; then
+              mkdir -p "$(dirname "$toolbox_dir")"
+              cp -r "${args.passthru.src}/bin" "$toolbox_dir"
+              chmod -R u+w "$toolbox_dir"
+            fi
+            exec "$toolbox_dir/jetbrains-toolbox" --update-failed "$@"
+          '';
+        }
+      );
+  };
 in
 {
   environment.systemPackages = [
-    idea
+    jetbrains-toolbox
     pkgs.jdk21
   ];
 
@@ -51,21 +59,15 @@ in
   # shell.nix rather than changing this.
   environment.variables.JAVA_HOME = "${pkgs.jdk21}/lib/openjdk";
 
-  # `idea` above is the nixpkgs-wrapped IDE and already works fine. This is
-  # for the *other* IntelliJ binary every Gradle project using the
-  # `org.jetbrains.intellij.platform` plugin pulls in: `./gradlew runIde`
-  # downloads its own copy of the IDE straight from JetBrains' CDN into
-  # ~/.gradle/caches, as a plain unpatched Linux tarball, and launches it
-  # unmodified. That binary's bundled JetBrains Runtime (JBR) expects FHS
-  # paths (libXext.so.6 etc. in a plain /usr/lib), which NixOS doesn't have,
-  # so it fails with UnsatisfiedLinkError before any window appears.
+  # Unpatched JetBrains IDE binaries -- both IDEs downloaded by JetBrains
+  # Toolbox into ~/.local/share/JetBrains/Toolbox and IDE instances pulled by
+  # Gradle's `org.jetbrains.intellij.platform` plugin (`./gradlew runIde`) into
+  # ~/.gradle/caches -- bundle a prebuilt JetBrains Runtime (JBR), JCEF, and
+  # native helpers that expect FHS paths.
   #
-  # nix-ld is the general-purpose fix for exactly this class of problem --
-  # any unpatched prebuilt binary that expects an FHS layout -- so it covers
-  # every current and future Gradle intellij.platform project, not just one.
-  # Per-project `shell.nix`/LD_LIBRARY_PATH workarounds remain valid as a
-  # portable fallback for contributors on non-NixOS-with-nix-ld machines, but
-  # shouldn't be necessary here once this is active.
+  # nix-ld provides the dynamic linker and libraries for those unpatched
+  # binaries when launched directly (e.g. via Toolbox-generated .desktop files,
+  # CLI scripts, or Gradle tasks).
   programs.nix-ld.enable = true;
   programs.nix-ld.libraries = with pkgs; [
     libx11
@@ -88,16 +90,21 @@ in
     zlib
     stdenv.cc.cc.lib
     glib
+    gtk3
     cairo
     pango
     atk
     at-spi2-core
     at-spi2-atk
     dbus
+    libdrm
+    libgbm
     mesa
     alsa-lib
     cups
     nspr
     nss
+    udev
+    e2fsprogs
   ];
 }

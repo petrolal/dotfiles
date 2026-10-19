@@ -44,8 +44,20 @@ public final class Xfconf {
             new XfceSetting("xfwm4", "/general/margin_right", "int", "0"),
             new XfceSetting("xfwm4", "/general/margin_top", "int", "0"),
 
-            // Panel height
+            // Panel 1: Windows 98-style bottom taskbar (horizontal, full-width, bottom-left snap p=8)
+            new XfceSetting("xfce4-panel", "/panels/panel-1/mode", "uint", "0"),
+            new XfceSetting("xfce4-panel", "/panels/panel-1/position", "string", "p=8;x=0;y=0"),
+            new XfceSetting("xfce4-panel", "/panels/panel-1/length", "uint", "100"),
+            new XfceSetting("xfce4-panel", "/panels/panel-1/position-locked", "bool", "true"),
             new XfceSetting("xfce4-panel", "/panels/panel-1/size", "uint", "32"),
+
+            // Panel 2: Dock on the left side of the screen (vertical, left-center snap p=7)
+            new XfceSetting("xfce4-panel", "/panels/panel-2/mode", "uint", "1"),
+            new XfceSetting("xfce4-panel", "/panels/panel-2/position", "string", "p=7;x=0;y=0"),
+            new XfceSetting("xfce4-panel", "/panels/panel-2/length", "uint", "1"),
+            new XfceSetting("xfce4-panel", "/panels/panel-2/position-locked", "bool", "true"),
+            new XfceSetting("xfce4-panel", "/panels/panel-2/size", "uint", "48"),
+            new XfceSetting("xfce4-panel", "/panels/panel-2/autohide-behavior", "uint", "1"),
 
             // Keybindings
             new XfceSetting("xfce4-keyboard-shortcuts", "/commands/custom/<Super>Return", "string", "xfce4-terminal"),

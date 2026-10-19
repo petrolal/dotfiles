@@ -135,7 +135,6 @@ let
   buildTools = [
     (pkgs.gradle.override { java = pkgs.jdk21; })
     (pkgs.maven.override { jdk_headless = pkgs.jdk21; })
-    (pkgs.sbt.override { jre = pkgs.jdk21; })
     pkgs.lombok
     pkgs.tomcat10
   ];

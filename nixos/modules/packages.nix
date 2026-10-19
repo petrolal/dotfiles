@@ -58,10 +58,12 @@ let
     pandoc          # extended Org exports
   ];
 
-  # The Scala language server. Installed here (reproducibly, pinned to
-  # nixpkgs) rather than left to lsp-metals, which would otherwise
-  # self-install it via coursier on first use.
+  # The Scala compiler, runner, CLI, build tool and language server. Installed
+  # here (reproducibly, pinned to nixpkgs) rather than left to external installers.
   scalaTools = with pkgs; [
+    scala
+    scala-cli
+    sbt
     metals
   ];
 
@@ -93,6 +95,7 @@ let
     galculator
     xarchiver   # archive manager (zip/tar/7z)
     evince      # PDF viewer
+    telegram-desktop
   ];
 
 in {
