@@ -6,6 +6,7 @@
 @define-color selected_bg_color #0A246A;
 @define-color selected_fg_color #FFFFFF;
 @define-color light_shadow #606060;
+@define-color mid_light_shadow #4a4a4a;
 @define-color dark_shadow #262626;
 @define-color borders #000000;
 @define-color button_bg_color @bg_color;

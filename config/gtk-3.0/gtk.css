@@ -119,3 +119,98 @@
   background-color: @selected_bg_color;
   border-radius: 0px;
 }
+
+/* ==========================================================================
+ * Notebook & Terminal Tabs (Windows 98 3D Beveled Tabs with Divisions)
+ * ========================================================================== */
+notebook > header {
+  background-color: @dark_shadow;
+  border-style: solid;
+  border-width: 0px 0px 1px 0px;
+  border-color: @light_shadow;
+  box-shadow: inset 0 -1px @borders;
+  padding: 2px 2px 0px 2px;
+}
+
+notebook > header tab,
+notebook > header.top > tabs > tab {
+  border-image: none;
+  background-image: none;
+  background-color: @dark_shadow;
+  color: @disabled_fg_color;
+  border-style: solid;
+  border-width: 1px;
+  border-color: @light_shadow @borders @borders @light_shadow;
+  box-shadow:
+    inset 1px 1px @mid_light_shadow,
+    inset -1px -1px @dark_shadow;
+  border-radius: 0px;
+  padding: 3px 8px;
+  margin-right: 2px;
+  margin-top: 2px;
+  outline: none;
+}
+
+notebook > header tab:hover,
+notebook > header.top > tabs > tab:hover {
+  background-color: @bg_color;
+  color: @fg_color;
+}
+
+notebook > header tab:checked,
+notebook > header.top > tabs > tab:checked {
+  border-image: none;
+  background-image: none;
+  background-color: @bg_color;
+  color: @fg_color;
+  border-style: solid;
+  border-width: 1px;
+  border-color: @light_shadow @borders @bg_color @light_shadow;
+  box-shadow:
+    inset 1px 1px @mid_light_shadow,
+    inset -1px 0 @dark_shadow;
+  margin-top: 0px;
+  margin-bottom: -1px;
+  padding: 4px 8px 3px 8px;
+}
+
+notebook > header tab label {
+  color: inherit;
+  padding: 0 2px;
+}
+
+notebook > header tab:checked label {
+  color: @fg_color;
+  font-weight: bold;
+}
+
+notebook > header tab button,
+notebook > header tab button.flat {
+  background-color: transparent;
+  background-image: none;
+  border: 1px solid transparent;
+  border-radius: 0px;
+  box-shadow: none;
+  min-height: 14px;
+  min-width: 14px;
+  padding: 1px;
+  margin: 0px 0px 0px 6px;
+  color: @fg_color;
+}
+
+notebook > header tab button:hover,
+notebook > header tab button.flat:hover {
+  background-color: @button_bg_color;
+  border-color: @light_shadow @borders @borders @light_shadow;
+  box-shadow:
+    inset 1px 1px @mid_light_shadow,
+    inset -1px -1px @dark_shadow;
+}
+
+notebook > header tab button:active,
+notebook > header tab button.flat:active {
+  background-color: @dark_shadow;
+  border-color: @borders @light_shadow @light_shadow @borders;
+  box-shadow: inset 1px 1px @dark_shadow;
+}
+
