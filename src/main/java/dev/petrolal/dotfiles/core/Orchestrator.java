@@ -26,7 +26,7 @@ public final class Orchestrator {
 	}
 
 	private static final List<List<String>> RELOAD_COMMANDS = List.of(
-			List.of("dbus-update-activation-environment", "--systemd", "GTK_THEME=Redmond97",
+			List.of("dbus-update-activation-environment", "--systemd", "GTK_THEME=Imp98",
 					"GTK_OVERLAY_SCROLLING=0", "QT_STYLE_OVERRIDE=Windows"),
 			List.of("xfsettingsd", "--replace"),
 			List.of("xfwm4", "--replace"),

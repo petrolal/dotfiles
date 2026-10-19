@@ -1,21 +1,15 @@
 { config, pkgs, ... }:
 
 let
-  redmond97 = pkgs.stdenvNoCC.mkDerivation {
-    pname = "redmond97";
-    version = "unstable-2021-02-23";
-    src = pkgs.fetchFromGitHub {
-      owner = "matthewmx86";
-      repo = "Redmond97";
-      rev = "f33bc057a01f091de774adbbf6abe226f0cb46e0";
-      hash = "sha256-lWRLgwIlfKd01vsBq6hpEio8eAx/FrWrNnAzpHOk6Xc=";
-    };
+  imp98 = pkgs.stdenvNoCC.mkDerivation {
+    pname = "imp98";
+    version = "1.0.0";
+    src = ../../themes/Imp98;
     dontBuild = true;
     installPhase = ''
       runHook preInstall
-      mkdir -p $out/share/themes $out/share/icons
-      cp -r Theme/csd/* $out/share/themes/
-      cp -r Extras/Icons/Redmond97 $out/share/icons/
+      mkdir -p $out/share/themes/Imp98
+      cp -r . $out/share/themes/Imp98/
       runHook postInstall
     '';
   };
@@ -42,8 +36,8 @@ in
     enable = true;
     greeters.gtk = {
       theme = {
-        name = "Redmond97";
-        package = redmond97;
+        name = "Imp98";
+        package = imp98;
       };
       iconTheme = {
         name = "Chicago95";
@@ -79,9 +73,9 @@ in
     pulse.enable = true;
   };
 
-  # Global Theme & Toolkit Overrides (Windows 98 / Redmond97)
+  # Global Theme & Toolkit Overrides (Windows 98 / Imp98)
   environment.variables = {
-    GTK_THEME = "Redmond97";
+    GTK_THEME = "Imp98";
     GTK_OVERLAY_SCROLLING = "0";
     QT_STYLE_OVERRIDE = "Windows";
   };
@@ -90,7 +84,7 @@ in
     adwaita-icon-theme
     gnome-themes-extra
     chicago95
-    redmond97
+    imp98
     xfce4-whiskermenu-plugin
     wofi
     waybar

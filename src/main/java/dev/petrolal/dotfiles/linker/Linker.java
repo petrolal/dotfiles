@@ -45,8 +45,8 @@ public final class Linker {
      * root-mirrored layout: renames, or a source linked to more than one target. */
     static final List<Mapping> OVERRIDES = List.of(
             new Mapping("config/gtk-2.0/gtkrc", ".gtkrc-2.0"),
-            new Mapping("themes/Redmond97", ".themes/Redmond97"),
-            new Mapping("themes/Redmond97", ".local/share/themes/Redmond97")
+            new Mapping("themes/Imp98", ".themes/Imp98"),
+            new Mapping("themes/Imp98", ".local/share/themes/Imp98")
     );
 
     /** Single-symlink target paths (relative to $HOME) from ROOT_TARGETS/OVERRIDES

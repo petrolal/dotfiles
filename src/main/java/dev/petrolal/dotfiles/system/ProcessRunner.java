@@ -83,7 +83,7 @@ public final class ProcessRunner {
                     .redirectOutput(ProcessBuilder.Redirect.DISCARD)
                     .redirectError(ProcessBuilder.Redirect.DISCARD)
                     .redirectInput(ProcessBuilder.Redirect.from(new File("/dev/null")));
-            pb.environment().put("GTK_THEME", "Redmond97");
+            pb.environment().put("GTK_THEME", "Imp98");
             pb.environment().put("GTK_OVERLAY_SCROLLING", "0");
             pb.environment().put("QT_STYLE_OVERRIDE", "Windows");
             pb.start();

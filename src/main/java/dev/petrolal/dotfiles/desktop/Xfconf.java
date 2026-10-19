@@ -18,8 +18,8 @@ public final class Xfconf {
     record GnomeSetting(String schema, String key, String value) {}
 
     static final List<XfceSetting> XFCE_SETTINGS = List.of(
-            // GTK and Theme Configuration (Windows 98 / Redmond97 Dark theme)
-            new XfceSetting("xsettings", "/Net/ThemeName", "string", "Redmond97"),
+            // GTK and Theme Configuration (Windows 98 / Imp98 Dark theme)
+            new XfceSetting("xsettings", "/Net/ThemeName", "string", "Imp98"),
             new XfceSetting("xsettings", "/Net/IconThemeName", "string", "Chicago95"),
             new XfceSetting("xsettings", "/Gtk/CursorThemeSize", "int", "24"),
             new XfceSetting("xsettings", "/Gtk/FontName", "string", "Sans 9"),
@@ -30,8 +30,8 @@ public final class Xfconf {
             new XfceSetting("xfce4-notifyd", "/initial-opacity", "double", "1.0"),
             new XfceSetting("xfce4-notifyd", "/notify-location", "uint", "3"),
 
-            // Window Manager Behavior (Redmond97 / Windows 98 classic 3D frame)
-            new XfceSetting("xfwm4", "/general/theme", "string", "Redmond97"),
+            // Window Manager Behavior (Imp98 / Windows 98 classic 3D frame)
+            new XfceSetting("xfwm4", "/general/theme", "string", "Imp98"),
             new XfceSetting("xfwm4", "/general/title_font", "string", "Sans Bold 9"),
             new XfceSetting("xfwm4", "/general/title_alignment", "string", "left"),
             new XfceSetting("xfwm4", "/general/button_layout", "string", "O|HMC"),
@@ -54,7 +54,7 @@ public final class Xfconf {
             new XfceSetting("xfce4-panel", "/panels/dark-mode", "bool", "false"),
             new XfceSetting("xfce4-panel", "/plugins/plugin-1", "string", "whiskermenu"),
             new XfceSetting("xfce4-panel", "/plugins/plugin-1/button-title", "string", "Start"),
-            new XfceSetting("xfce4-panel", "/plugins/plugin-1/button-icon", "string", "~/.themes/Redmond97/gtk-3.0/assets/start-here.png"),
+            new XfceSetting("xfce4-panel", "/plugins/plugin-1/button-icon", "string", "~/.themes/Imp98/gtk-3.0/assets/start-here.png"),
             new XfceSetting("xfce4-panel", "/plugins/plugin-1/show-button-title", "bool", "true"),
             new XfceSetting("xfce4-panel", "/plugins/plugin-1/show-button-icon", "bool", "true"),
             new XfceSetting("xfce4-panel", "/plugins/plugin-1/view-mode", "int", "1"),
@@ -102,14 +102,6 @@ public final class Xfconf {
             new XfceSetting("xfce4-panel", "/panels/panel-1/size", "uint", "28"),
             new XfceSetting("xfce4-panel", "/panels/panel-1/icon-size", "uint", "16"),
 
-            // Panel 2: Dock on the left side of the screen (vertical, left-center snap p=7)
-            new XfceSetting("xfce4-panel", "/panels/panel-2/mode", "uint", "1"),
-            new XfceSetting("xfce4-panel", "/panels/panel-2/position", "string", "p=7;x=0;y=0"),
-            new XfceSetting("xfce4-panel", "/panels/panel-2/length", "uint", "1"),
-            new XfceSetting("xfce4-panel", "/panels/panel-2/position-locked", "bool", "true"),
-            new XfceSetting("xfce4-panel", "/panels/panel-2/size", "uint", "48"),
-            new XfceSetting("xfce4-panel", "/panels/panel-2/autohide-behavior", "uint", "1"),
-
             // Dark Retro Teal (#183c42) Desktop Background
             new XfceSetting("xfce4-desktop", "/backdrop/screen0/monitor0/workspace0/image-style", "int", "0"),
             new XfceSetting("xfce4-desktop", "/backdrop/screen0/monitor0/workspace0/color-style", "int", "0"),
@@ -147,7 +139,7 @@ public final class Xfconf {
 
     static final List<GnomeSetting> GNOME_SETTINGS = List.of(
             new GnomeSetting("org.gnome.desktop.interface", "icon-theme", "Chicago95"),
-            new GnomeSetting("org.gnome.desktop.interface", "gtk-theme", "Redmond97"),
+            new GnomeSetting("org.gnome.desktop.interface", "gtk-theme", "Imp98"),
             new GnomeSetting("org.gnome.desktop.interface", "color-scheme", "prefer-dark")
     );
 
@@ -164,6 +156,7 @@ public final class Xfconf {
     record XfceReset(String channel, String property) {}
 
     private static final List<XfceReset> XFCE_RESETS = List.of(
+            new XfceReset("xfce4-panel", "/panels/panel-2"),
             new XfceReset("xfwm4", "/general/button_spacing"),
             new XfceReset("xfwm4", "/general/button_offset"),
             new XfceReset("xfwm4", "/general/full_width_title"),
@@ -179,9 +172,9 @@ public final class Xfconf {
 
     private static void resetXfconf(String channel, String property, boolean dryRun) {
         if (dryRun) {
-            System.out.printf("[DRY-RUN] xfconf-query -c %s -p %s -r%n", channel, property);
+            System.out.printf("[DRY-RUN] xfconf-query -c %s -p %s -r -R%n", channel, property);
         } else {
-            ProcessRunner.run(List.of("xfconf-query", "-c", channel, "-p", property, "-r"));
+            ProcessRunner.run(List.of("xfconf-query", "-c", channel, "-p", property, "-r", "-R"));
         }
     }
 
@@ -286,6 +279,8 @@ public final class Xfconf {
         for (XfceSetting s : XFCE_SETTINGS) {
             if (!setXfconf(s.channel(), s.property(), s.type(), s.value(), dryRun)) failures++;
         }
+        // Only Panel 1 (bottom Windows 98 taskbar); left dock (panel-2) is removed
+        if (!setXfconfArray("xfce4-panel", "/panels", "int", List.of("1"), dryRun, verbose)) failures++;
         // Quick Launch favorite application launcher items on Panel 1
         if (!setXfconfArray("xfce4-panel", "/plugins/plugin-19/items", "string", List.of("filemanager.desktop"), dryRun, verbose)) failures++;
         if (!setXfconfArray("xfce4-panel", "/plugins/plugin-20/items", "string", List.of("webbrowser.desktop"), dryRun, verbose)) failures++;

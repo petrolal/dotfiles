@@ -1,5 +1,5 @@
 /* ==========================================================================
- * Redmond97 Dark / Windows 98 Theme for GTK 4.0 & Libadwaita
+ * Imp98 / Windows 98 Theme for GTK 4.0 & Libadwaita
  * Edit the @define-color variables below to customize with your own thematic!
  * ========================================================================== */
 
@@ -20,7 +20,7 @@
 @define-color inactive_title_color #373737;
 @define-color inactive_title_text #d4d0c8;
 
-/* Map Libadwaita / GTK4 semantic colors to Redmond97 Dark palette */
+/* Map Libadwaita / GTK4 semantic colors to Imp98 palette */
 @define-color window_bg_color @bg_color;
 @define-color window_fg_color @fg_color;
 @define-color view_bg_color @base_color;

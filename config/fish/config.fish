@@ -45,7 +45,7 @@ if status is-interactive
     set -gx EDITOR nano
     set -gx VISUAL nano
     set -gx PAGER less
-    set -gx GTK_THEME Redmond97
+    set -gx GTK_THEME Imp98
     set -gx GTK_OVERLAY_SCROLLING 0
     set -gx QT_STYLE_OVERRIDE Windows
 

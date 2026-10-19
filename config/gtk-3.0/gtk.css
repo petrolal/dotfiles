@@ -1,11 +1,11 @@
 /* ==========================================================================
- * Redmond97 Dark / Windows 98 User Theme & Palette Overrides (GTK 3.0 & XFCE)
+ * Imp98 / Windows 98 User Theme & Palette Overrides (GTK 3.0 & XFCE)
  * Edit the @define-color variables below to customize with your own thematic!
  * ========================================================================== */
 
-@import url("../../.themes/Redmond97/gtk-3.0/gtk.css");
+@import url("../../.themes/Imp98/gtk-3.0/gtk.css");
 
-/* Surface & Text Colors (Redmond97 Dark) */
+/* Surface & Text Colors (Imp98 Dark) */
 @define-color bg_color #373737;
 @define-color fg_color #eaeaea;
 @define-color base_color #16171d;
@@ -42,7 +42,7 @@
 @define-color tooltip_fg_color #eaeaea;
 
 /* ==========================================================================
- * XFCE Panel & Left Dock Refinements (Windows 98 3D Bevel)
+ * XFCE Panel Refinements (Windows 98 3D Bevel)
  * ========================================================================== */
 .xfce4-panel,
 #XfcePanelWindow {
@@ -54,62 +54,6 @@
 .xfce4-panel.horizontal {
   border-top: 1px solid @light_shadow;
   box-shadow: inset 0 1px @mid_light_shadow;
-}
-
-/* Workspace Pager buttons on the bottom taskbar */
-#pager-1 button,
-#pager-2 button,
-#pager-3 button,
-#pager-4 button,
-#pager-5 button,
-#pager-6 button {
-  min-width: 22px;
-  padding: 1px 4px;
-  margin: 2px 1px;
-  font-size: 8.5pt;
-}
-
-.xfce4-panel.vertical {
-  border-top: 2px solid @light_shadow;
-  border-left: 2px solid @light_shadow;
-  border-right: 2px solid @borders;
-  border-bottom: 2px solid @borders;
-  box-shadow:
-    inset 1px 1px @mid_light_shadow,
-    inset -1px -1px @dark_shadow;
-  padding: 2px;
-}
-
-.xfce4-panel.vertical button,
-.xfce4-panel.vertical #launcher-arrow {
-  margin: 2px;
-  padding: 3px;
-  border-radius: 0px;
-  background-color: @button_bg_color;
-  color: @button_fg_color;
-  border-top: 1px solid @light_shadow;
-  border-left: 1px solid @light_shadow;
-  border-right: 1px solid @borders;
-  border-bottom: 1px solid @borders;
-  box-shadow:
-    inset -1px -1px @dark_shadow,
-    inset 1px 1px @mid_light_shadow;
-}
-
-.xfce4-panel.vertical button:hover,
-.xfce4-panel.vertical #launcher-arrow:hover {
-  background-color: @mid_light_shadow;
-}
-
-.xfce4-panel.vertical button:active,
-.xfce4-panel.vertical button:checked,
-.xfce4-panel.vertical #launcher-arrow:active {
-  border-top: 1px solid @borders;
-  border-left: 1px solid @borders;
-  border-right: 1px solid @light_shadow;
-  border-bottom: 1px solid @light_shadow;
-  box-shadow: inset 1px 1px @dark_shadow;
-  background-color: @dark_shadow;
 }
 
 /* ==========================================================================
