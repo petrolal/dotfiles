@@ -13,6 +13,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+import dev.petrolal.dotfiles.core.Theme;
 import dev.petrolal.dotfiles.domain.DotfileError;
 import dev.petrolal.dotfiles.domain.Result;
 
@@ -43,101 +44,13 @@ public final class Linker {
      * root-mirrored layout: renames, or a source linked to more than one target. */
     static final List<Mapping> OVERRIDES = List.of(
             new Mapping("config/gtk-2.0/gtkrc", ".gtkrc-2.0"),
-            new Mapping("themes/Imp98", ".themes/Imp98"),
-            new Mapping("themes/Imp98", ".local/share/themes/Imp98")
+            new Mapping("themes/" + Theme.NAME, ".themes/" + Theme.NAME),
+            new Mapping("themes/" + Theme.NAME, ".local/share/themes/" + Theme.NAME)
     );
-
-    /** Single-symlink target paths (relative to $HOME) from ROOT_TARGETS/OVERRIDES
-     * entries removed when sources were deleted. Cleaned up explicitly to avoid dangling symlinks. */
-    static final List<String> LEGACY_TARGETS = List.of(
-            ".icons/imp98",
-            ".icons/retro-infernal",
-            ".icons/Abyssal-Biopunk",
-            ".icons/Infernal-Retro",
-            ".themes/imp98",
-            ".themes/Redmond97",
-            ".local/share/themes/Redmond97",
-            ".themes/retro-infernal",
-            ".themes/Abyssal-Biopunk",
-            ".themes/Infernal-Retro",
-            ".config/autostart/conky.desktop",
-            ".config/conky/conky.conf"
-    );
-
-    /** Directories that were mirrored file-by-file from deleted repo sources. */
-    static final List<String> LEGACY_TARGET_DIRS = List.of(
-            ".local/share/themes/imp98",
-            ".local/share/imp98",
-            ".config/quickshell"
-    );
-
-    /** Removes every symlink found under DIR (bottom-up), then DIR itself and any
-     * subdirectory left empty by that. */
-    private static void cleanupLegacyDir(Path dir, boolean dryRun, boolean verbose) {
-        if (!Files.isDirectory(dir) || Files.isSymbolicLink(dir)) return;
-        List<Path> entries;
-        try (var stream = Files.walk(dir)) {
-            entries = stream.sorted(java.util.Comparator.reverseOrder()).toList();
-        } catch (IOException _) {
-            return;
-        }
-        for (Path entry : entries) {
-            if (Files.isSymbolicLink(entry)) {
-                if (dryRun) {
-                    System.out.println("[DRY-RUN] Would remove symlink: " + entry);
-                    continue;
-                }
-                try {
-                    Files.delete(entry);
-                    if (verbose) System.out.println("[OK] Removed symlink: " + entry);
-                } catch (IOException e) {
-                    System.err.println("[FAIL] Failed to remove symlink " + entry);
-                }
-            } else if (Files.isDirectory(entry) && !dryRun) {
-                try {
-                    Files.deleteIfExists(entry);
-                    if (verbose && !Files.exists(entry)) System.out.println("[OK] Removed empty directory: " + entry);
-                } catch (IOException _) {
-                    // Not empty -- leave it alone.
-                }
-            }
-        }
-        if (!dryRun) {
-            try {
-                Files.deleteIfExists(dir);
-                if (verbose && !Files.exists(dir)) System.out.println("[OK] Removed empty directory: " + dir);
-            } catch (IOException _) {}
-        }
-    }
-
-    public static int cleanupLegacyTargets(Path home, boolean dryRun, boolean verbose) {
-        int removed = 0;
-        for (String legacyTarget : LEGACY_TARGETS) {
-            if (unlinkFile(legacyTarget, home, dryRun, verbose) == UnlinkOutcome.REMOVED) removed++;
-        }
-        for (String legacyDir : LEGACY_TARGET_DIRS) {
-            cleanupLegacyDir(home.resolve(legacyDir), dryRun, verbose);
-        }
-        return removed;
-    }
-
-    private static final String XFCONF_EXPORT_MARKER = "xfconf/xfce-perchannel-xml";
-
-    /** True if relpath is (or is under) an xfce-perchannel-xml export directory. */
-    static boolean isXfconfExportDir(String relpath) {
-        int pos = relpath.indexOf(XFCONF_EXPORT_MARKER);
-        return pos >= 0 && (pos == 0 || relpath.charAt(pos - 1) == '/');
-    }
 
     static boolean isExcluded(String relpath) {
-        if (isXfconfExportDir(relpath)) return true;
         for (String prefix : EXCLUDES) {
-            if (relpath.equals(prefix)) return true;
-            if (relpath.length() > prefix.length()
-                    && relpath.startsWith(prefix)
-                    && relpath.charAt(prefix.length()) == '/') {
-                return true;
-            }
+            if (isPrefixMatch(prefix, relpath)) return true;
         }
         return false;
     }
@@ -201,14 +114,6 @@ public final class Linker {
         return out;
     }
 
-    private static boolean isSymlink(Path path) {
-        return Files.isSymbolicLink(path);
-    }
-
-    private static boolean isDirectory(Path path) {
-        return Files.isDirectory(path);
-    }
-
     private static void deleteRecursively(Path path) throws IOException {
         Files.walkFileTree(path, new SimpleFileVisitor<>() {
             @Override
@@ -265,7 +170,7 @@ public final class Linker {
         }
         try {
             ensureRealDirectory(dest.getParent(), home);
-            if (isDirectory(src) && isDirectory(dest) && !isSymlink(dest)) {
+            if (Files.isDirectory(src) && Files.isDirectory(dest) && !Files.isSymbolicLink(dest)) {
                 deleteRecursively(dest);
             }
             atomicSymlink(dest, src);
@@ -279,7 +184,7 @@ public final class Linker {
 
     public static UnlinkOutcome unlinkFile(String targetRel, Path home, boolean dryRun, boolean verbose) {
         Path dest = home.resolve(targetRel);
-        if (!isSymlink(dest)) {
+        if (!Files.isSymbolicLink(dest)) {
             if (verbose) {
                 if (Files.exists(dest)) {
                     System.err.println("[SKIP] Not a symlink: " + dest + " (refusing to delete)");

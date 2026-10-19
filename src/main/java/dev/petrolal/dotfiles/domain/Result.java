@@ -4,8 +4,6 @@ package dev.petrolal.dotfiles.domain;
 
 import java.util.Objects;
 import java.util.function.Consumer;
-import java.util.function.Function;
-import java.util.function.Supplier;
 
 public sealed interface Result<T> permits Result.Ok, Result.Err {
     record Ok<T>(T value) implements Result<T> {}
@@ -27,37 +25,11 @@ public sealed interface Result<T> permits Result.Ok, Result.Err {
         return this instanceof Err<T>;
     }
 
-    @SuppressWarnings("unchecked")
-    default <R> Result<R> map(Function<? super T, ? extends R> mapper) {
-        Objects.requireNonNull(mapper);
-        if (this instanceof Ok<T> ok) {
-            return new Ok<>(mapper.apply(ok.value()));
-        }
-        return (Result<R>) this;
-    }
-
-    @SuppressWarnings("unchecked")
-    default <R> Result<R> flatMap(Function<? super T, Result<R>> mapper) {
-        Objects.requireNonNull(mapper);
-        if (this instanceof Ok<T> ok) {
-            return Objects.requireNonNull(mapper.apply(ok.value()));
-        }
-        return (Result<R>) this;
-    }
-
     default T orElse(T fallback) {
         if (this instanceof Ok<T> ok) {
             return ok.value();
         }
         return fallback;
-    }
-
-    default T orElseGet(Supplier<? extends T> fallbackSupplier) {
-        Objects.requireNonNull(fallbackSupplier);
-        if (this instanceof Ok<T> ok) {
-            return ok.value();
-        }
-        return fallbackSupplier.get();
     }
 
     default Result<T> ifOk(Consumer<? super T> action) {

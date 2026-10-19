@@ -10,6 +10,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
+import dev.petrolal.dotfiles.core.Theme;
 import dev.petrolal.dotfiles.domain.DotfileError;
 import dev.petrolal.dotfiles.domain.Result;
 
@@ -83,9 +84,7 @@ public final class ProcessRunner {
                     .redirectOutput(ProcessBuilder.Redirect.DISCARD)
                     .redirectError(ProcessBuilder.Redirect.DISCARD)
                     .redirectInput(ProcessBuilder.Redirect.from(new File("/dev/null")));
-            pb.environment().put("GTK_THEME", "Imp98");
-            pb.environment().put("GTK_OVERLAY_SCROLLING", "0");
-            pb.environment().put("QT_STYLE_OVERRIDE", "Windows");
+            pb.environment().putAll(Theme.ENV);
             pb.start();
         } catch (IOException _) {
             // best-effort: service reload is not fatal to deployment

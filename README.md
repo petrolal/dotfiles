@@ -35,14 +35,13 @@ After the initial bootstrap, use Gradle (`./gradlew`):
 | `./gradlew system-install` | Rebuild NixOS + redeploy (full update) |
 | `./gradlew dry-run` | Preview what deploy would change |
 | `./gradlew uninstall` | Safely remove all deployed dotfiles symlinks |
-| `./gradlew scale` | Reset WM margins for current display |
 | `./gradlew tasks` | Show all available Gradle tasks |
 
 Default login shell is [fish](https://fishshell.com/) (`nixos/modules/users.nix`),
 configured in `config/fish/` (prompt, theme, abbreviations). Each command
 above also has a fish abbreviation that runs from anywhere, no `cd` needed:
-`dfdeploy`, `dfdry`, `dfinstall`, `dfuninstall`, `dfswitch`, `dfupdate`,
-`dfupgrade`, `dfscale`, `dfreload`, `ff` (fastfetch), plus `dotfiles` to `cd ~/dotfiles`.
+`dfdeploy`, `dfdry`, `dfuninstall`, `dfswitch`, `dfupdate`,
+`dfupgrade`, `dfreload`, `ff` (fastfetch), plus `dotfiles` to `cd ~/dotfiles`.
 
 ## Project Structure
 
@@ -52,7 +51,6 @@ dotfiles/
 ├── build.gradle                    # Gradle build & orchestration tasks
 ├── settings.gradle                 # Gradle settings
 ├── gradlew                         # Gradle wrapper script
-├── shell.nix                       # Nix dev shell (Gradle, GraalVM, git)
 │
 ├── nixos/                          # NixOS system configuration
 │   ├── flake.nix                   # Flake entry point
@@ -68,12 +66,11 @@ dotfiles/
 │       └── development.nix         # direnv, dev-init, devshell
 │
 ├── src/main/java/dev/petrolal/dotfiles/  # Java deployer (compiles to native binary via GraalVM)
-│   ├── Main.java                   # Entry point, delegates to Cli
 │   ├── cli/                        # CLI argument parsing (Cli.java)
-│   ├── core/                       # Orchestration & path resolution (Orchestrator, DotfilePaths)
-│   ├── desktop/                    # Display, XFCE settings & XML replay (Display, Xfconf, XfconfXml)
+│   ├── core/                       # Orchestration, paths & theme constants (Orchestrator, DotfilePaths, Theme)
+│   ├── desktop/                    # XFCE & GNOME settings (Xfconf)
 │   ├── domain/                     # Functional domain types (Result, DotfileError)
-│   ├── linker/                     # Symlink engine & config generation (Linker, Generators)
+│   ├── linker/                     # Symlink engine (Linker)
 │   ├── wallpaper/                  # 3D OpenGL wallpaper engine (Wallpaper, X11Canvas, ShaderPipeline)
 │   └── system/                     # Subprocess execution (ProcessRunner)
 │
@@ -85,8 +82,8 @@ dotfiles/
 │   ├── gtk-2.0/gtkrc
 │   ├── gtk-3.0/settings.ini
 │   ├── gtk-4.0/settings.ini
-│   ├── glava/                      # Audio-reactive GLSL visualizer
-│   └── picom/picom.conf            # Compositor
+│   ├── xfce4/                     # Terminal, panel launchers, volume script
+│   └── icons/                     # Chicago95 icon overrides
 │
 └── docs/
     └── dev-environments.md         # Per-project dev environment guide

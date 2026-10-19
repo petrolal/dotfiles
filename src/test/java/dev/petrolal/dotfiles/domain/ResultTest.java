@@ -15,7 +15,6 @@ class ResultTest {
         assertTrue(ok.isOk());
         assertFalse(ok.isErr());
         assertEquals("value", ok.orElse("fallback"));
-        assertEquals("value", ok.orElseGet(() -> "fallback"));
     }
 
     @Test
@@ -25,29 +24,6 @@ class ResultTest {
         assertFalse(err.isOk());
         assertTrue(err.isErr());
         assertEquals("fallback", err.orElse("fallback"));
-        assertEquals("fallback", err.orElseGet(() -> "fallback"));
-    }
-
-    @Test
-    void mapTransformsValueOnOk() {
-        Result<Integer> ok = Result.ok(10).map(x -> x * 2);
-        assertTrue(ok.isOk());
-        assertEquals(20, ok.orElse(0));
-
-        DotfileError error = new DotfileError.IoError("boom");
-        Result<Integer> err = Result.<Integer>err(error).map(x -> x * 2);
-        assertTrue(err.isErr());
-    }
-
-    @Test
-    void flatMapChainsResults() {
-        Result<Integer> ok = Result.ok(10).flatMap(x -> Result.ok(x + 5));
-        assertTrue(ok.isOk());
-        assertEquals(15, ok.orElse(0));
-
-        DotfileError error = new DotfileError.IoError("boom");
-        Result<Integer> err = Result.ok(10).flatMap(x -> Result.err(error));
-        assertTrue(err.isErr());
     }
 
     @Test

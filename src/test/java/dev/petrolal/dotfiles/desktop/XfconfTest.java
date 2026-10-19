@@ -18,7 +18,7 @@ class XfconfTest {
 
     @Test
     void expandHomeTildeLeavesOtherValuesUnchanged() {
-        assertEquals("Adwaita-dark", Xfconf.expandHomeTilde("Adwaita-dark"));
+        assertEquals("Imp98", Xfconf.expandHomeTilde("Imp98"));
         assertEquals("/absolute/path", Xfconf.expandHomeTilde("/absolute/path"));
         assertEquals("~notarealhome", Xfconf.expandHomeTilde("~notarealhome"));
     }

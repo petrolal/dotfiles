@@ -27,12 +27,6 @@ class LinkerTest {
     }
 
     @Test
-    void isXfconfExportDirOnlyMatchesAtPathBoundary() {
-        assertTrue(Linker.isXfconfExportDir("config/xfce4-panel/xfconf/xfce-perchannel-xml/xfce4-panel.xml"));
-        assertFalse(Linker.isXfconfExportDir("config/not-xfconf/xfce-perchannel-xml-ish/file"));
-    }
-
-    @Test
     void rootTargetForPicksLongestMatchingPrefix() {
         var target = Linker.rootTargetFor("config/applications/foo.desktop");
         assertTrue(target.isPresent());

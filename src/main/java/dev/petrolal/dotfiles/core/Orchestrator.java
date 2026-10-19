@@ -4,11 +4,11 @@ package dev.petrolal.dotfiles.core;
 
 import java.nio.file.Path;
 import java.util.List;
-import dev.petrolal.dotfiles.wallpaper.Wallpaper;
 
 import dev.petrolal.dotfiles.desktop.Xfconf;
 import dev.petrolal.dotfiles.linker.Linker;
 import dev.petrolal.dotfiles.system.ProcessRunner;
+import dev.petrolal.dotfiles.wallpaper.Wallpaper;
 
 public final class Orchestrator {
 	private Orchestrator() {
@@ -23,10 +23,11 @@ public final class Orchestrator {
 	public record WallpaperResult(boolean ok, int failures) {
 	}
 
+	/** Spawned with Theme.ENV by ProcessRunner.spawnDetached, so restarted
+	 * components pick up the theme regardless of the session environment. */
 	private static final List<List<String>> RELOAD_COMMANDS = List.of(
 			List.of("xfsettingsd", "--replace"),
-			List.of("sh", "-c",
-					"if pgrep -x xfce4-panel >/dev/null 2>&1; then xfce4-panel -r; else env GTK_THEME=Imp98 GTK_OVERLAY_SCROLLING=0 xfce4-panel & fi"),
+			List.of("sh", "-c", "if pgrep -x xfce4-panel >/dev/null 2>&1; then xfce4-panel -r; else xfce4-panel & fi"),
 			List.of("xfwm4", "--replace"),
 			List.of("pkill", "-f", "xfce4-notifyd"),
 			List.of("thunar", "-q"));
@@ -41,26 +42,22 @@ public final class Orchestrator {
 		if (verbose)
 			System.out.println("Reloading XFCE services...");
 
-		try (var executor = java.util.concurrent.Executors.newVirtualThreadPerTaskExecutor()) {
-			for (List<String> args : RELOAD_COMMANDS) {
-				executor.submit(() -> {
-					String binary = args.get(0);
-					if (!DotfilePaths.commandExists(binary)) {
-						if (verbose)
-							System.out.println("[SKIP] " + binary + " not found, skipping.");
-					} else if (dryRun) {
-						System.out.println("[DRY-RUN] Would execute: " + String.join(" ", args));
-					} else {
-						ProcessRunner.spawnDetached(args);
-					}
-				});
+		for (List<String> args : RELOAD_COMMANDS) {
+			String binary = args.get(0);
+			if (!DotfilePaths.commandExists(binary)) {
+				if (verbose)
+					System.out.println("[SKIP] " + binary + " not found, skipping.");
+			} else if (dryRun) {
+				System.out.println("[DRY-RUN] Would execute: " + String.join(" ", args));
+			} else {
+				ProcessRunner.spawnDetached(args);
 			}
 		}
 	}
 
 	public static DeployResult deploy(boolean dryRun, boolean verbose, boolean reload, boolean applySettings) {
 		if (verbose)
-			System.out.println("=== Deploying Imp98 Dotfiles ===");
+			System.out.println("=== Deploying " + Theme.NAME + " Dotfiles ===");
 		Path root = DotfilePaths.findDotfilesRoot();
 		Path home = DotfilePaths.userHomeDirectory();
 		int failures = 0;
@@ -69,32 +66,18 @@ public final class Orchestrator {
 			System.out.println("Root:   " + root);
 			System.out.println("Target: " + home);
 		}
-		Linker.cleanupLegacyTargets(home, dryRun, verbose);
 
-		List<Linker.Mapping> mappings = Linker.collectAllMappings(root);
-		try (var executor = java.util.concurrent.Executors.newVirtualThreadPerTaskExecutor()) {
-			var linkTasks = mappings.stream()
-					.map(mapping -> executor.submit(() ->
-							Linker.linkFile(mapping.from(), mapping.to(), root, home, dryRun, verbose)))
-					.toList();
-
-			for (var task : linkTasks) {
-				try {
-					if (task.get().isOk())
-						successes++;
-					else
-						failures++;
-				} catch (Exception _) {
-					failures++;
-				}
-			}
+		for (Linker.Mapping mapping : Linker.collectAllMappings(root)) {
+			if (Linker.linkFile(mapping.from(), mapping.to(), root, home, dryRun, verbose).isOk())
+				successes++;
+			else
+				failures++;
 		}
 
 		if (applySettings) {
-			failures += Xfconf.applyXfceSettings(root, dryRun, verbose);
-		}
-		if (reload && applySettings) {
-			reloadDesktopServices(dryRun, verbose);
+			failures += Xfconf.applyXfceSettings(dryRun, verbose);
+			if (reload)
+				reloadDesktopServices(dryRun, verbose);
 		}
 		if (verbose) {
 			if (failures == 0) {
@@ -108,7 +91,7 @@ public final class Orchestrator {
 
 	public static UninstallResult uninstall(boolean dryRun, boolean verbose) {
 		if (verbose)
-			System.out.println("=== Removing Imp98 Dotfiles Symlinks ===");
+			System.out.println("=== Removing " + Theme.NAME + " Dotfiles Symlinks ===");
 		Path root = DotfilePaths.findDotfilesRoot();
 		Path home = DotfilePaths.userHomeDirectory();
 		int failures = 0;
@@ -116,27 +99,15 @@ public final class Orchestrator {
 		if (verbose)
 			System.out.println("Target: " + home);
 
-		List<Linker.Mapping> mappings = Linker.collectAllMappings(root);
-		try (var executor = java.util.concurrent.Executors.newVirtualThreadPerTaskExecutor()) {
-			var unlinkTasks = mappings.stream()
-					.map(mapping -> executor.submit(() ->
-							Linker.unlinkFile(mapping.to(), home, dryRun, verbose)))
-					.toList();
-
-			for (var task : unlinkTasks) {
-				try {
-					Linker.UnlinkOutcome outcome = task.get();
-					if (outcome == Linker.UnlinkOutcome.REMOVED)
-						removedCount++;
-					else if (outcome == Linker.UnlinkOutcome.FAILED)
-						failures++;
-				} catch (Exception _) {
-					failures++;
-				}
+		for (Linker.Mapping mapping : Linker.collectAllMappings(root)) {
+			switch (Linker.unlinkFile(mapping.to(), home, dryRun, verbose)) {
+			case REMOVED -> removedCount++;
+			case FAILED -> failures++;
+			case SKIPPED -> {
+			}
 			}
 		}
 
-		removedCount += Linker.cleanupLegacyTargets(home, dryRun, verbose);
 		if (verbose) {
 			if (dryRun) {
 				System.out.println("Dry-run complete. " + removedCount + " symlink(s) would be removed.");
@@ -161,14 +132,12 @@ public final class Orchestrator {
 			return new WallpaperResult(true, 0);
 		}
 
-		int failures = 0;
 		try {
-			Wallpaper wallpaper = new Wallpaper();
-			wallpaper.start();
+			new Wallpaper().start();
+			return new WallpaperResult(true, 0);
 		} catch (Throwable ex) {
-			failures++;
 			System.err.println("Error on wallpaper application: " + ex.getMessage());
+			return new WallpaperResult(false, 1);
 		}
-		return new WallpaperResult(failures == 0, failures);
 	}
 }

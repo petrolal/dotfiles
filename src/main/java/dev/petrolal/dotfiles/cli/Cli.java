@@ -1,28 +1,26 @@
-// Cli.java --- CLI interface
+// Cli.java --- Command-line entry point
 // License: GPL-3.0-or-later
 package dev.petrolal.dotfiles.cli;
 
 import dev.petrolal.dotfiles.core.Orchestrator;
-import dev.petrolal.dotfiles.desktop.Xfconf;
+import dev.petrolal.dotfiles.core.Theme;
 
 public final class Cli {
 	private Cli() {
 	}
 
-	static final String VERSION = "1.2.0";
+	static final String VERSION = "1.3.0";
 	static final String PROGRAM_NAME = "invoker";
 
 	private static void printHelp() {
 		System.out.printf("Usage: %s [COMMAND|OPTION]...%n%n", PROGRAM_NAME);
-		System.out.println("Deploy Imp98 dotfiles symlinks and configure desktop settings.\n");
+		System.out.println("Deploy " + Theme.NAME + " dotfiles symlinks and configure desktop settings.\n");
 		System.out.println("Commands:");
 		System.out.println("  deploy            perform full deployment (link, configure, reload) [default]");
 		System.out.println("  uninstall         remove all deployed dotfile symlinks safely");
-		System.out.println("  scale             query display resolution and reset WM margins");
 		System.out.println("  wallpaper         start OpenGL 3D wallpaper\n");
 		System.out.println("Options:");
 		System.out.println("  -u, --uninstall   remove all deployed dotfile symlinks safely");
-		System.out.println("  -s, --scale       detect resolution and reset WM margins");
 		System.out.println("  -n, --dry-run     simulate actions without modifying filesystem or xfconf");
 		System.out.println("  -q, --quiet       suppress non-error output");
 		System.out.println("      --links-only  only symlink dotfiles (implies --no-xfconf --no-reload)");
@@ -33,14 +31,14 @@ public final class Cli {
 	}
 
 	private static void printVersion() {
-		System.out.printf("%s %s (Imp98 / Windows 98)%n", PROGRAM_NAME, VERSION);
+		System.out.printf("%s %s (%s / Windows 98)%n", PROGRAM_NAME, VERSION, Theme.NAME);
 		System.out.println("License GPLv3+: GNU GPL version 3 or later <https://gnu.org/licenses/gpl.html>.");
 		System.out.println("This is free software: you are free to change and redistribute it.");
 		System.out.println("There is NO WARRANTY, to the extent permitted by law.");
 	}
 
 	private enum Action {
-		DEPLOY, UNINSTALL, SCALE, WALLPAPER
+		DEPLOY, UNINSTALL, WALLPAPER
 	}
 
 	public static void main(String[] argv) {
@@ -73,7 +71,6 @@ public final class Cli {
 			case "--no-xfconf" -> applySettings = false;
 			case "--no-reload" -> reload = false;
 			case "-u", "--uninstall", "uninstall" -> action = Action.UNINSTALL;
-			case "-s", "--scale", "scale" -> action = Action.SCALE;
 			case "deploy" -> action = Action.DEPLOY;
 			case "wallpaper" -> action = Action.WALLPAPER;
 			default -> {
@@ -84,30 +81,11 @@ public final class Cli {
 			}
 		}
 
-		switch (action) {
-		case UNINSTALL -> {
-			Orchestrator.UninstallResult result = Orchestrator.uninstall(dryRun, verbose);
-			if (!result.ok())
-				return 1;
-		}
-		case SCALE -> {
-			int failures = Xfconf.applyDynamicResolutionScaling(dryRun, verbose);
-			if (reload)
-				Orchestrator.reloadDesktopServices(dryRun, verbose);
-			if (failures > 0)
-				return 1;
-		}
-		case DEPLOY -> {
-			Orchestrator.DeployResult result = Orchestrator.deploy(dryRun, verbose, reload, applySettings);
-			if (!result.ok())
-				return 1;
-		}
-		case WALLPAPER -> {
-			Orchestrator.WallpaperResult result = Orchestrator.set3DWallpaper(dryRun, verbose);
-			if (!result.ok())
-				return 1;
-		}
-		}
-		return 0;
+		boolean ok = switch (action) {
+		case UNINSTALL -> Orchestrator.uninstall(dryRun, verbose).ok();
+		case DEPLOY -> Orchestrator.deploy(dryRun, verbose, reload, applySettings).ok();
+		case WALLPAPER -> Orchestrator.set3DWallpaper(dryRun, verbose).ok();
+		};
+		return ok ? 0 : 1;
 	}
 }

@@ -2,11 +2,11 @@
 // License: GPL-3.0-or-later
 package dev.petrolal.dotfiles.desktop;
 
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
 import dev.petrolal.dotfiles.core.DotfilePaths;
+import dev.petrolal.dotfiles.core.Theme;
 import dev.petrolal.dotfiles.domain.Result;
 import dev.petrolal.dotfiles.system.ProcessRunner;
 
@@ -17,130 +17,155 @@ public final class Xfconf {
 
     record GnomeSetting(String schema, String key, String value) {}
 
-    static final List<XfceSetting> XFCE_SETTINGS = List.of(
-            // GTK and Theme Configuration (Windows 98 / Imp98 Dark theme)
-            new XfceSetting("xsettings", "/Net/ThemeName", "string", "Imp98"),
-            new XfceSetting("xsettings", "/Net/IconThemeName", "string", "Chicago95"),
-            new XfceSetting("xsettings", "/Gtk/CursorThemeSize", "int", "24"),
-            new XfceSetting("xsettings", "/Gtk/FontName", "string", "Sans 9"),
-            new XfceSetting("xsettings", "/Gtk/ApplicationPreferDarkTheme", "bool", "true"),
+    // Panel plugin ids (xfce4-panel /plugins/plugin-N)
+    private static final int START = 1, TASKLIST = 2, SPACER = 3, PAGER = 4, SYSTRAY = 6, CLOCK = 8;
+    private static final int FIRST_LAUNCHER = 19;
 
-            // Notification Daemon Styling (xfce4-notifyd: 100% solid opacity, bottom-right above tray)
-            new XfceSetting("xfce4-notifyd", "/theme", "string", "Default"),
-            new XfceSetting("xfce4-notifyd", "/initial-opacity", "double", "1.0"),
-            new XfceSetting("xfce4-notifyd", "/notify-location", "uint", "3"),
+    /** Quick Launch favourites on the taskbar; each gets its own launcher plugin. */
+    private static final List<String> LAUNCHERS = List.of("filemanager", "webbrowser", "appfinder", "terminal");
 
-            // Window Manager Behavior (Imp98 / Windows 98 classic 3D frame)
-            new XfceSetting("xfwm4", "/general/theme", "string", "Imp98"),
-            new XfceSetting("xfwm4", "/general/title_font", "string", "Sans Bold 9"),
-            new XfceSetting("xfwm4", "/general/title_alignment", "string", "left"),
-            new XfceSetting("xfwm4", "/general/button_layout", "string", "O|HMC"),
-            new XfceSetting("xfwm4", "/general/show_frame_shadow", "bool", "false"),
-            new XfceSetting("xfwm4", "/general/show_popup_shadow", "bool", "false"),
-            new XfceSetting("xfwm4", "/general/show_dock_shadow", "bool", "false"),
-            new XfceSetting("xfwm4", "/general/easy_click", "string", "Super"),
-            new XfceSetting("xfwm4", "/general/snap_to_windows", "bool", "true"),
-            new XfceSetting("xfwm4", "/general/snap_to_border", "bool", "true"),
-            new XfceSetting("xfwm4", "/general/snap_width", "int", "10"),
-            new XfceSetting("xfwm4", "/general/use_compositing", "bool", "true"),
+    /** Desktop backdrop nodes whose image/colour style must be flat ("none"). */
+    private static final List<String> BACKDROPS = List.of(
+            "monitor0/workspace0", "monitoreDP-1/workspace0", "monitoreDP-1/workspace1");
 
-            // Desktop Screen Margins: strictly 0px to ensure flush window tiling and full maximization
-            new XfceSetting("xfwm4", "/general/margin_bottom", "int", "0"),
-            new XfceSetting("xfwm4", "/general/margin_left", "int", "0"),
-            new XfceSetting("xfwm4", "/general/margin_right", "int", "0"),
-            new XfceSetting("xfwm4", "/general/margin_top", "int", "0"),
+    private static final List<String> BACKDROP_COLOR = List.of("0.094", "0.235", "0.259", "1.0"); // #183c42
 
-            // Panel global & Start Button (Windows 98 style via Whisker Menu)
-            new XfceSetting("xfce4-panel", "/panels/dark-mode", "bool", "false"),
-            new XfceSetting("xfce4-panel", "/plugins/plugin-1", "string", "whiskermenu"),
-            new XfceSetting("xfce4-panel", "/plugins/plugin-1/button-title", "string", "Start"),
-            new XfceSetting("xfce4-panel", "/plugins/plugin-1/button-icon", "string", "~/.themes/Imp98/gtk-3.0/assets/start-here.png"),
-            new XfceSetting("xfce4-panel", "/plugins/plugin-1/show-button-title", "bool", "true"),
-            new XfceSetting("xfce4-panel", "/plugins/plugin-1/show-button-icon", "bool", "true"),
-            new XfceSetting("xfce4-panel", "/plugins/plugin-1/view-mode", "int", "1"),
-            new XfceSetting("xfce4-panel", "/plugins/plugin-1/launcher-show-name", "bool", "true"),
-            new XfceSetting("xfce4-panel", "/plugins/plugin-1/launcher-show-description", "bool", "true"),
-            new XfceSetting("xfce4-panel", "/plugins/plugin-1/launcher-icon-size", "int", "2"),
-            new XfceSetting("xfce4-panel", "/plugins/plugin-1/category-icon-size", "int", "1"),
-            new XfceSetting("xfce4-panel", "/plugins/plugin-1/position-categories-alternate", "bool", "true"),
-            new XfceSetting("xfce4-panel", "/plugins/plugin-1/position-categories-horizontal", "bool", "false"),
-            new XfceSetting("xfce4-panel", "/plugins/plugin-1/position-search-alternate", "bool", "true"),
-            new XfceSetting("xfce4-panel", "/plugins/plugin-1/position-commands-alternate", "bool", "false"),
-            new XfceSetting("xfce4-panel", "/plugins/plugin-1/position-profile-alternate", "bool", "false"),
-            new XfceSetting("xfce4-panel", "/plugins/plugin-1/show-command-settings", "bool", "true"),
-            new XfceSetting("xfce4-panel", "/plugins/plugin-1/show-command-lockscreen", "bool", "true"),
-            new XfceSetting("xfce4-panel", "/plugins/plugin-1/show-command-switchuser", "bool", "false"),
-            new XfceSetting("xfce4-panel", "/plugins/plugin-1/show-command-logoutuser", "bool", "false"),
-            new XfceSetting("xfce4-panel", "/plugins/plugin-1/show-command-logout", "bool", "true"),
-            new XfceSetting("xfce4-panel", "/plugins/plugin-1/menu-width", "int", "450"),
-            new XfceSetting("xfce4-panel", "/plugins/plugin-1/menu-height", "int", "530"),
+    private static XfceSetting setting(String channel, String property, String type, String value) {
+        return new XfceSetting(channel, property, type, value);
+    }
 
-            // Quick Launch favorite application icons on bottom taskbar (File Manager, Web Browser, App Finder, Terminal)
-            new XfceSetting("xfce4-panel", "/plugins/plugin-19", "string", "launcher"),
-            new XfceSetting("xfce4-panel", "/plugins/plugin-20", "string", "launcher"),
-            new XfceSetting("xfce4-panel", "/plugins/plugin-21", "string", "launcher"),
-            new XfceSetting("xfce4-panel", "/plugins/plugin-22", "string", "launcher"),
+    private static XfceSetting panel(String property, String type, String value) {
+        return setting("xfce4-panel", property, type, value);
+    }
 
-            // Taskbar plugins: classic ungrouped 3D window buttons, 1-row workspace buttons, and 1-line tray clock
-            new XfceSetting("xfce4-panel", "/plugins/plugin-2/grouping", "uint", "0"),
-            new XfceSetting("xfce4-panel", "/plugins/plugin-2/flat-buttons", "bool", "false"),
-            new XfceSetting("xfce4-panel", "/plugins/plugin-2/show-handle", "bool", "true"),
-            new XfceSetting("xfce4-panel", "/plugins/plugin-3/expand", "bool", "true"),
-            new XfceSetting("xfce4-panel", "/plugins/plugin-3/style", "uint", "0"),
-            new XfceSetting("xfce4-panel", "/plugins/plugin-4/rows", "uint", "1"),
-            new XfceSetting("xfce4-panel", "/plugins/plugin-4/miniature-view", "bool", "false"),
-            new XfceSetting("xfce4-panel", "/plugins/plugin-8/mode", "uint", "2"),
-            new XfceSetting("xfce4-panel", "/plugins/plugin-8/digital-layout", "uint", "3"),
-            new XfceSetting("xfce4-panel", "/plugins/plugin-8/digital-time-format", "string", "%I:%M %p"),
-            new XfceSetting("xfce4-panel", "/plugins/plugin-8/digital-time-font", "string", "Sans 8.5"),
+    private static XfceSetting plugin(int id, String key, String type, String value) {
+        return panel("/plugins/plugin-" + id + "/" + key, type, value);
+    }
 
-            // Panel 1: Windows 98-style bottom taskbar (horizontal, full-width, bottom-left snap p=8)
-            new XfceSetting("xfce4-panel", "/panels/panel-1/mode", "uint", "0"),
-            new XfceSetting("xfce4-panel", "/panels/panel-1/position", "string", "p=8;x=0;y=0"),
-            new XfceSetting("xfce4-panel", "/panels/panel-1/length", "uint", "100"),
-            new XfceSetting("xfce4-panel", "/panels/panel-1/position-locked", "bool", "true"),
-            new XfceSetting("xfce4-panel", "/panels/panel-1/size", "uint", "28"),
-            new XfceSetting("xfce4-panel", "/panels/panel-1/icon-size", "uint", "16"),
+    private static XfceSetting xfwm(String key, String type, String value) {
+        return setting("xfwm4", "/general/" + key, type, value);
+    }
 
-            // Dark Retro Teal (#183c42) Desktop Background
-            new XfceSetting("xfce4-desktop", "/backdrop/screen0/monitor0/workspace0/image-style", "int", "0"),
-            new XfceSetting("xfce4-desktop", "/backdrop/screen0/monitor0/workspace0/color-style", "int", "0"),
-            new XfceSetting("xfce4-desktop", "/backdrop/screen0/monitoreDP-1/workspace0/image-style", "int", "0"),
-            new XfceSetting("xfce4-desktop", "/backdrop/screen0/monitoreDP-1/workspace0/color-style", "int", "0"),
-            new XfceSetting("xfce4-desktop", "/backdrop/screen0/monitoreDP-1/workspace1/image-style", "int", "0"),
-            new XfceSetting("xfce4-desktop", "/backdrop/screen0/monitoreDP-1/workspace1/color-style", "int", "0"),
+    private static XfceSetting shortcut(String property, String command) {
+        return setting("xfce4-keyboard-shortcuts", property, "string", command);
+    }
 
-            // Keybindings
-            new XfceSetting("xfce4-keyboard-shortcuts", "/commands/custom/<Super>Return", "string", "xfce4-terminal"),
-            new XfceSetting("xfce4-keyboard-shortcuts", "/commands/custom/<Primary><Alt>t", "string", "xfce4-terminal"),
-            new XfceSetting("xfce4-keyboard-shortcuts", "/commands/custom/<Super>e", "string", "thunar"),
-            new XfceSetting("xfce4-keyboard-shortcuts", "/commands/custom/<Super>r", "string", "wofi --show drun"),
-            new XfceSetting("xfce4-keyboard-shortcuts", "/commands/custom/<Shift><Super>s", "string", "xfce4-screenshooter -r"),
-            new XfceSetting("xfce4-keyboard-shortcuts", "/xfwm4/custom/<Super>q", "string", "close_window_key"),
-            new XfceSetting("xfce4-keyboard-shortcuts", "/xfwm4/custom/<Super>f", "string", "fullscreen_key"),
-            new XfceSetting("xfce4-keyboard-shortcuts", "/xfwm4/custom/<Super>1", "string", "workspace_1_key"),
-            new XfceSetting("xfce4-keyboard-shortcuts", "/xfwm4/custom/<Super>2", "string", "workspace_2_key"),
-            new XfceSetting("xfce4-keyboard-shortcuts", "/xfwm4/custom/<Super>3", "string", "workspace_3_key"),
-            new XfceSetting("xfce4-keyboard-shortcuts", "/xfwm4/custom/<Super>4", "string", "workspace_4_key"),
-            new XfceSetting("xfce4-keyboard-shortcuts", "/xfwm4/custom/<Shift><Super>1", "string", "move_window_workspace_1_key"),
-            new XfceSetting("xfce4-keyboard-shortcuts", "/xfwm4/custom/<Shift><Super>2", "string", "move_window_workspace_2_key"),
-            new XfceSetting("xfce4-keyboard-shortcuts", "/xfwm4/custom/<Shift><Super>3", "string", "move_window_workspace_3_key"),
-            new XfceSetting("xfce4-keyboard-shortcuts", "/xfwm4/custom/<Shift><Super>4", "string", "move_window_workspace_4_key"),
+    static final List<XfceSetting> XFCE_SETTINGS = buildXfceSettings();
 
-            // Multimedia & Volume Keys (PipeWire / wpctl with native OSD notifications & playerctl)
-            new XfceSetting("xfce4-keyboard-shortcuts", "/commands/custom/XF86AudioRaiseVolume", "string", "~/.config/xfce4/scripts/volume.sh up"),
-            new XfceSetting("xfce4-keyboard-shortcuts", "/commands/custom/XF86AudioLowerVolume", "string", "~/.config/xfce4/scripts/volume.sh down"),
-            new XfceSetting("xfce4-keyboard-shortcuts", "/commands/custom/XF86AudioMute", "string", "~/.config/xfce4/scripts/volume.sh mute"),
-            new XfceSetting("xfce4-keyboard-shortcuts", "/commands/custom/XF86AudioMicMute", "string", "~/.config/xfce4/scripts/volume.sh mic-mute"),
-            new XfceSetting("xfce4-keyboard-shortcuts", "/commands/custom/XF86AudioPlay", "string", "playerctl play-pause"),
-            new XfceSetting("xfce4-keyboard-shortcuts", "/commands/custom/XF86AudioNext", "string", "playerctl next"),
-            new XfceSetting("xfce4-keyboard-shortcuts", "/commands/custom/XF86AudioPrev", "string", "playerctl previous")
-    );
+    private static List<XfceSetting> buildXfceSettings() {
+        List<XfceSetting> s = new ArrayList<>(List.of(
+                // GTK, icons, fonts
+                setting("xsettings", "/Net/ThemeName", "string", Theme.NAME),
+                setting("xsettings", "/Net/IconThemeName", "string", Theme.ICONS),
+                setting("xsettings", "/Gtk/CursorThemeSize", "int", "24"),
+                setting("xsettings", "/Gtk/FontName", "string", "Sans 9"),
+                setting("xsettings", "/Gtk/ApplicationPreferDarkTheme", "bool", "false"),
+
+                // Notification daemon: solid, bottom-right above the tray
+                setting("xfce4-notifyd", "/theme", "string", "Default"),
+                setting("xfce4-notifyd", "/initial-opacity", "double", "1.0"),
+                setting("xfce4-notifyd", "/notify-location", "uint", "3"),
+
+                // Window manager: classic 3D frame, no shadows, flush margins
+                xfwm("theme", "string", Theme.NAME),
+                xfwm("title_font", "string", "Sans Bold 9"),
+                xfwm("title_alignment", "string", "left"),
+                xfwm("button_layout", "string", "O|HMC"),
+                xfwm("show_frame_shadow", "bool", "false"),
+                xfwm("show_popup_shadow", "bool", "false"),
+                xfwm("show_dock_shadow", "bool", "false"),
+                xfwm("easy_click", "string", "Super"),
+                xfwm("snap_to_windows", "bool", "true"),
+                xfwm("snap_to_border", "bool", "true"),
+                xfwm("snap_width", "int", "10"),
+                xfwm("use_compositing", "bool", "true"),
+                xfwm("margin_bottom", "int", "0"),
+                xfwm("margin_left", "int", "0"),
+                xfwm("margin_right", "int", "0"),
+                xfwm("margin_top", "int", "0"),
+
+                // Start button (Whisker Menu)
+                panel("/panels/dark-mode", "bool", "false"),
+                panel("/plugins/plugin-" + START, "string", "whiskermenu"),
+                plugin(START, "button-title", "string", "Start"),
+                plugin(START, "button-icon", "string", "~/.themes/" + Theme.NAME + "/gtk-3.0/assets/start-here.png"),
+                plugin(START, "show-button-title", "bool", "true"),
+                plugin(START, "show-button-icon", "bool", "true"),
+                plugin(START, "view-mode", "int", "1"),
+                plugin(START, "launcher-show-name", "bool", "true"),
+                plugin(START, "launcher-show-description", "bool", "true"),
+                plugin(START, "launcher-icon-size", "int", "2"),
+                plugin(START, "category-icon-size", "int", "1"),
+                plugin(START, "position-categories-alternate", "bool", "true"),
+                plugin(START, "position-categories-horizontal", "bool", "false"),
+                plugin(START, "position-search-alternate", "bool", "true"),
+                plugin(START, "position-commands-alternate", "bool", "false"),
+                plugin(START, "position-profile-alternate", "bool", "false"),
+                plugin(START, "show-command-settings", "bool", "true"),
+                plugin(START, "show-command-lockscreen", "bool", "true"),
+                plugin(START, "show-command-switchuser", "bool", "false"),
+                plugin(START, "show-command-logoutuser", "bool", "false"),
+                plugin(START, "show-command-logout", "bool", "true"),
+                plugin(START, "menu-width", "int", "450"),
+                plugin(START, "menu-height", "int", "530"),
+
+                // Taskbar: ungrouped 3D buttons, 1-row pager, 1-line clock
+                plugin(TASKLIST, "grouping", "uint", "0"),
+                plugin(TASKLIST, "flat-buttons", "bool", "false"),
+                plugin(TASKLIST, "show-handle", "bool", "true"),
+                plugin(SPACER, "expand", "bool", "true"),
+                plugin(SPACER, "style", "uint", "0"),
+                plugin(PAGER, "rows", "uint", "1"),
+                plugin(PAGER, "miniature-view", "bool", "false"),
+                plugin(CLOCK, "mode", "uint", "2"),
+                plugin(CLOCK, "digital-layout", "uint", "3"),
+                plugin(CLOCK, "digital-time-format", "string", "%I:%M %p"),
+                plugin(CLOCK, "digital-time-font", "string", "Sans 8.5"),
+
+                // Panel 1: bottom, full-width taskbar
+                panel("/panels/panel-1/mode", "uint", "0"),
+                panel("/panels/panel-1/position", "string", "p=8;x=0;y=0"),
+                panel("/panels/panel-1/length", "uint", "100"),
+                panel("/panels/panel-1/position-locked", "bool", "true"),
+                panel("/panels/panel-1/size", "uint", "28"),
+                panel("/panels/panel-1/icon-size", "uint", "16"),
+
+                // Keybindings
+                shortcut("/commands/custom/<Super>Return", "xfce4-terminal"),
+                shortcut("/commands/custom/<Primary><Alt>t", "xfce4-terminal"),
+                shortcut("/commands/custom/<Super>e", "thunar"),
+                shortcut("/commands/custom/<Super>r", "xfce4-appfinder"),
+                shortcut("/commands/custom/<Shift><Super>s", "xfce4-screenshooter -r"),
+                shortcut("/xfwm4/custom/<Super>q", "close_window_key"),
+                shortcut("/xfwm4/custom/<Super>f", "fullscreen_key"),
+
+                // Multimedia keys (PipeWire via wpctl, playerctl)
+                shortcut("/commands/custom/XF86AudioRaiseVolume", "~/.config/xfce4/scripts/volume.sh up"),
+                shortcut("/commands/custom/XF86AudioLowerVolume", "~/.config/xfce4/scripts/volume.sh down"),
+                shortcut("/commands/custom/XF86AudioMute", "~/.config/xfce4/scripts/volume.sh mute"),
+                shortcut("/commands/custom/XF86AudioMicMute", "~/.config/xfce4/scripts/volume.sh mic-mute"),
+                shortcut("/commands/custom/XF86AudioPlay", "playerctl play-pause"),
+                shortcut("/commands/custom/XF86AudioNext", "playerctl next"),
+                shortcut("/commands/custom/XF86AudioPrev", "playerctl previous")));
+
+        for (int i = 1; i <= 4; i++) {
+            s.add(shortcut("/xfwm4/custom/<Super>" + i, "workspace_" + i + "_key"));
+            s.add(shortcut("/xfwm4/custom/<Shift><Super>" + i, "move_window_workspace_" + i + "_key"));
+        }
+        for (int i = 0; i < LAUNCHERS.size(); i++) {
+            s.add(panel("/plugins/plugin-" + (FIRST_LAUNCHER + i), "string", "launcher"));
+        }
+        for (String node : BACKDROPS) {
+            s.add(setting("xfce4-desktop", "/backdrop/screen0/" + node + "/image-style", "int", "0"));
+            s.add(setting("xfce4-desktop", "/backdrop/screen0/" + node + "/color-style", "int", "0"));
+        }
+        return List.copyOf(s);
+    }
 
     static final List<GnomeSetting> GNOME_SETTINGS = List.of(
-            new GnomeSetting("org.gnome.desktop.interface", "icon-theme", "Chicago95"),
-            new GnomeSetting("org.gnome.desktop.interface", "gtk-theme", "Imp98"),
-            new GnomeSetting("org.gnome.desktop.interface", "color-scheme", "prefer-dark")
+            new GnomeSetting("org.gnome.desktop.interface", "icon-theme", Theme.ICONS),
+            new GnomeSetting("org.gnome.desktop.interface", "gtk-theme", Theme.NAME),
+            new GnomeSetting("org.gnome.desktop.interface", "color-scheme", "default")
     );
 
     /** Expands a leading ~/ to $HOME. */
@@ -151,31 +176,6 @@ public final class Xfconf {
             return trimmed + valStr.substring(1);
         }
         return valStr;
-    }
-
-    record XfceReset(String channel, String property) {}
-
-    private static final List<XfceReset> XFCE_RESETS = List.of(
-            new XfceReset("xfce4-panel", "/panels/panel-2"),
-            new XfceReset("xfwm4", "/general/button_spacing"),
-            new XfceReset("xfwm4", "/general/button_offset"),
-            new XfceReset("xfwm4", "/general/full_width_title"),
-            new XfceReset("xfwm4", "/general/borderless_maximize"),
-            new XfceReset("xfwm4", "/general/shadow_delta_x"),
-            new XfceReset("xfwm4", "/general/shadow_delta_y"),
-            new XfceReset("xfwm4", "/general/shadow_opacity"),
-            new XfceReset("xfwm4", "/general/shadow_delta_width"),
-            new XfceReset("xfwm4", "/general/shadow_delta_height"),
-            new XfceReset("xfwm4", "/general/frame_opacity"),
-            new XfceReset("xfwm4", "/general/inactive_opacity")
-    );
-
-    private static void resetXfconf(String channel, String property, boolean dryRun) {
-        if (dryRun) {
-            System.out.printf("[DRY-RUN] xfconf-query -c %s -p %s -r -R%n", channel, property);
-        } else {
-            ProcessRunner.run(List.of("xfconf-query", "-c", channel, "-p", property, "-r", "-R"));
-        }
     }
 
     /** Logs the DotfileError on a failed Result, prefixed with CONTEXT, so the
@@ -212,22 +212,6 @@ public final class Xfconf {
         return logIfFailed(channel + " " + property, ProcessRunner.run(cmd));
     }
 
-    /** Detects the current display resolution and enforces 0px window manager
-     * margins via xfconf. Returns the number of xfconf-query calls that failed. */
-    public static int applyDynamicResolutionScaling(boolean dryRun, boolean verbose) {
-        Display.PrimaryResolution res = Display.determinePrimaryResolution();
-        if (verbose) {
-            System.out.printf("Display detection: %dx%d%s -> WM margins: 0px%n",
-                    res.width(), res.height(), res.output() != null ? " (" + res.output() + ")" : "");
-        }
-        int failures = 0;
-        if (!setXfconf("xfwm4", "/general/margin_bottom", "int", "0", dryRun)) failures++;
-        if (!setXfconf("xfwm4", "/general/margin_left", "int", "0", dryRun)) failures++;
-        if (!setXfconf("xfwm4", "/general/margin_right", "int", "0", dryRun)) failures++;
-        if (!setXfconf("xfwm4", "/general/margin_top", "int", "0", dryRun)) failures++;
-        return failures;
-    }
-
     private static boolean runGsettings(String schema, String key, String value, boolean dryRun) {
         if (dryRun) {
             System.out.printf("[DRY-RUN] gsettings set %s %s '%s'%n", schema, key, value);
@@ -236,25 +220,10 @@ public final class Xfconf {
         return logIfFailed(schema + " " + key, ProcessRunner.run(List.of("gsettings", "set", schema, key, value)));
     }
 
-    private static final List<GnomeSetting> GNOME_RESETS = List.of(
-            new GnomeSetting("org.gnome.desktop.interface", "font-name", ""),
-            new GnomeSetting("org.gnome.desktop.wm.preferences", "titlebar-font", ""),
-            new GnomeSetting("org.gnome.desktop.wm.preferences", "button-layout", "")
-    );
-
-    /** Returns the number of gsettings "set" calls that failed. Resets are
-     * best-effort (a schema/key not present on this system is expected, not
-     * a failure) and are not counted. */
+    /** Returns the number of gsettings "set" calls that failed. */
     static int applyGnomeSettings(boolean dryRun, boolean verbose) {
         if (!DotfilePaths.commandExists("gsettings")) return 0;
         if (verbose) System.out.println("Syncing GSettings for GNOME/GTK apps...");
-        for (GnomeSetting s : GNOME_RESETS) {
-            if (dryRun) {
-                System.out.printf("[DRY-RUN] gsettings reset %s %s%n", s.schema(), s.key());
-            } else {
-                ProcessRunner.run(List.of("gsettings", "reset", s.schema(), s.key()));
-            }
-        }
         int failures = 0;
         for (GnomeSetting s : GNOME_SETTINGS) {
             if (!runGsettings(s.schema(), s.key(), s.value(), dryRun)) failures++;
@@ -263,41 +232,42 @@ public final class Xfconf {
     }
 
     /** Applies every XFCE/GNOME desktop setting and returns the number of
-     * underlying subprocess calls that failed (resets are best-effort and
-     * excluded). A deploy that reports success no longer does so while every
-     * xfconf-query call silently failed underneath it. */
-    public static int applyXfceSettings(Path root, boolean dryRun, boolean verbose) {
+     * underlying subprocess calls that failed, so a deploy cannot report
+     * success while every xfconf-query call silently failed. */
+    public static int applyXfceSettings(boolean dryRun, boolean verbose) {
         if (!DotfilePaths.commandExists("xfconf-query")) {
             if (verbose) System.out.println("[SKIP] xfconf-query not found, skipping desktop theme configuration.");
             return 0;
         }
         if (verbose) System.out.println("Applying XFCE desktop settings...");
-        for (XfceReset r : XFCE_RESETS) {
-            resetXfconf(r.channel(), r.property(), dryRun);
-        }
         int failures = 0;
         for (XfceSetting s : XFCE_SETTINGS) {
             if (!setXfconf(s.channel(), s.property(), s.type(), s.value(), dryRun)) failures++;
         }
-        // Only Panel 1 (bottom Windows 98 taskbar); left dock (panel-2) is removed
-        if (!setXfconfArray("xfce4-panel", "/panels", "int", List.of("1"), dryRun, verbose)) failures++;
-        // Quick Launch favorite application launcher items on Panel 1
-        if (!setXfconfArray("xfce4-panel", "/plugins/plugin-19/items", "string", List.of("filemanager.desktop"), dryRun, verbose)) failures++;
-        if (!setXfconfArray("xfce4-panel", "/plugins/plugin-20/items", "string", List.of("webbrowser.desktop"), dryRun, verbose)) failures++;
-        if (!setXfconfArray("xfce4-panel", "/plugins/plugin-21/items", "string", List.of("appfinder.desktop"), dryRun, verbose)) failures++;
-        if (!setXfconfArray("xfce4-panel", "/plugins/plugin-22/items", "string", List.of("terminal.desktop"), dryRun, verbose)) failures++;
-        // Panel 1 plugin order: Start (1), Quick Launch (19, 20, 21, 22), Window Buttons (2), Expanding Spacer (3), Systray (6), Clock (8)
-        if (!setXfconfArray("xfce4-panel", "/panels/panel-1/plugin-ids", "int",
-                List.of("1", "19", "20", "21", "22", "2", "3", "6", "8"), dryRun, verbose)) {
-            failures++;
+
+        List<String> launcherItems = new ArrayList<>();
+        List<String> pluginIds = new ArrayList<>(List.of(String.valueOf(START)));
+        for (int i = 0; i < LAUNCHERS.size(); i++) {
+            int id = FIRST_LAUNCHER + i;
+            pluginIds.add(String.valueOf(id));
+            launcherItems.add(LAUNCHERS.get(i) + ".desktop");
+            if (!setXfconfArray("xfce4-panel", "/plugins/plugin-" + id + "/items", "string",
+                    List.of(launcherItems.get(i)), dryRun, verbose)) {
+                failures++;
+            }
         }
-        // Dark Retro Teal (#183c42) desktop color arrays
-        List<String> darkRetroTeal = List.of("0.094", "0.235", "0.259", "1.0");
-        setXfconfArray("xfce4-desktop", "/backdrop/screen0/monitor0/workspace0/rgba1", "double", darkRetroTeal, dryRun, false);
-        setXfconfArray("xfce4-desktop", "/backdrop/screen0/monitoreDP-1/workspace0/rgba1", "double", darkRetroTeal, dryRun, false);
-        setXfconfArray("xfce4-desktop", "/backdrop/screen0/monitoreDP-1/workspace1/rgba1", "double", darkRetroTeal, dryRun, false);
-        failures += XfconfXml.applyExportedXfconfFiles(root, dryRun, verbose);
-        failures += applyDynamicResolutionScaling(dryRun, verbose);
+        for (int id : new int[] {TASKLIST, SPACER, SYSTRAY, CLOCK}) {
+            pluginIds.add(String.valueOf(id));
+        }
+        if (!setXfconfArray("xfce4-panel", "/panels", "int", List.of("1"), dryRun, verbose)) failures++;
+        if (!setXfconfArray("xfce4-panel", "/panels/panel-1/plugin-ids", "int", pluginIds, dryRun, verbose)) failures++;
+
+        for (String node : BACKDROPS) {
+            if (!setXfconfArray("xfce4-desktop", "/backdrop/screen0/" + node + "/rgba1", "double",
+                    BACKDROP_COLOR, dryRun, false)) {
+                failures++;
+            }
+        }
         failures += applyGnomeSettings(dryRun, verbose);
         return failures;
     }

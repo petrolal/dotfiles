@@ -1,4 +1,4 @@
-function fish_prompt --description 'Abyssal Biopunk prompt'
+function fish_prompt --description 'Imp98 prompt'
     set -l last_status $status
 
     set -l branch ''

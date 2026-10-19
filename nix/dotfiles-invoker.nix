@@ -44,7 +44,7 @@ stdenv.mkDerivation {
       --gc=serial \
       --enable-native-access=ALL-UNNAMED \
       -O3 \
-      dev.petrolal.dotfiles.Main
+      dev.petrolal.dotfiles.cli.Cli
 
     runHook postBuild
   '';

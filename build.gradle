@@ -41,13 +41,13 @@ tasks.withType(JavaExec) {
 }
 
 application {
-    mainClass.set('dev.petrolal.dotfiles.Main')
+    mainClass.set('dev.petrolal.dotfiles.cli.Cli')
 }
 
 tasks.jar {
     archiveBaseName.set('dotfiles-deployer')
     manifest {
-        attributes 'Main-Class': 'dev.petrolal.dotfiles.Main',
+        attributes 'Main-Class': 'dev.petrolal.dotfiles.cli.Cli',
                    'Implementation-Title': 'dotfiles-deployer',
                    'Implementation-Version': project.version
     }
@@ -100,6 +100,7 @@ List<String> getDeployFlags() {
 }
 
 def invokerFile = layout.projectDirectory.file('bin/invoker').asFile
+def themeName = 'Imp98' // keep in sync with dev.petrolal.dotfiles.core.Theme.NAME
 
 // ---------------------------------------------------------------------------
 // Native Image Configuration
@@ -110,7 +111,7 @@ graalvmNative {
     binaries {
         named('main') {
             imageName.set('invoker')
-            mainClass.set('dev.petrolal.dotfiles.Main')
+            mainClass.set('dev.petrolal.dotfiles.cli.Cli')
             fallback.set(true)
             // Epsilon GC never reclaims memory -- fine for a short benchmark,
             // fatal for this long-running desktop daemon: it allocates a small
@@ -200,12 +201,6 @@ tasks.register('deploy') {
     }
 }
 
-tasks.register('install') {
-    group = 'Deploy'
-    description = 'Link dotfiles and apply XFCE theme.'
-    dependsOn('deploy')
-}
-
 tasks.register('dry-run') {
     group = 'Deploy'
     description = 'Show what deploy would do without changing anything.'
@@ -217,39 +212,15 @@ tasks.register('dry-run') {
         }
     }
 }
-tasks.register('dryRun') {
-    group = 'Deploy'
-    description = 'Alias for dry-run.'
-    dependsOn('dry-run')
-}
-
-tasks.register('scale') {
-    group = 'Deploy'
-    description = 'Reset WM margins for current display, reload XFCE.'
-    dependsOn('nativeCompile')
-    doLast {
-        def cmd = [invokerFile.absolutePath, '--scale'] + getDeployFlags()
-        exec {
-            commandLine(cmd)
-        }
-    }
-}
-
 tasks.register('quick-deploy', JavaExec) {
     group = 'Deploy'
     description = 'Deploy via the JVM directly, without a native-image build.'
     dependsOn('classes')
     classpath = sourceSets.main.runtimeClasspath
-    mainClass.set('dev.petrolal.dotfiles.Main')
+    mainClass.set('dev.petrolal.dotfiles.cli.Cli')
     environment('DOTFILES_DIR', projectDir.absolutePath)
     args = getDeployFlags()
 }
-tasks.register('quickDeploy') {
-    group = 'Deploy'
-    description = 'Alias for quick-deploy.'
-    dependsOn('quick-deploy')
-}
-
 tasks.register('uninstall') {
     group = 'Deploy'
     description = 'Remove all dotfiles symlinks managed by deploy.'
@@ -275,15 +246,15 @@ tasks.register('reload') {
             ignoreExitValue = true
             commandLine(
                 'sh', '-c',
-                '''
+                """
                 xfce4-panel -r 2>/dev/null || true
                 xfwm4 --replace &
                 xfsettingsd --replace &
                 pkill -f xfce4-notifyd 2>/dev/null || true
                 thunar -q 2>/dev/null || true
                 xfconf-query -c xsettings -p /Net/ThemeName -s "Default" 2>/dev/null || true
-                xfconf-query -c xsettings -p /Net/ThemeName -s "Imp98" 2>/dev/null || true
-                '''
+                xfconf-query -c xsettings -p /Net/ThemeName -s "${themeName}" 2>/dev/null || true
+                """
             )
         }
     }
@@ -300,12 +271,6 @@ tasks.register('reload-panel') {
         }
     }
 }
-tasks.register('reloadPanel') {
-    group = 'Desktop'
-    description = 'Alias for reload-panel.'
-    dependsOn('reload-panel')
-}
-
 tasks.register('reload-wm') {
     group = 'Desktop'
     description = 'Restart only xfwm4 window manager.'
@@ -317,12 +282,6 @@ tasks.register('reload-wm') {
         }
     }
 }
-tasks.register('reloadWm') {
-    group = 'Desktop'
-    description = 'Alias for reload-wm.'
-    dependsOn('reload-wm')
-}
-
 tasks.register('reload-theme') {
     group = 'Desktop'
     description = 'Trigger instant GTK CSS reload across all windows.'
@@ -330,16 +289,10 @@ tasks.register('reload-theme') {
         println('==> Forcing GTK theme stylesheet reload...')
         exec {
             ignoreExitValue = true
-            commandLine('sh', '-c', 'xfconf-query -c xsettings -p /Net/ThemeName -s "Default" && xfconf-query -c xsettings -p /Net/ThemeName -s "Imp98"')
+            commandLine('sh', '-c', "xfconf-query -c xsettings -p /Net/ThemeName -s Default && xfconf-query -c xsettings -p /Net/ThemeName -s ${themeName}")
         }
     }
 }
-tasks.register('reloadTheme') {
-    group = 'Desktop'
-    description = 'Alias for reload-theme.'
-    dependsOn('reload-theme')
-}
-
 // ---------------------------------------------------------------------------
 // NixOS Tasks
 // ---------------------------------------------------------------------------
@@ -384,12 +337,6 @@ tasks.register('nix-link') {
         }
     }
 }
-tasks.register('nixLink') {
-    group = 'NixOS'
-    description = 'Alias for nix-link.'
-    dependsOn('nix-link')
-}
-
 tasks.register('nix-switch') {
     group = 'NixOS'
     description = 'Rebuild NixOS from the flake and switch to it.'
@@ -401,12 +348,6 @@ tasks.register('nix-switch') {
         }
     }
 }
-tasks.register('nixSwitch') {
-    group = 'NixOS'
-    description = 'Alias for nix-switch.'
-    dependsOn('nix-switch')
-}
-
 tasks.register('nix-check') {
     group = 'NixOS'
     description = 'Verify Nix flake syntax and evaluate configuration without building.'
@@ -417,12 +358,6 @@ tasks.register('nix-check') {
         }
     }
 }
-tasks.register('nixCheck') {
-    group = 'NixOS'
-    description = 'Alias for nix-check.'
-    dependsOn('nix-check')
-}
-
 tasks.register('nix-update') {
     group = 'NixOS'
     description = 'Update Nix flake inputs (flake.lock) to latest upstream revisions.'
@@ -433,12 +368,6 @@ tasks.register('nix-update') {
         }
     }
 }
-tasks.register('nixUpdate') {
-    group = 'NixOS'
-    description = 'Alias for nix-update.'
-    dependsOn('nix-update')
-}
-
 tasks.register('nix-gc') {
     group = 'NixOS'
     description = 'Collect garbage and remove old Nix store generations.'
@@ -451,23 +380,11 @@ tasks.register('nix-gc') {
         }
     }
 }
-tasks.register('nixGc') {
-    group = 'NixOS'
-    description = 'Alias for nix-gc.'
-    dependsOn('nix-gc')
-}
-
 tasks.register('system-install') {
     group = 'NixOS'
-    description = 'nix-switch, then install.'
-    dependsOn('nix-switch', 'install')
+    description = 'nix-switch, then deploy.'
+    dependsOn('nix-switch', 'deploy')
 }
-tasks.register('systemInstall') {
-    group = 'NixOS'
-    description = 'Alias for system-install.'
-    dependsOn('system-install')
-}
-
 tasks.register('upgrade') {
     group = 'NixOS'
     description = 'Full system upgrade: update flake inputs, rebuild NixOS, and redeploy dotfiles.'
@@ -475,7 +392,7 @@ tasks.register('upgrade') {
 }
 
 // Ensure proper task execution sequence
-tasks.named('install') {
+tasks.named('deploy') {
     mustRunAfter('nix-switch')
 }
 tasks.named('system-install') {

@@ -84,8 +84,6 @@ in
     chicago95
     imp98
     xfce4-whiskermenu-plugin
-    wofi
-    waybar
   ];
 
   # Portal and dconf management

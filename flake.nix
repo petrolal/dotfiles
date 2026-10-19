@@ -23,7 +23,7 @@
       # Full dev loop (Gradle + tests + `./gradlew nativeCompile` with
       # -march=native, the default task's whole task graph, etc.) still
       # needs network for the test-only Maven Central deps -- that's what
-      # this devShell is for, same packages shell.nix already provided,
+      # this devShell is for, the same toolchain bootstrap.sh relies on,
       # just reachable via `nix develop` too.
       devShells.${system}.default = pkgs.mkShell {
         packages = [
