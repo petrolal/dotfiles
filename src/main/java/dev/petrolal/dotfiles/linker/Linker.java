@@ -43,7 +43,9 @@ public final class Linker {
     /** Explicit (source -> target) pairs for paths that don't fit the generic
      * root-mirrored layout: renames, or a source linked to more than one target. */
     static final List<Mapping> OVERRIDES = List.of(
-            new Mapping("config/gtk-2.0/gtkrc", ".gtkrc-2.0")
+            new Mapping("config/gtk-2.0/gtkrc", ".gtkrc-2.0"),
+            new Mapping("themes/Redmond97", ".themes/Redmond97"),
+            new Mapping("themes/Redmond97", ".local/share/themes/Redmond97")
     );
 
     /** Single-symlink target paths (relative to $HOME) from ROOT_TARGETS/OVERRIDES
@@ -57,8 +59,6 @@ public final class Linker {
             ".themes/retro-infernal",
             ".themes/Abyssal-Biopunk",
             ".themes/Infernal-Retro",
-            ".config/gtk-3.0/gtk.css",
-            ".config/gtk-4.0/gtk.css",
             ".config/autostart/conky.desktop",
             ".config/conky/conky.conf"
     );

@@ -79,11 +79,14 @@ public final class ProcessRunner {
      */
     public static void spawnDetached(List<String> cmd) {
         try {
-            new ProcessBuilder(cmd)
+            ProcessBuilder pb = new ProcessBuilder(cmd)
                     .redirectOutput(ProcessBuilder.Redirect.DISCARD)
                     .redirectError(ProcessBuilder.Redirect.DISCARD)
-                    .redirectInput(ProcessBuilder.Redirect.from(new File("/dev/null")))
-                    .start();
+                    .redirectInput(ProcessBuilder.Redirect.from(new File("/dev/null")));
+            pb.environment().put("GTK_THEME", "Redmond97");
+            pb.environment().put("GTK_OVERLAY_SCROLLING", "0");
+            pb.environment().put("QT_STYLE_OVERRIDE", "Windows");
+            pb.start();
         } catch (IOException _) {
             // best-effort: service reload is not fatal to deployment
         }

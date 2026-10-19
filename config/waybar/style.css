@@ -1,0 +1,125 @@
+/* ==========================================================================
+ * Redmond97 Dark / Windows 98 Taskbar Theme for Waybar
+ * Edit the @define-color variables below to customize with your own thematic!
+ * ========================================================================== */
+
+@define-color bg_color #373737;
+@define-color fg_color #eaeaea;
+@define-color base_color #16171d;
+@define-color selected_bg_color #0a246a;
+@define-color selected_fg_color #ffffff;
+@define-color light_shadow #606060;
+@define-color mid_light_shadow #4a4a4a;
+@define-color dark_shadow #262626;
+@define-color borders #000000;
+
+* {
+  font-family: "Sans", "MS Sans Serif", "Tahoma", monospace;
+  font-size: 9pt;
+  border-radius: 0px;
+  min-height: 0;
+}
+
+window#waybar {
+  background-color: @bg_color;
+  color: @fg_color;
+  border-top: 1px solid @light_shadow;
+  box-shadow: inset 0 1px 0px @mid_light_shadow;
+}
+
+/* Classic Win98 3D Raised Start Button */
+#custom-start {
+  font-weight: bold;
+  background-color: @bg_color;
+  color: @fg_color;
+  margin: 2px 2px 2px 3px;
+  padding: 2px 8px;
+  border-top: 1px solid @light_shadow;
+  border-left: 1px solid @light_shadow;
+  border-right: 1px solid @borders;
+  border-bottom: 1px solid @borders;
+  box-shadow:
+    inset -1px -1px 0px @dark_shadow,
+    inset 1px 1px 0px @mid_light_shadow;
+}
+
+#custom-start:hover {
+  background-color: @mid_light_shadow;
+}
+
+#custom-start:active {
+  background-color: @dark_shadow;
+  border-top: 1px solid @borders;
+  border-left: 1px solid @borders;
+  border-right: 1px solid @light_shadow;
+  border-bottom: 1px solid @light_shadow;
+  box-shadow: inset 1px 1px 0px @dark_shadow;
+}
+
+/* Workspace & Taskbar Window Buttons */
+#workspaces button,
+#taskbar button {
+  background-color: @bg_color;
+  color: @fg_color;
+  margin: 2px 1px;
+  padding: 2px 8px;
+  border-top: 1px solid @light_shadow;
+  border-left: 1px solid @light_shadow;
+  border-right: 1px solid @borders;
+  border-bottom: 1px solid @borders;
+  box-shadow:
+    inset -1px -1px 0px @dark_shadow,
+    inset 1px 1px 0px @mid_light_shadow;
+}
+
+/* Depressed / Checked 3D Active Taskbar Button */
+#workspaces button.active,
+#workspaces button.focused,
+#taskbar button.active {
+  font-weight: bold;
+  background-color: @dark_shadow;
+  color: #ffffff;
+  border-top: 1px solid @borders;
+  border-left: 1px solid @borders;
+  border-right: 1px solid @light_shadow;
+  border-bottom: 1px solid @light_shadow;
+  box-shadow:
+    inset 1px 1px 0px @borders,
+    inset -1px -1px 0px @bg_color;
+}
+
+#window {
+  margin: 2px 4px;
+  padding: 2px 6px;
+  color: @fg_color;
+}
+
+/* Classic Win98 Sunken Notification Area / System Tray & Clock */
+#tray,
+#pulseaudio,
+#network,
+#battery,
+#clock {
+  background-color: @bg_color;
+  color: @fg_color;
+  margin: 3px 0px;
+  padding: 1px 6px;
+  border-top: 1px solid @dark_shadow;
+  border-bottom: 1px solid @light_shadow;
+}
+
+#tray {
+  border-left: 1px solid @dark_shadow;
+  margin-left: 4px;
+}
+
+#clock {
+  border-right: 1px solid @light_shadow;
+  margin-right: 3px;
+}
+
+tooltip {
+  background-color: @base_color;
+  color: @fg_color;
+  border: 1px solid @light_shadow;
+}

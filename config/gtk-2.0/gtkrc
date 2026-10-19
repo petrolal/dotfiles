@@ -1,4 +1,6 @@
-gtk-theme-name="Adwaita-dark"
+gtk-theme-name="Redmond97"
 gtk-icon-theme-name="Chicago95"
-gtk-font-name="Sans 10"
+gtk-font-name="Sans 9"
 gtk-cursor-theme-size=24
+gtk-button-images=1
+gtk-menu-images=1

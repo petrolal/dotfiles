@@ -25,8 +25,13 @@ public final class Orchestrator {
 	public record WallpaperResult(boolean ok, int failures) {
 	}
 
-	private static final List<List<String>> RELOAD_COMMANDS = List.of(List.of("xfsettingsd", "--replace"),
-			List.of("xfce4-panel", "-r"), List.of("xfwm4", "--replace"), List.of("pkill", "-f", "xfce4-notifyd"),
+	private static final List<List<String>> RELOAD_COMMANDS = List.of(
+			List.of("dbus-update-activation-environment", "--systemd", "GTK_THEME=Redmond97",
+					"GTK_OVERLAY_SCROLLING=0", "QT_STYLE_OVERRIDE=Windows"),
+			List.of("xfsettingsd", "--replace"),
+			List.of("xfwm4", "--replace"),
+			List.of("sh", "-c", "sleep 0.6; xfce4-panel -r"),
+			List.of("pkill", "-f", "xfce4-notifyd"),
 			List.of("thunar", "-q"));
 
 	/** Reloads active XFCE desktop components if running in an X11 session. */

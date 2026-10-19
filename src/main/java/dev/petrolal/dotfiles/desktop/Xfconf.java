@@ -18,20 +18,26 @@ public final class Xfconf {
     record GnomeSetting(String schema, String key, String value) {}
 
     static final List<XfceSetting> XFCE_SETTINGS = List.of(
-            // GTK and Theme Configuration (default dark theme)
-            new XfceSetting("xsettings", "/Net/ThemeName", "string", "Adwaita-dark"),
+            // GTK and Theme Configuration (Windows 98 / Redmond97 Dark theme)
+            new XfceSetting("xsettings", "/Net/ThemeName", "string", "Redmond97"),
             new XfceSetting("xsettings", "/Net/IconThemeName", "string", "Chicago95"),
             new XfceSetting("xsettings", "/Gtk/CursorThemeSize", "int", "24"),
-            new XfceSetting("xsettings", "/Gtk/FontName", "string", "Sans 10"),
+            new XfceSetting("xsettings", "/Gtk/FontName", "string", "Sans 9"),
             new XfceSetting("xsettings", "/Gtk/ApplicationPreferDarkTheme", "bool", "true"),
 
-            // Notification Daemon Styling (xfce4-notifyd: 100% solid opacity)
+            // Notification Daemon Styling (xfce4-notifyd: 100% solid opacity, bottom-right above tray)
+            new XfceSetting("xfce4-notifyd", "/theme", "string", "Default"),
             new XfceSetting("xfce4-notifyd", "/initial-opacity", "double", "1.0"),
-            new XfceSetting("xfce4-notifyd", "/notify-location", "int", "2"),
+            new XfceSetting("xfce4-notifyd", "/notify-location", "uint", "3"),
 
-            // Window Manager Behavior
-            new XfceSetting("xfwm4", "/general/theme", "string", "Default"),
+            // Window Manager Behavior (Redmond97 / Windows 98 classic 3D frame)
+            new XfceSetting("xfwm4", "/general/theme", "string", "Redmond97"),
             new XfceSetting("xfwm4", "/general/title_font", "string", "Sans Bold 9"),
+            new XfceSetting("xfwm4", "/general/title_alignment", "string", "left"),
+            new XfceSetting("xfwm4", "/general/button_layout", "string", "O|HMC"),
+            new XfceSetting("xfwm4", "/general/show_frame_shadow", "bool", "false"),
+            new XfceSetting("xfwm4", "/general/show_popup_shadow", "bool", "false"),
+            new XfceSetting("xfwm4", "/general/show_dock_shadow", "bool", "false"),
             new XfceSetting("xfwm4", "/general/easy_click", "string", "Super"),
             new XfceSetting("xfwm4", "/general/snap_to_windows", "bool", "true"),
             new XfceSetting("xfwm4", "/general/snap_to_border", "bool", "true"),
@@ -44,12 +50,32 @@ public final class Xfconf {
             new XfceSetting("xfwm4", "/general/margin_right", "int", "0"),
             new XfceSetting("xfwm4", "/general/margin_top", "int", "0"),
 
+            // Panel global & Start Button (Windows 98 style)
+            new XfceSetting("xfce4-panel", "/panels/dark-mode", "bool", "false"),
+            new XfceSetting("xfce4-panel", "/plugins/plugin-1/button-title", "string", "Start"),
+            new XfceSetting("xfce4-panel", "/plugins/plugin-1/button-icon", "string", "start-here"),
+            new XfceSetting("xfce4-panel", "/plugins/plugin-1/show-button-title", "bool", "true"),
+
+            // Taskbar plugins: classic ungrouped 3D window buttons, 1-row workspace buttons, and 1-line tray clock
+            new XfceSetting("xfce4-panel", "/plugins/plugin-2/grouping", "uint", "0"),
+            new XfceSetting("xfce4-panel", "/plugins/plugin-2/flat-buttons", "bool", "false"),
+            new XfceSetting("xfce4-panel", "/plugins/plugin-2/show-handle", "bool", "true"),
+            new XfceSetting("xfce4-panel", "/plugins/plugin-3/expand", "bool", "true"),
+            new XfceSetting("xfce4-panel", "/plugins/plugin-3/style", "uint", "0"),
+            new XfceSetting("xfce4-panel", "/plugins/plugin-4/rows", "uint", "1"),
+            new XfceSetting("xfce4-panel", "/plugins/plugin-4/miniature-view", "bool", "false"),
+            new XfceSetting("xfce4-panel", "/plugins/plugin-8/mode", "uint", "2"),
+            new XfceSetting("xfce4-panel", "/plugins/plugin-8/digital-layout", "uint", "3"),
+            new XfceSetting("xfce4-panel", "/plugins/plugin-8/digital-time-format", "string", "%I:%M %p"),
+            new XfceSetting("xfce4-panel", "/plugins/plugin-8/digital-time-font", "string", "Sans 8.5"),
+
             // Panel 1: Windows 98-style bottom taskbar (horizontal, full-width, bottom-left snap p=8)
             new XfceSetting("xfce4-panel", "/panels/panel-1/mode", "uint", "0"),
             new XfceSetting("xfce4-panel", "/panels/panel-1/position", "string", "p=8;x=0;y=0"),
             new XfceSetting("xfce4-panel", "/panels/panel-1/length", "uint", "100"),
             new XfceSetting("xfce4-panel", "/panels/panel-1/position-locked", "bool", "true"),
-            new XfceSetting("xfce4-panel", "/panels/panel-1/size", "uint", "32"),
+            new XfceSetting("xfce4-panel", "/panels/panel-1/size", "uint", "28"),
+            new XfceSetting("xfce4-panel", "/panels/panel-1/icon-size", "uint", "16"),
 
             // Panel 2: Dock on the left side of the screen (vertical, left-center snap p=7)
             new XfceSetting("xfce4-panel", "/panels/panel-2/mode", "uint", "1"),
@@ -59,10 +85,19 @@ public final class Xfconf {
             new XfceSetting("xfce4-panel", "/panels/panel-2/size", "uint", "48"),
             new XfceSetting("xfce4-panel", "/panels/panel-2/autohide-behavior", "uint", "1"),
 
+            // Dark Retro Teal (#183c42) Desktop Background
+            new XfceSetting("xfce4-desktop", "/backdrop/screen0/monitor0/workspace0/image-style", "int", "0"),
+            new XfceSetting("xfce4-desktop", "/backdrop/screen0/monitor0/workspace0/color-style", "int", "0"),
+            new XfceSetting("xfce4-desktop", "/backdrop/screen0/monitoreDP-1/workspace0/image-style", "int", "0"),
+            new XfceSetting("xfce4-desktop", "/backdrop/screen0/monitoreDP-1/workspace0/color-style", "int", "0"),
+            new XfceSetting("xfce4-desktop", "/backdrop/screen0/monitoreDP-1/workspace1/image-style", "int", "0"),
+            new XfceSetting("xfce4-desktop", "/backdrop/screen0/monitoreDP-1/workspace1/color-style", "int", "0"),
+
             // Keybindings
             new XfceSetting("xfce4-keyboard-shortcuts", "/commands/custom/<Super>Return", "string", "xfce4-terminal"),
             new XfceSetting("xfce4-keyboard-shortcuts", "/commands/custom/<Primary><Alt>t", "string", "xfce4-terminal"),
             new XfceSetting("xfce4-keyboard-shortcuts", "/commands/custom/<Super>e", "string", "thunar"),
+            new XfceSetting("xfce4-keyboard-shortcuts", "/commands/custom/<Super>r", "string", "wofi --show drun"),
             new XfceSetting("xfce4-keyboard-shortcuts", "/commands/custom/<Shift><Super>s", "string", "xfce4-screenshooter -r"),
             new XfceSetting("xfce4-keyboard-shortcuts", "/xfwm4/custom/<Super>q", "string", "close_window_key"),
             new XfceSetting("xfce4-keyboard-shortcuts", "/xfwm4/custom/<Super>f", "string", "fullscreen_key"),
@@ -87,7 +122,7 @@ public final class Xfconf {
 
     static final List<GnomeSetting> GNOME_SETTINGS = List.of(
             new GnomeSetting("org.gnome.desktop.interface", "icon-theme", "Chicago95"),
-            new GnomeSetting("org.gnome.desktop.interface", "gtk-theme", "Adwaita-dark"),
+            new GnomeSetting("org.gnome.desktop.interface", "gtk-theme", "Redmond97"),
             new GnomeSetting("org.gnome.desktop.interface", "color-scheme", "prefer-dark")
     );
 
@@ -104,10 +139,8 @@ public final class Xfconf {
     record XfceReset(String channel, String property) {}
 
     private static final List<XfceReset> XFCE_RESETS = List.of(
-            new XfceReset("xfwm4", "/general/button_layout"),
             new XfceReset("xfwm4", "/general/button_spacing"),
             new XfceReset("xfwm4", "/general/button_offset"),
-            new XfceReset("xfwm4", "/general/title_alignment"),
             new XfceReset("xfwm4", "/general/full_width_title"),
             new XfceReset("xfwm4", "/general/borderless_maximize"),
             new XfceReset("xfwm4", "/general/shadow_delta_x"),
@@ -115,9 +148,6 @@ public final class Xfconf {
             new XfceReset("xfwm4", "/general/shadow_opacity"),
             new XfceReset("xfwm4", "/general/shadow_delta_width"),
             new XfceReset("xfwm4", "/general/shadow_delta_height"),
-            new XfceReset("xfwm4", "/general/show_frame_shadow"),
-            new XfceReset("xfwm4", "/general/show_popup_shadow"),
-            new XfceReset("xfwm4", "/general/show_dock_shadow"),
             new XfceReset("xfwm4", "/general/frame_opacity"),
             new XfceReset("xfwm4", "/general/inactive_opacity")
     );
@@ -231,6 +261,16 @@ public final class Xfconf {
         for (XfceSetting s : XFCE_SETTINGS) {
             if (!setXfconf(s.channel(), s.property(), s.type(), s.value(), dryRun)) failures++;
         }
+        // Panel 1 plugin order: Start (1), Workspaces (4), Window Buttons (2), Expanding Spacer (3), Systray (6), Clock (8)
+        if (!setXfconfArray("xfce4-panel", "/panels/panel-1/plugin-ids", "int",
+                List.of("1", "4", "2", "3", "6", "8"), dryRun, verbose)) {
+            failures++;
+        }
+        // Dark Retro Teal (#183c42) desktop color arrays
+        List<String> darkRetroTeal = List.of("0.094", "0.235", "0.259", "1.0");
+        setXfconfArray("xfce4-desktop", "/backdrop/screen0/monitor0/workspace0/rgba1", "double", darkRetroTeal, dryRun, false);
+        setXfconfArray("xfce4-desktop", "/backdrop/screen0/monitoreDP-1/workspace0/rgba1", "double", darkRetroTeal, dryRun, false);
+        setXfconfArray("xfce4-desktop", "/backdrop/screen0/monitoreDP-1/workspace1/rgba1", "double", darkRetroTeal, dryRun, false);
         failures += XfconfXml.applyExportedXfconfFiles(root, dryRun, verbose);
         failures += applyDynamicResolutionScaling(dryRun, verbose);
         failures += applyGnomeSettings(dryRun, verbose);

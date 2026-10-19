@@ -1,0 +1,177 @@
+/* ==========================================================================
+ * Redmond97 Dark / Windows 98 User Theme & Palette Overrides (GTK 3.0 & XFCE)
+ * Edit the @define-color variables below to customize with your own thematic!
+ * ========================================================================== */
+
+@import url("../../.themes/Redmond97/gtk-3.0/gtk.css");
+
+/* Surface & Text Colors (Redmond97 Dark) */
+@define-color bg_color #373737;
+@define-color fg_color #eaeaea;
+@define-color base_color #16171d;
+@define-color text_color #cccccc;
+@define-color disabled_fg_color #888888;
+@define-color disabled_bg_color #373737;
+
+/* Selection & Accent Colors (Classic Win98 Dark Navy) */
+@define-color selected_bg_color #0a246a;
+@define-color selected_fg_color #ffffff;
+
+/* 3D Bevel Highlight & Shadow Colors */
+@define-color light_shadow #606060;
+@define-color mid_light_shadow #4a4a4a;
+@define-color dark_shadow #262626;
+@define-color borders #000000;
+
+/* Window Titlebar Gradient Colors (Win98 Active / Inactive) */
+@define-color active_title_color1 #030b20;
+@define-color active_title_color #21345c;
+@define-color active_title_text #ffffff;
+@define-color inactive_title_color1 #1c1c1c;
+@define-color inactive_title_color #373737;
+@define-color inactive_title_text #d4d0c8;
+
+/* Button, Toolbar & Menu Mappings */
+@define-color button_bg_color @bg_color;
+@define-color button_fg_color @fg_color;
+@define-color toolbar_bg_color @bg_color;
+@define-color toolbar_fg_color @fg_color;
+@define-color menubar_bg_color @bg_color;
+@define-color menubar_fg_color @fg_color;
+@define-color tooltip_bg_color #16171d;
+@define-color tooltip_fg_color #eaeaea;
+
+/* ==========================================================================
+ * XFCE Panel & Left Dock Refinements (Windows 98 3D Bevel)
+ * ========================================================================== */
+.xfce4-panel,
+#XfcePanelWindow {
+  background-color: @bg_color;
+  color: @fg_color;
+  border-radius: 0px;
+}
+
+.xfce4-panel.horizontal {
+  border-top: 1px solid @light_shadow;
+  box-shadow: inset 0 1px @mid_light_shadow;
+}
+
+/* Workspace Pager buttons on the bottom taskbar */
+#pager-1 button,
+#pager-2 button,
+#pager-3 button,
+#pager-4 button,
+#pager-5 button,
+#pager-6 button {
+  min-width: 22px;
+  padding: 1px 4px;
+  margin: 2px 1px;
+  font-size: 8.5pt;
+}
+
+.xfce4-panel.vertical {
+  border-top: 2px solid @light_shadow;
+  border-left: 2px solid @light_shadow;
+  border-right: 2px solid @borders;
+  border-bottom: 2px solid @borders;
+  box-shadow:
+    inset 1px 1px @mid_light_shadow,
+    inset -1px -1px @dark_shadow;
+  padding: 2px;
+}
+
+.xfce4-panel.vertical button,
+.xfce4-panel.vertical #launcher-arrow {
+  margin: 2px;
+  padding: 3px;
+  border-radius: 0px;
+  background-color: @button_bg_color;
+  color: @button_fg_color;
+  border-top: 1px solid @light_shadow;
+  border-left: 1px solid @light_shadow;
+  border-right: 1px solid @borders;
+  border-bottom: 1px solid @borders;
+  box-shadow:
+    inset -1px -1px @dark_shadow,
+    inset 1px 1px @mid_light_shadow;
+}
+
+.xfce4-panel.vertical button:hover,
+.xfce4-panel.vertical #launcher-arrow:hover {
+  background-color: @mid_light_shadow;
+}
+
+.xfce4-panel.vertical button:active,
+.xfce4-panel.vertical button:checked,
+.xfce4-panel.vertical #launcher-arrow:active {
+  border-top: 1px solid @borders;
+  border-left: 1px solid @borders;
+  border-right: 1px solid @light_shadow;
+  border-bottom: 1px solid @light_shadow;
+  box-shadow: inset 1px 1px @dark_shadow;
+  background-color: @dark_shadow;
+}
+
+/* ==========================================================================
+ * XFCE Notification Daemon (xfce4-notifyd) - Classic Win98 Dialog Box
+ * ========================================================================== */
+#XfceNotifyWindow {
+  background-color: @bg_color;
+  color: @fg_color;
+  border-radius: 0px;
+  border-top: 2px solid @light_shadow;
+  border-left: 2px solid @light_shadow;
+  border-right: 2px solid @borders;
+  border-bottom: 2px solid @borders;
+  box-shadow:
+    inset 1px 1px 0px @mid_light_shadow,
+    inset -1px -1px 0px @dark_shadow;
+  padding: 4px;
+}
+
+#XfceNotifyWindow label#summary {
+  background-image: linear-gradient(to right, @active_title_color1, @active_title_color);
+  color: @active_title_text;
+  font-weight: bold;
+  padding: 3px 6px;
+  margin-bottom: 4px;
+}
+
+#XfceNotifyWindow label#body {
+  color: @fg_color;
+  padding: 4px 6px;
+}
+
+#XfceNotifyWindow button {
+  border-radius: 0px;
+  background-color: @button_bg_color;
+  color: @button_fg_color;
+  border-top: 1px solid @light_shadow;
+  border-left: 1px solid @light_shadow;
+  border-right: 1px solid @borders;
+  border-bottom: 1px solid @borders;
+  box-shadow: inset -1px -1px 0px @dark_shadow;
+  padding: 2px 8px;
+}
+
+#XfceNotifyWindow button:active {
+  border-top: 1px solid @borders;
+  border-left: 1px solid @borders;
+  border-right: 1px solid @light_shadow;
+  border-bottom: 1px solid @light_shadow;
+  box-shadow: inset 1px 1px 0px @dark_shadow;
+}
+
+#XfceNotifyWindow progressbar trough {
+  background-color: @base_color;
+  border-radius: 0px;
+  border-top: 1px solid @dark_shadow;
+  border-left: 1px solid @dark_shadow;
+  border-right: 1px solid @light_shadow;
+  border-bottom: 1px solid @light_shadow;
+}
+
+#XfceNotifyWindow progressbar progress {
+  background-color: @selected_bg_color;
+  border-radius: 0px;
+}

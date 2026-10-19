@@ -1,0 +1,111 @@
+/* ==========================================================================
+ * Redmond97 Dark / Windows 98 Theme for Wofi
+ * Edit the @define-color variables below to customize with your own thematic!
+ * ========================================================================== */
+
+@define-color bg_color #373737;
+@define-color fg_color #eaeaea;
+@define-color base_color #16171d;
+@define-color text_color #cccccc;
+@define-color selected_bg_color #0a246a;
+@define-color selected_fg_color #ffffff;
+@define-color light_shadow #606060;
+@define-color mid_light_shadow #4a4a4a;
+@define-color dark_shadow #262626;
+@define-color borders #000000;
+@define-color active_title_color1 #030b20;
+@define-color active_title_color #21345c;
+@define-color active_title_text #ffffff;
+
+* {
+  font-family: "Sans", "MS Sans Serif", "Tahoma", monospace;
+  font-size: 9.5pt;
+  border-radius: 0px;
+}
+
+window {
+  margin: 0px;
+  background-color: @bg_color;
+  color: @fg_color;
+  border-top: 2px solid @light_shadow;
+  border-left: 2px solid @light_shadow;
+  border-right: 2px solid @borders;
+  border-bottom: 2px solid @borders;
+  box-shadow:
+    inset 1px 1px 0px @mid_light_shadow,
+    inset -1px -1px 0px @dark_shadow;
+}
+
+#outer-box {
+  margin: 4px;
+  padding: 2px;
+  background-color: @bg_color;
+  border-top: 22px solid @active_title_color;
+}
+
+#input {
+  margin: 6px 4px 6px 4px;
+  padding: 4px 6px;
+  background-color: @base_color;
+  color: @text_color;
+  border-top: 2px solid @dark_shadow;
+  border-left: 2px solid @dark_shadow;
+  border-right: 2px solid @light_shadow;
+  border-bottom: 2px solid @light_shadow;
+  box-shadow:
+    inset 1px 1px 0px @borders,
+    inset -1px -1px 0px @bg_color;
+  outline: none;
+}
+
+#input:focus {
+  outline: none;
+  border-top: 2px solid @dark_shadow;
+  border-left: 2px solid @dark_shadow;
+  border-right: 2px solid @light_shadow;
+  border-bottom: 2px solid @light_shadow;
+}
+
+#scroll {
+  margin: 0px 4px 4px 4px;
+  background-color: @base_color;
+  border-top: 2px solid @dark_shadow;
+  border-left: 2px solid @dark_shadow;
+  border-right: 2px solid @light_shadow;
+  border-bottom: 2px solid @light_shadow;
+  box-shadow:
+    inset 1px 1px 0px @borders,
+    inset -1px -1px 0px @bg_color;
+}
+
+#inner-box {
+  margin: 2px;
+  background-color: @base_color;
+}
+
+#entry {
+  padding: 4px 6px;
+  background-color: @base_color;
+  color: @text_color;
+  border: 1px solid transparent;
+}
+
+#entry:selected {
+  background-color: @selected_bg_color;
+  color: @selected_fg_color;
+  border: 1px dotted #ffff80;
+  outline: none;
+}
+
+#text {
+  margin-left: 6px;
+  color: inherit;
+}
+
+#text:selected {
+  color: @selected_fg_color;
+}
+
+#img {
+  margin-right: 4px;
+}

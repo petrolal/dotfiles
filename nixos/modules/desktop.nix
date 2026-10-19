@@ -1,5 +1,25 @@
 { config, pkgs, ... }:
 
+let
+  redmond97 = pkgs.stdenvNoCC.mkDerivation {
+    pname = "redmond97";
+    version = "unstable-2021-02-23";
+    src = pkgs.fetchFromGitHub {
+      owner = "matthewmx86";
+      repo = "Redmond97";
+      rev = "f33bc057a01f091de774adbbf6abe226f0cb46e0";
+      hash = "sha256-lWRLgwIlfKd01vsBq6hpEio8eAx/FrWrNnAzpHOk6Xc=";
+    };
+    dontBuild = true;
+    installPhase = ''
+      runHook preInstall
+      mkdir -p $out/share/themes $out/share/icons
+      cp -r Theme/csd/* $out/share/themes/
+      cp -r Extras/Icons/Redmond97 $out/share/icons/
+      runHook postInstall
+    '';
+  };
+in
 {
   # Time & Locale
   time.timeZone = "America/Sao_Paulo";
@@ -22,12 +42,12 @@
     enable = true;
     greeters.gtk = {
       theme = {
-        name = "Adwaita-dark";
-        package = pkgs.gnome-themes-extra;
+        name = "Redmond97";
+        package = redmond97;
       };
       iconTheme = {
-        name = "Adwaita";
-        package = pkgs.adwaita-icon-theme;
+        name = "Chicago95";
+        package = pkgs.chicago95;
       };
       cursorTheme = {
         name = "Adwaita";
@@ -59,20 +79,22 @@
     pulse.enable = true;
   };
 
-  # Global Theme & Toolkit Overrides
+  # Global Theme & Toolkit Overrides (Windows 98 / Redmond97)
   environment.variables = {
-    GTK_THEME = "Adwaita:dark";
-    QT_STYLE_OVERRIDE = "Adwaita-Dark";
+    GTK_THEME = "Redmond97";
+    GTK_OVERLAY_SCROLLING = "0";
+    QT_STYLE_OVERRIDE = "Windows";
   };
 
   environment.systemPackages = with pkgs; [
     adwaita-icon-theme
     gnome-themes-extra
     chicago95
+    redmond97
+    wofi
+    waybar
   ];
 
   # Portal and dconf management
   programs.dconf.enable = true;
-
-
 }

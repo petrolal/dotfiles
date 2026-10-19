@@ -1,0 +1,107 @@
+/* ==========================================================================
+ * Redmond97 Dark / Windows 98 Theme for GTK 4.0 & Libadwaita
+ * Edit the @define-color variables below to customize with your own thematic!
+ * ========================================================================== */
+
+@define-color bg_color #373737;
+@define-color fg_color #eaeaea;
+@define-color base_color #16171d;
+@define-color text_color #cccccc;
+@define-color selected_bg_color #0a246a;
+@define-color selected_fg_color #ffffff;
+@define-color light_shadow #606060;
+@define-color mid_light_shadow #4a4a4a;
+@define-color dark_shadow #262626;
+@define-color borders #000000;
+@define-color active_title_color1 #030b20;
+@define-color active_title_color #21345c;
+@define-color active_title_text #ffffff;
+@define-color inactive_title_color1 #1c1c1c;
+@define-color inactive_title_color #373737;
+@define-color inactive_title_text #d4d0c8;
+
+/* Map Libadwaita / GTK4 semantic colors to Redmond97 Dark palette */
+@define-color window_bg_color @bg_color;
+@define-color window_fg_color @fg_color;
+@define-color view_bg_color @base_color;
+@define-color view_fg_color @text_color;
+@define-color headerbar_bg_color @active_title_color1;
+@define-color headerbar_fg_color @active_title_text;
+@define-color headerbar_backdrop_color @inactive_title_color1;
+@define-color card_bg_color @bg_color;
+@define-color card_fg_color @fg_color;
+@define-color popover_bg_color @bg_color;
+@define-color popover_fg_color @fg_color;
+@define-color dialog_bg_color @bg_color;
+@define-color dialog_fg_color @fg_color;
+@define-color accent_bg_color @selected_bg_color;
+@define-color accent_fg_color @selected_fg_color;
+@define-color accent_color @selected_bg_color;
+
+* {
+  border-radius: 0px;
+}
+
+window,
+dialog,
+popover > contents {
+  background-color: @bg_color;
+  color: @fg_color;
+}
+
+headerbar {
+  background-image: linear-gradient(to right, @active_title_color1, @active_title_color);
+  color: @active_title_text;
+  min-height: 26px;
+  padding: 2px 4px;
+  border-bottom: 1px solid @borders;
+}
+
+headerbar:backdrop {
+  background-image: linear-gradient(to right, @inactive_title_color1, @inactive_title_color);
+  color: @inactive_title_text;
+}
+
+button {
+  background-color: @bg_color;
+  color: @fg_color;
+  border-top: 1px solid @light_shadow;
+  border-left: 1px solid @light_shadow;
+  border-right: 1px solid @borders;
+  border-bottom: 1px solid @borders;
+  box-shadow:
+    inset -1px -1px 0px @dark_shadow,
+    inset 1px 1px 0px @mid_light_shadow;
+  padding: 3px 8px;
+}
+
+button:active,
+button:checked {
+  background-color: @dark_shadow;
+  border-top: 1px solid @borders;
+  border-left: 1px solid @borders;
+  border-right: 1px solid @light_shadow;
+  border-bottom: 1px solid @light_shadow;
+  box-shadow: inset 1px 1px 0px @dark_shadow;
+}
+
+entry,
+textview,
+listview,
+columnview {
+  background-color: @base_color;
+  color: @text_color;
+  border-top: 1px solid @dark_shadow;
+  border-left: 1px solid @dark_shadow;
+  border-right: 1px solid @light_shadow;
+  border-bottom: 1px solid @light_shadow;
+  box-shadow:
+    inset 1px 1px 0px @borders,
+    inset -1px -1px 0px @bg_color;
+}
+
+selection,
+row:selected {
+  background-color: @selected_bg_color;
+  color: @selected_fg_color;
+}

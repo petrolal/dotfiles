@@ -45,6 +45,9 @@ if status is-interactive
     set -gx EDITOR nano
     set -gx VISUAL nano
     set -gx PAGER less
+    set -gx GTK_THEME Redmond97
+    set -gx GTK_OVERLAY_SCROLLING 0
+    set -gx QT_STYLE_OVERRIDE Windows
 
     # --- dotfiles workflow shortcuts (see README.md "Day-to-Day Usage";
     # -p lets these run from anywhere, no `cd ~/dotfiles` needed) ---
