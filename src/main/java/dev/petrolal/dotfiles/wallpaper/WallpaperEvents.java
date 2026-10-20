@@ -3,6 +3,7 @@ package dev.petrolal.dotfiles.wallpaper;
 import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -50,6 +51,14 @@ public class WallpaperEvents implements AutoCloseable {
     private long prevIdle = 0;
     private long prevTotal = 0;
 
+    // Workspace query throttle (confined to the render thread via pollState).
+    // The virtual-desktop index changes maybe a handful of times per session,
+    // not 60-165x/sec -- unlike the mouse, querying it every frame is a
+    // wasted XGetWindowProperty round trip to the X server on every frame.
+    private int cachedWorkspace = 0;
+    private long lastWorkspaceCheckNanos = Long.MIN_VALUE;
+    private static final long WORKSPACE_CHECK_INTERVAL_NANOS = 500_000_000L;
+
     public WallpaperEvents(X11Canvas canvas) {
         this.canvas = canvas;
         // Start background virtual thread for off-thread procfs reading
@@ -94,7 +103,12 @@ public class WallpaperEvents implements AutoCloseable {
      */
     public WallpaperState pollState(float width, float height, float elapsedSeconds) {
         X11Canvas.MouseInfo mouse = canvas.queryMouse();
-        int workspace = canvas.queryWorkspace();
+
+        long now = System.nanoTime();
+        if (now - lastWorkspaceCheckNanos > WORKSPACE_CHECK_INTERVAL_NANOS) {
+            cachedWorkspace = canvas.queryWorkspace();
+            lastWorkspaceCheckNanos = now;
+        }
 
         return new WallpaperState(
             width,
@@ -104,39 +118,59 @@ public class WallpaperEvents implements AutoCloseable {
             mouse.y(),
             mouse.leftDown(),
             mouse.rightDown(),
-            workspace,
+            cachedWorkspace,
             cachedAudio,
             cachedCpu,
             cachedRam
         );
     }
 
+    // ALSA topology cache (confined to the virtual background thread): the
+    // set of card/pcm/sub "status" files basically never changes except on
+    // device hotplug, but isAlsaPcmActive() runs at 10Hz forever. Walking the
+    // full /proc/asound tree (listFiles() at every level) on every tick was
+    // pure wasted syscalls -- only the known status files' *contents* need
+    // reading that often, not the topology itself.
+    private List<File> cachedAlsaStatusFiles = null;
+    private long lastAlsaTopologyScanMs = 0;
+    private static final long ALSA_TOPOLOGY_RESCAN_INTERVAL_MS = 5_000;
+
+    private List<File> scanAlsaStatusFiles() {
+        List<File> result = new ArrayList<>();
+        File asoundDir = new File("/proc/asound");
+        File[] cards = asoundDir.listFiles((_, name) -> name.startsWith("card") && Character.isDigit(name.charAt(4)));
+        if (cards == null) return result;
+
+        for (File card : cards) {
+            File[] pcms = card.listFiles((_, name) -> name.startsWith("pcm") && name.endsWith("p"));
+            if (pcms == null) continue;
+
+            for (File pcm : pcms) {
+                File[] subs = pcm.listFiles((_, name) -> name.startsWith("sub"));
+                if (subs == null) continue;
+
+                for (File sub : subs) {
+                    File statusFile = new File(sub, "status");
+                    if (statusFile.exists()) result.add(statusFile);
+                }
+            }
+        }
+        return result;
+    }
+
     private boolean isAlsaPcmActive() {
         try {
-            File asoundDir = new File("/proc/asound");
-            if (!asoundDir.exists()) return false;
+            long now = System.currentTimeMillis();
+            if (cachedAlsaStatusFiles == null || now - lastAlsaTopologyScanMs > ALSA_TOPOLOGY_RESCAN_INTERVAL_MS) {
+                cachedAlsaStatusFiles = scanAlsaStatusFiles();
+                lastAlsaTopologyScanMs = now;
+            }
 
-            File[] cards = asoundDir.listFiles((_, name) -> name.startsWith("card") && Character.isDigit(name.charAt(4)));
-            if (cards == null) return false;
-
-            for (File card : cards) {
-                File[] pcms = card.listFiles((_, name) -> name.startsWith("pcm") && name.endsWith("p"));
-                if (pcms == null) continue;
-
-                for (File pcm : pcms) {
-                    File[] subs = pcm.listFiles((_, name) -> name.startsWith("sub"));
-                    if (subs == null) continue;
-
-                    for (File sub : subs) {
-                        File statusFile = new File(sub, "status");
-                        if (statusFile.exists()) {
-                            List<String> lines = Files.readAllLines(statusFile.toPath());
-                            for (String line : lines) {
-                                if (line.contains("state: RUNNING")) {
-                                    return true;
-                                }
-                            }
-                        }
+            for (File statusFile : cachedAlsaStatusFiles) {
+                if (!statusFile.exists()) continue; // device removed since last scan
+                for (String line : Files.readAllLines(statusFile.toPath())) {
+                    if (line.contains("state: RUNNING")) {
+                        return true;
                     }
                 }
             }

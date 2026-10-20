@@ -76,7 +76,16 @@ public class ShaderPipeline {
 
     private int compileProgram() throws Throwable {
         int vs = compileShader(vertPath, X11Canvas.GL_VERTEX_SHADER);
-        int fs = compileShader(fragPath, X11Canvas.GL_FRAGMENT_SHADER);
+        int fs;
+        try {
+            fs = compileShader(fragPath, X11Canvas.GL_FRAGMENT_SHADER);
+        } catch (Throwable ex) {
+            // vs compiled fine but fs didn't -- without this, every failed
+            // hot-reload attempt on a broken fragment shader leaks one more
+            // vertex shader object in the driver for the life of the daemon.
+            canvas.deleteShader(vs);
+            throw ex;
+        }
 
         int prog = canvas.createProgram();
         canvas.attachShader(prog, vs);

@@ -4,6 +4,11 @@ package dev.petrolal.dotfiles.desktop;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.Semaphore;
 
 import dev.petrolal.dotfiles.core.DotfilePaths;
 import dev.petrolal.dotfiles.core.Theme;
@@ -220,15 +225,65 @@ public final class Xfconf {
         return logIfFailed(schema + " " + key, ProcessRunner.run(List.of("gsettings", "set", schema, key, value)));
     }
 
+    /** Max xfconf-query/gsettings subprocesses allowed in flight at once.
+     * Each setting is an independent fork+exec+D-Bus round trip with no
+     * ordering dependency on any other setting, so running them one at a
+     * time (as a plain loop did) made subprocess latency the dominant cost
+     * of `deploy`. Bounded rather than unbounded so ~90 settings don't all
+     * fork at once and hammer xfconfd/dbus-daemon simultaneously. */
+    private static final int MAX_CONCURRENT_SETTINGS = 8;
+
+    /** Runs TASKS -- each an independent "apply one setting, report success"
+     * call -- serially during a dry-run (so the printed plan stays in a
+     * readable, deterministic order) or concurrently, bounded to
+     * {@link #MAX_CONCURRENT_SETTINGS} at a time, otherwise. */
+    private static int runTasks(List<Callable<Boolean>> tasks, boolean dryRun) {
+        if (dryRun) {
+            int failures = 0;
+            for (Callable<Boolean> task : tasks) {
+                try {
+                    if (!task.call()) failures++;
+                } catch (Exception e) {
+                    failures++;
+                }
+            }
+            return failures;
+        }
+
+        Semaphore concurrencyLimit = new Semaphore(MAX_CONCURRENT_SETTINGS);
+        List<Future<Boolean>> futures = new ArrayList<>(tasks.size());
+        try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
+            for (Callable<Boolean> task : tasks) {
+                futures.add(executor.submit(() -> {
+                    concurrencyLimit.acquire();
+                    try {
+                        return task.call();
+                    } finally {
+                        concurrencyLimit.release();
+                    }
+                }));
+            }
+            int failures = 0;
+            for (Future<Boolean> future : futures) {
+                try {
+                    if (!future.get()) failures++;
+                } catch (InterruptedException | ExecutionException e) {
+                    failures++;
+                }
+            }
+            return failures;
+        }
+    }
+
     /** Returns the number of gsettings "set" calls that failed. */
     static int applyGnomeSettings(boolean dryRun, boolean verbose) {
         if (!DotfilePaths.commandExists("gsettings")) return 0;
         if (verbose) System.out.println("Syncing GSettings for GNOME/GTK apps...");
-        int failures = 0;
+        List<Callable<Boolean>> tasks = new ArrayList<>();
         for (GnomeSetting s : GNOME_SETTINGS) {
-            if (!runGsettings(s.schema(), s.key(), s.value(), dryRun)) failures++;
+            tasks.add(() -> runGsettings(s.schema(), s.key(), s.value(), dryRun));
         }
-        return failures;
+        return runTasks(tasks, dryRun);
     }
 
     /** Applies every XFCE/GNOME desktop setting and returns the number of
@@ -240,34 +295,32 @@ public final class Xfconf {
             return 0;
         }
         if (verbose) System.out.println("Applying XFCE desktop settings...");
-        int failures = 0;
+
+        List<Callable<Boolean>> tasks = new ArrayList<>();
         for (XfceSetting s : XFCE_SETTINGS) {
-            if (!setXfconf(s.channel(), s.property(), s.type(), s.value(), dryRun)) failures++;
+            tasks.add(() -> setXfconf(s.channel(), s.property(), s.type(), s.value(), dryRun));
         }
 
-        List<String> launcherItems = new ArrayList<>();
         List<String> pluginIds = new ArrayList<>(List.of(String.valueOf(START)));
         for (int i = 0; i < LAUNCHERS.size(); i++) {
             int id = FIRST_LAUNCHER + i;
             pluginIds.add(String.valueOf(id));
-            launcherItems.add(LAUNCHERS.get(i) + ".desktop");
-            if (!setXfconfArray("xfce4-panel", "/plugins/plugin-" + id + "/items", "string",
-                    List.of(launcherItems.get(i)), dryRun, verbose)) {
-                failures++;
-            }
+            String item = LAUNCHERS.get(i) + ".desktop";
+            tasks.add(() -> setXfconfArray("xfce4-panel", "/plugins/plugin-" + id + "/items", "string",
+                    List.of(item), dryRun, verbose));
         }
         for (int id : new int[] {TASKLIST, SPACER, SYSTRAY, CLOCK}) {
             pluginIds.add(String.valueOf(id));
         }
-        if (!setXfconfArray("xfce4-panel", "/panels", "int", List.of("1"), dryRun, verbose)) failures++;
-        if (!setXfconfArray("xfce4-panel", "/panels/panel-1/plugin-ids", "int", pluginIds, dryRun, verbose)) failures++;
+        tasks.add(() -> setXfconfArray("xfce4-panel", "/panels", "int", List.of("1"), dryRun, verbose));
+        tasks.add(() -> setXfconfArray("xfce4-panel", "/panels/panel-1/plugin-ids", "int", pluginIds, dryRun, verbose));
 
         for (String node : BACKDROPS) {
-            if (!setXfconfArray("xfce4-desktop", "/backdrop/screen0/" + node + "/rgba1", "double",
-                    BACKDROP_COLOR, dryRun, false)) {
-                failures++;
-            }
+            tasks.add(() -> setXfconfArray("xfce4-desktop", "/backdrop/screen0/" + node + "/rgba1", "double",
+                    BACKDROP_COLOR, dryRun, false));
         }
+
+        int failures = runTasks(tasks, dryRun);
         failures += applyGnomeSettings(dryRun, verbose);
         return failures;
     }
