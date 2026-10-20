@@ -18,7 +18,7 @@ java {
     targetCompatibility = JavaVersion.toVersion('25')
 }
 
-tasks.withType(JavaCompile) {
+tasks.withType(JavaCompile).configureEach {
     def graalHome = resolveGraalVmHome()
     if (graalHome != null) {
         options.fork = true
@@ -26,14 +26,14 @@ tasks.withType(JavaCompile) {
     }
 }
 
-tasks.withType(Test) {
+tasks.withType(Test).configureEach {
     def graalHome = resolveGraalVmHome()
     if (graalHome != null) {
         executable = new File(graalHome, 'bin/java').absolutePath
     }
 }
 
-tasks.withType(JavaExec) {
+tasks.withType(JavaExec).configureEach {
     def graalHome = resolveGraalVmHome()
     if (graalHome != null) {
         executable = new File(graalHome, 'bin/java').absolutePath
