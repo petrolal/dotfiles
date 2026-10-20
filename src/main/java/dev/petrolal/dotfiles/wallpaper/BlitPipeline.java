@@ -23,7 +23,7 @@ public class BlitPipeline {
         int vs = canvas.createShader(X11Canvas.GL_VERTEX_SHADER);
         canvas.shaderSource(vs, Files.readString(vertPath));
         canvas.compileShader(vs);
-        if (!canvas.getShaderCompileStatus(vs)) {
+        if (canvas.getShaderCompileStatus(vs)) {
             String log = canvas.getShaderInfoLog(vs);
             canvas.deleteShader(vs);
             throw new IllegalStateException("Blit vertex shader compile failed (" + vertPath.getFileName() + "): " + log);
@@ -32,7 +32,7 @@ public class BlitPipeline {
         int fs = canvas.createShader(X11Canvas.GL_FRAGMENT_SHADER);
         canvas.shaderSource(fs, Files.readString(fragPath));
         canvas.compileShader(fs);
-        if (!canvas.getShaderCompileStatus(fs)) {
+        if (canvas.getShaderCompileStatus(fs)) {
             String log = canvas.getShaderInfoLog(fs);
             canvas.deleteShader(fs);
             canvas.deleteShader(vs);

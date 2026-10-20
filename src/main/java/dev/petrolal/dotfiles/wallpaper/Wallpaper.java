@@ -31,16 +31,6 @@ public final class Wallpaper {
 
     public record Monitor(int id, int x, int y, int width, int height, boolean primary) {}
 
-    private Path resolveShader(String name, String fallbackName) {
-        Path p = resolveShader(name);
-        if (Files.exists(p)) return p;
-        if (fallbackName != null) {
-            Path fb = resolveShader(fallbackName);
-            if (Files.exists(fb)) return fb;
-        }
-        return p;
-    }
-
     private Path resolveShader(String name) {
         Path direct = Path.of(name);
         if (Files.exists(direct)) return direct;
@@ -259,7 +249,7 @@ public final class Wallpaper {
                 // Install our own handler explicitly so Ctrl+C always works
                 // regardless of how this process was started, routed through
                 // the same System.exit() -> shutdown-hook path as SIGTERM.
-                Signal.handle(new Signal("INT"), sig -> System.exit(0));
+                Signal.handle(new Signal("INT"), _ -> System.exit(0));
 
                 // SIGINT/SIGTERM run shutdown hooks on a separate thread while
                 // this render loop keeps executing concurrently -- Xlib/GLX

@@ -50,7 +50,7 @@ public final class Orchestrator {
 			System.out.println("Reloading XFCE services...");
 
 		for (List<String> args : RELOAD_COMMANDS) {
-			String binary = args.get(0);
+			String binary = args.getFirst();
 			if (!DotfilePaths.commandExists(binary)) {
 				if (verbose)
 					System.out.println("[SKIP] " + binary + " not found, skipping.");
@@ -260,8 +260,8 @@ public final class Orchestrator {
 		try {
 			Process child = new ProcessBuilder(cmd).inheritIO().start();
 
-			Signal.handle(new Signal("TERM"), sig -> child.destroy());
-			Signal.handle(new Signal("INT"), sig -> {
+			Signal.handle(new Signal("TERM"), _ -> child.destroy());
+			Signal.handle(new Signal("INT"), _ -> {
 				try {
 					new ProcessBuilder("kill", "-INT", String.valueOf(child.pid())).start().waitFor();
 				} catch (IOException | InterruptedException ignored) {

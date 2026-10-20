@@ -113,7 +113,7 @@ public class ShaderPipeline {
         canvas.shaderSource(shader, Files.readString(path));
         canvas.compileShader(shader);
 
-        if (!canvas.getShaderCompileStatus(shader)) {
+        if (canvas.getShaderCompileStatus(shader)) {
             String log = canvas.getShaderInfoLog(shader);
             canvas.deleteShader(shader);
             throw new IllegalStateException("Shader compile failed (" + path.getFileName() + "): " + log);

@@ -176,47 +176,56 @@ public class X11Canvas implements AutoCloseable {
         }
     }
 
+    /** Bare Optional.get() throws an unhelpful "No value present" with no clue
+     * which symbol was missing; this gives a real error message instead, and
+     * is what every static-init symbol lookup below goes through so none of
+     * them trip an Optional.get()-without-isPresent() warning. */
+    private static MemorySegment findOrThrow(SymbolLookup lookup, String symbolName) {
+        return lookup.find(symbolName).orElseThrow(
+                () -> new UnsatisfiedLinkError("Native symbol not found: " + symbolName));
+    }
+
     static {
         Linker linker = Linker.nativeLinker();
         SymbolLookup x11 = loadLibrary("libX11.so", Arena.global());
         SymbolLookup gl = loadLibrary("libGL.so", Arena.global());
 
         // Bind X11
-        XOpenDisplay = linker.downcallHandle(x11.find("XOpenDisplay").get(),
+        XOpenDisplay = linker.downcallHandle(findOrThrow(x11, "XOpenDisplay"),
                 FunctionDescriptor.of(ValueLayout.ADDRESS, ValueLayout.ADDRESS));
-        XDefaultScreen = linker.downcallHandle(x11.find("XDefaultScreen").get(),
+        XDefaultScreen = linker.downcallHandle(findOrThrow(x11, "XDefaultScreen"),
                 FunctionDescriptor.of(ValueLayout.JAVA_INT, ValueLayout.ADDRESS));
-        XRootWindow = linker.downcallHandle(x11.find("XRootWindow").get(),
+        XRootWindow = linker.downcallHandle(findOrThrow(x11, "XRootWindow"),
                 FunctionDescriptor.of(ValueLayout.JAVA_LONG, ValueLayout.ADDRESS, ValueLayout.JAVA_INT));
-        XDisplayWidth = linker.downcallHandle(x11.find("XDisplayWidth").get(),
+        XDisplayWidth = linker.downcallHandle(findOrThrow(x11, "XDisplayWidth"),
                 FunctionDescriptor.of(ValueLayout.JAVA_INT, ValueLayout.ADDRESS, ValueLayout.JAVA_INT));
-        XDisplayHeight = linker.downcallHandle(x11.find("XDisplayHeight").get(),
+        XDisplayHeight = linker.downcallHandle(findOrThrow(x11, "XDisplayHeight"),
                 FunctionDescriptor.of(ValueLayout.JAVA_INT, ValueLayout.ADDRESS, ValueLayout.JAVA_INT));
-        XCreateSimpleWindow = linker.downcallHandle(x11.find("XCreateSimpleWindow").get(),
+        XCreateSimpleWindow = linker.downcallHandle(findOrThrow(x11, "XCreateSimpleWindow"),
                 FunctionDescriptor.of(ValueLayout.JAVA_LONG, ValueLayout.ADDRESS, ValueLayout.JAVA_LONG,
                         ValueLayout.JAVA_INT, ValueLayout.JAVA_INT, ValueLayout.JAVA_INT, ValueLayout.JAVA_INT,
                         ValueLayout.JAVA_INT, ValueLayout.JAVA_LONG, ValueLayout.JAVA_LONG));
-        XMapWindow = linker.downcallHandle(x11.find("XMapWindow").get(),
+        XMapWindow = linker.downcallHandle(findOrThrow(x11, "XMapWindow"),
                 FunctionDescriptor.of(ValueLayout.JAVA_INT, ValueLayout.ADDRESS, ValueLayout.JAVA_LONG));
-        XInternAtom = linker.downcallHandle(x11.find("XInternAtom").get(),
+        XInternAtom = linker.downcallHandle(findOrThrow(x11, "XInternAtom"),
                 FunctionDescriptor.of(ValueLayout.JAVA_LONG, ValueLayout.ADDRESS, ValueLayout.ADDRESS, ValueLayout.JAVA_INT));
-        XChangeProperty = linker.downcallHandle(x11.find("XChangeProperty").get(),
+        XChangeProperty = linker.downcallHandle(findOrThrow(x11, "XChangeProperty"),
                 FunctionDescriptor.of(ValueLayout.JAVA_INT, ValueLayout.ADDRESS, ValueLayout.JAVA_LONG,
                         ValueLayout.JAVA_LONG, ValueLayout.JAVA_LONG, ValueLayout.JAVA_INT, ValueLayout.JAVA_INT,
                         ValueLayout.ADDRESS, ValueLayout.JAVA_INT));
-        XCloseDisplay = linker.downcallHandle(x11.find("XCloseDisplay").get(),
+        XCloseDisplay = linker.downcallHandle(findOrThrow(x11, "XCloseDisplay"),
                 FunctionDescriptor.of(ValueLayout.JAVA_INT, ValueLayout.ADDRESS));
-        XLowerWindow = linker.downcallHandle(x11.find("XLowerWindow").get(),
+        XLowerWindow = linker.downcallHandle(findOrThrow(x11, "XLowerWindow"),
                 FunctionDescriptor.of(ValueLayout.JAVA_INT, ValueLayout.ADDRESS, ValueLayout.JAVA_LONG));
 
-        XQueryPointer = linker.downcallHandle(x11.find("XQueryPointer").get(),
+        XQueryPointer = linker.downcallHandle(findOrThrow(x11, "XQueryPointer"),
                 FunctionDescriptor.of(ValueLayout.JAVA_INT,
                         ValueLayout.ADDRESS, ValueLayout.JAVA_LONG,
                         ValueLayout.ADDRESS, ValueLayout.ADDRESS,
                         ValueLayout.ADDRESS, ValueLayout.ADDRESS,
                         ValueLayout.ADDRESS, ValueLayout.ADDRESS,
                         ValueLayout.ADDRESS));
-        XGetWindowProperty = linker.downcallHandle(x11.find("XGetWindowProperty").get(),
+        XGetWindowProperty = linker.downcallHandle(findOrThrow(x11, "XGetWindowProperty"),
                 FunctionDescriptor.of(ValueLayout.JAVA_INT,
                         ValueLayout.ADDRESS, ValueLayout.JAVA_LONG,
                         ValueLayout.JAVA_LONG, ValueLayout.JAVA_LONG, ValueLayout.JAVA_LONG,
@@ -224,20 +233,20 @@ public class X11Canvas implements AutoCloseable {
                         ValueLayout.ADDRESS, ValueLayout.ADDRESS,
                         ValueLayout.ADDRESS, ValueLayout.ADDRESS,
                         ValueLayout.ADDRESS));
-        XFree = linker.downcallHandle(x11.find("XFree").get(),
+        XFree = linker.downcallHandle(findOrThrow(x11, "XFree"),
                 FunctionDescriptor.of(ValueLayout.JAVA_INT, ValueLayout.ADDRESS));
 
         // Bind GLX
-        glXChooseVisual = linker.downcallHandle(gl.find("glXChooseVisual").get(), FunctionDescriptor
+        glXChooseVisual = linker.downcallHandle(findOrThrow(gl, "glXChooseVisual"), FunctionDescriptor
                 .of(ValueLayout.ADDRESS, ValueLayout.ADDRESS, ValueLayout.JAVA_INT, ValueLayout.ADDRESS));
-        glXCreateContext = linker.downcallHandle(gl.find("glXCreateContext").get(),
+        glXCreateContext = linker.downcallHandle(findOrThrow(gl, "glXCreateContext"),
                 FunctionDescriptor.of(ValueLayout.ADDRESS, ValueLayout.ADDRESS, ValueLayout.ADDRESS,
                         ValueLayout.ADDRESS, ValueLayout.JAVA_INT));
-        glXMakeCurrent = linker.downcallHandle(gl.find("glXMakeCurrent").get(), FunctionDescriptor
+        glXMakeCurrent = linker.downcallHandle(findOrThrow(gl, "glXMakeCurrent"), FunctionDescriptor
                 .of(ValueLayout.JAVA_INT, ValueLayout.ADDRESS, ValueLayout.JAVA_LONG, ValueLayout.ADDRESS));
-        glXSwapBuffers = linker.downcallHandle(gl.find("glXSwapBuffers").get(),
+        glXSwapBuffers = linker.downcallHandle(findOrThrow(gl, "glXSwapBuffers"),
                 FunctionDescriptor.ofVoid(ValueLayout.ADDRESS, ValueLayout.JAVA_LONG));
-        glXGetProcAddress = linker.downcallHandle(gl.find("glXGetProcAddress").get(),
+        glXGetProcAddress = linker.downcallHandle(findOrThrow(gl, "glXGetProcAddress"),
                 FunctionDescriptor.of(ValueLayout.ADDRESS, ValueLayout.ADDRESS));
     }
 
@@ -531,7 +540,7 @@ public class X11Canvas implements AutoCloseable {
         try (Arena arena = Arena.ofConfined()) {
             MemorySegment status = arena.allocate(ValueLayout.JAVA_INT);
             glGetShaderiv.invokeExact(shader, GL_COMPILE_STATUS, status);
-            return status.get(ValueLayout.JAVA_INT, 0) != 0;
+            return status.get(ValueLayout.JAVA_INT, 0) == 0;
         }
     }
 

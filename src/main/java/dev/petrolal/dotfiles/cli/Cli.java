@@ -45,7 +45,7 @@ public final class Cli {
 		DEPLOY, UNINSTALL, WALLPAPER
 	}
 
-	public static void main(String[] argv) {
+	static void main(String[] argv) {
 		System.exit(run(argv));
 	}
 
