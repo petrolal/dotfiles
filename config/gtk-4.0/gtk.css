@@ -7,14 +7,14 @@
 @define-color fg_color #eaeaea;
 @define-color base_color #16171d;
 @define-color text_color #cccccc;
-@define-color selected_bg_color #0a246a;
+@define-color selected_bg_color #3d141a;
 @define-color selected_fg_color #ffffff;
 @define-color light_shadow #606060;
 @define-color mid_light_shadow #4a4a4a;
 @define-color dark_shadow #262626;
 @define-color borders #000000;
-@define-color active_title_color1 #030b20;
-@define-color active_title_color #21345c;
+@define-color active_title_color1 #100507;
+@define-color active_title_color #b81424;
 @define-color active_title_text #ffffff;
 @define-color inactive_title_color1 #1c1c1c;
 @define-color inactive_title_color #373737;
