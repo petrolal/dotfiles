@@ -87,3 +87,16 @@ Thumbs.db
 *.cache
 .icon-theme.cache
 icon-theme.cache
+
+# ------------------------------------------------------------------------------
+# AI tools
+# ------------------------------------------------------------------------------
+.claude
+.cursor
+.windsurf
+.aider*
+.continue
+.codeium
+.cline
+.roo
+.amazonq
