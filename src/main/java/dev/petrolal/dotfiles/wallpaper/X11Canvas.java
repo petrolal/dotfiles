@@ -47,6 +47,8 @@ public class X11Canvas implements AutoCloseable {
     public static final int GLX_RGBA = 4;
     public static final int GLX_DOUBLEBUFFER = 5;
 
+    private static final int COPY_FROM_PARENT = 0;
+
     // X11 Mouse button bitmasks (Button 1 = Left, Button 3 = Right)
     public static final int MOUSE_BUTTON1_MASK = 1 << 8;
     public static final int MOUSE_BUTTON3_MASK = 1 << 10;
@@ -99,7 +101,7 @@ public class X11Canvas implements AutoCloseable {
     private static final MethodHandle XRootWindow;
     private static final MethodHandle XDisplayWidth;
     private static final MethodHandle XDisplayHeight;
-    private static final MethodHandle XCreateSimpleWindow;
+    private static final MethodHandle XCreateWindow;
     private static final MethodHandle XMapWindow;
     private static final MethodHandle XInternAtom;
     private static final MethodHandle XChangeProperty;
@@ -201,10 +203,13 @@ public class X11Canvas implements AutoCloseable {
                 FunctionDescriptor.of(ValueLayout.JAVA_INT, ValueLayout.ADDRESS, ValueLayout.JAVA_INT));
         XDisplayHeight = linker.downcallHandle(findOrThrow(x11, "XDisplayHeight"),
                 FunctionDescriptor.of(ValueLayout.JAVA_INT, ValueLayout.ADDRESS, ValueLayout.JAVA_INT));
-        XCreateSimpleWindow = linker.downcallHandle(findOrThrow(x11, "XCreateSimpleWindow"),
+        // XCreateWindow, not XCreateSimpleWindow: only the full version lets us
+        // request override-redirect (see createSurface for why that matters).
+        XCreateWindow = linker.downcallHandle(findOrThrow(x11, "XCreateWindow"),
                 FunctionDescriptor.of(ValueLayout.JAVA_LONG, ValueLayout.ADDRESS, ValueLayout.JAVA_LONG,
                         ValueLayout.JAVA_INT, ValueLayout.JAVA_INT, ValueLayout.JAVA_INT, ValueLayout.JAVA_INT,
-                        ValueLayout.JAVA_INT, ValueLayout.JAVA_LONG, ValueLayout.JAVA_LONG));
+                        ValueLayout.JAVA_INT, ValueLayout.JAVA_INT, ValueLayout.JAVA_INT, ValueLayout.ADDRESS,
+                        ValueLayout.JAVA_LONG, ValueLayout.ADDRESS));
         XMapWindow = linker.downcallHandle(findOrThrow(x11, "XMapWindow"),
                 FunctionDescriptor.of(ValueLayout.JAVA_INT, ValueLayout.ADDRESS, ValueLayout.JAVA_LONG));
         XInternAtom = linker.downcallHandle(findOrThrow(x11, "XInternAtom"),
@@ -343,7 +348,22 @@ public class X11Canvas implements AutoCloseable {
      * explicit VSync swap interval (1 for vsync-paced, 0 for immediate unblocked presentation).
      */
     public Surface createSurface(int x, int y, int w, int h, int swapInterval) throws Throwable {
-        long window = (long) XCreateSimpleWindow.invokeExact(display, root, x, y, w, h, 0, 0L, 0L);
+        // REVERTED: override-redirect (see git history) made xfwm4 stop
+        // managing this window entirely, which was meant to make our
+        // lowerWindow() calls stick instead of being routed through xfwm4 as
+        // an ignorable ConfigureRequest -- but it also meant xfwm4's
+        // compositor (use_compositing=true) stopped compositing it, which on
+        // real hardware produced a black screen instead of the rendered
+        // scene: compositors commonly assume they own final screen
+        // presentation via their own composited buffer, and a window that
+        // bypasses their redirection may never actually get painted to the
+        // display. Back to a plain CopyFromParent window (valuemask=0,
+        // equivalent to the old XCreateSimpleWindow) -- WM-managed, so
+        // compositing works, at the cost of reintroducing the icon-stacking
+        // race this was trying to fix. See lowerToBackground()'s comment for
+        // the follow-up plan on that.
+        long window = (long) XCreateWindow.invokeExact(display, root, x, y, w, h, 0,
+                COPY_FROM_PARENT, COPY_FROM_PARENT, MemorySegment.NULL, 0L, MemorySegment.NULL);
 
         try (Arena arena = Arena.ofConfined()) {
             MemorySegment propType = arena.allocateFrom(ValueLayout.JAVA_LONG, atomWmWindowTypeDesktop);
