@@ -262,6 +262,14 @@
           "jint",
           "jint"
         ]
+      },
+      {
+        "returnType": "void",
+        "parameterTypes": [
+          "jint",
+          "jint",
+          "void*"
+        ]
       }
     ]
   }

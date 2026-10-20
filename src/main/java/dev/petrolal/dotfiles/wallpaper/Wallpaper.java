@@ -5,6 +5,7 @@ import java.io.InputStreamReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -14,6 +15,8 @@ import java.util.regex.Pattern;
 import dev.petrolal.dotfiles.core.DotfilePaths;
 import dev.petrolal.dotfiles.domain.Result;
 import dev.petrolal.dotfiles.system.ProcessRunner;
+
+import sun.misc.Signal;
 
 /**
  * Universal wallpaper controller:
@@ -26,7 +29,7 @@ import dev.petrolal.dotfiles.system.ProcessRunner;
  */
 public final class Wallpaper {
 
-    public record Monitor(int id, int x, int y, int width, int height) {}
+    public record Monitor(int id, int x, int y, int width, int height, boolean primary) {}
 
     private Path resolveShader(String name, String fallbackName) {
         Path p = resolveShader(name);
@@ -100,26 +103,31 @@ public final class Wallpaper {
         // display): treat the whole X screen as one monitor. Never guess a
         // monitor count or split -- an incorrect guess is worse than one
         // monitor-sized window covering everything.
-        return List.of(new Monitor(0, 0, 0, totalWidth, totalHeight));
+        return List.of(new Monitor(0, 0, 0, totalWidth, totalHeight, true));
     }
 
-    /** Primary detection path: `xrandr --listmonitors`. */
+    /** Primary detection path: `xrandr --listmonitors`. Output lines look
+     * like "0: +*eDP-1 1920/344x1080/193+1920+0  eDP-1" -- the '*' (present
+     * only on the xrandr-designated primary output) sits right after the
+     * leading '+', so it's captured explicitly rather than swallowed by a
+     * generic \S+ match. */
     private List<Monitor> parseListMonitors() {
         List<Monitor> list = new ArrayList<>();
         try {
             Process p = new ProcessBuilder("xrandr", "--listmonitors").start();
             try (BufferedReader reader = new BufferedReader(new InputStreamReader(p.getInputStream()))) {
                 String line;
-                Pattern pat = Pattern.compile("(\\d+):\\s+\\S+\\s+(\\d+)/\\d+x(\\d+)/\\d+\\+(\\d+)\\+(\\d+)");
+                Pattern pat = Pattern.compile("(\\d+):\\s+\\+(\\*?)\\S*\\s+(\\d+)/\\d+x(\\d+)/\\d+\\+(\\d+)\\+(\\d+)");
                 int autoId = 0;
                 while ((line = reader.readLine()) != null) {
                     Matcher m = pat.matcher(line);
                     if (m.find()) {
-                        int w = Integer.parseInt(m.group(2));
-                        int h = Integer.parseInt(m.group(3));
-                        int x = Integer.parseInt(m.group(4));
-                        int y = Integer.parseInt(m.group(5));
-                        list.add(new Monitor(autoId++, x, y, w, h));
+                        boolean primary = !m.group(2).isEmpty();
+                        int w = Integer.parseInt(m.group(3));
+                        int h = Integer.parseInt(m.group(4));
+                        int x = Integer.parseInt(m.group(5));
+                        int y = Integer.parseInt(m.group(6));
+                        list.add(new Monitor(autoId++, x, y, w, h, primary));
                     }
                 }
             }
@@ -140,16 +148,17 @@ public final class Wallpaper {
             Process p = new ProcessBuilder("xrandr", "--query").start();
             try (BufferedReader reader = new BufferedReader(new InputStreamReader(p.getInputStream()))) {
                 String line;
-                Pattern pat = Pattern.compile("^\\S+\\s+connected\\s+(?:primary\\s+)?(\\d+)x(\\d+)\\+(\\d+)\\+(\\d+)");
+                Pattern pat = Pattern.compile("^\\S+\\s+connected\\s+(primary\\s+)?(\\d+)x(\\d+)\\+(\\d+)\\+(\\d+)");
                 int autoId = 0;
                 while ((line = reader.readLine()) != null) {
                     Matcher m = pat.matcher(line);
                     if (m.find()) {
-                        int w = Integer.parseInt(m.group(1));
-                        int h = Integer.parseInt(m.group(2));
-                        int x = Integer.parseInt(m.group(3));
-                        int y = Integer.parseInt(m.group(4));
-                        list.add(new Monitor(autoId++, x, y, w, h));
+                        boolean primary = m.group(1) != null;
+                        int w = Integer.parseInt(m.group(2));
+                        int h = Integer.parseInt(m.group(3));
+                        int x = Integer.parseInt(m.group(4));
+                        int y = Integer.parseInt(m.group(5));
+                        list.add(new Monitor(autoId++, x, y, w, h, primary));
                     }
                 }
             }
@@ -173,12 +182,30 @@ public final class Wallpaper {
             // The primary surface is vsync'd to pace the render loop to its hardware
             // vblank (e.g. 165Hz), while secondary surfaces present without blocking (swapInterval=0).
             // This prevents serial vblank waiting from dragging mixed-refresh-rate setups down to ~40 FPS.
-            List<X11Canvas.Surface> surfaces = new ArrayList<>();
-            Monitor firstMon = monitors.get(0);
-            surfaces.add(canvas.initGL(firstMon.x(), firstMon.y(), firstMon.width(), firstMon.height()));
-            for (int i = 1; i < monitors.size(); i++) {
+            //
+            // "Primary" here means xrandr's actual designated primary output,
+            // not whichever monitor happens to sort first by position -- a
+            // monitor's physical/virtual placement (leftmost, topmost) has no
+            // relationship to its refresh rate or which one the user wants
+            // driving the pace. Picking the wrong one silently caps every
+            // monitor's frame rate to that of an unrelated, possibly much
+            // slower, secondary display.
+            int primaryIndex = 0;
+            for (int i = 0; i < monitors.size(); i++) {
+                if (monitors.get(i).primary()) {
+                    primaryIndex = i;
+                    break;
+                }
+            }
+
+            List<X11Canvas.Surface> surfaces = new ArrayList<>(Collections.nCopies(monitors.size(), null));
+            Monitor primaryMon = monitors.get(primaryIndex);
+            surfaces.set(primaryIndex,
+                    canvas.initGL(primaryMon.x(), primaryMon.y(), primaryMon.width(), primaryMon.height()));
+            for (int i = 0; i < monitors.size(); i++) {
+                if (i == primaryIndex) continue;
                 Monitor mon = monitors.get(i);
-                surfaces.add(canvas.createSurface(mon.x(), mon.y(), mon.width(), mon.height(), 0));
+                surfaces.set(i, canvas.createSurface(mon.x(), mon.y(), mon.width(), mon.height(), 0));
             }
 
             // One shared program for every surface: all contexts share the same
@@ -187,6 +214,15 @@ public final class Wallpaper {
             ShaderPipeline sharedPipeline = new ShaderPipeline(canvas, vertPath, panoramaFrag);
 
             try (WallpaperEvents events = new WallpaperEvents(canvas)) {
+                // A background-launched process typically has SIGINT left at
+                // its inherited disposition (often SIG_IGN, per job-control
+                // convention), and GraalVM native-image's built-in SIGTERM
+                // handling has been observed not to cover SIGINT either.
+                // Install our own handler explicitly so Ctrl+C always works
+                // regardless of how this process was started, routed through
+                // the same System.exit() -> shutdown-hook path as SIGTERM.
+                Signal.handle(new Signal("INT"), sig -> System.exit(0));
+
                 // SIGINT/SIGTERM run shutdown hooks on a separate thread while
                 // this render loop keeps executing concurrently -- Xlib/GLX
                 // calls and the X11Canvas native state are not safe to touch
@@ -196,14 +232,31 @@ public final class Wallpaper {
                 // canvas state itself: it only flips a flag and blocks the
                 // JVM's exit until this thread observes it, exits the loop,
                 // and runs its own try-with-resources close() below.
+                //
+                // That handoff only works if the render thread is actually
+                // executing Java bytecode to observe the flag -- if it's
+                // blocked inside a native GL call (e.g. a vsync'd
+                // glXSwapBuffers with no vblank source to return from, which
+                // happens under some virtualized/software display setups),
+                // it can never get back to the flag check, and join() would
+                // hang forever, leaving the daemon only killable with
+                // SIGKILL. Bound the wait: if the render thread hasn't
+                // stopped within the grace period, give up on a clean close()
+                // and let the JVM exit anyway rather than hang indefinitely.
+                final long shutdownGraceMillis = 2000;
                 AtomicBoolean shutdownRequested = new AtomicBoolean(false);
                 Thread renderThread = Thread.currentThread();
                 Thread shutdownHook = new Thread(() -> {
                     shutdownRequested.set(true);
                     try {
-                        renderThread.join();
+                        renderThread.join(shutdownGraceMillis);
                     } catch (InterruptedException ignored) {
                         Thread.currentThread().interrupt();
+                    }
+                    if (renderThread.isAlive()) {
+                        System.err.println("[wallpaper] render thread did not stop within "
+                                + shutdownGraceMillis + "ms (likely blocked in a native GL call) -- "
+                                + "exiting without finishing cleanup.");
                     }
                 }, "wallpaper-shutdown");
                 Runtime.getRuntime().addShutdownHook(shutdownHook);
@@ -213,6 +266,23 @@ public final class Wallpaper {
                 final long lowerIntervalNanos = 3_000_000_000L;
                 long lastReloadCheckNanos = System.nanoTime();
                 final long reloadCheckIntervalNanos = 1_000_000_000L;
+
+                // STOPGAP for suspected secondary-monitor GPU/compositor flooding:
+                // secondary surfaces are swapInterval=0 (no vsync of their own), so
+                // without a cap they get re-rendered+re-presented as fast as the
+                // primary paces the loop (e.g. 165Hz) even though the secondary
+                // display can only ever show a fraction of that (e.g. 60Hz) --
+                // every extra swap is pure wasted GPU work and an extra
+                // recomposite for that output, which can starve the compositor
+                // enough to visibly stutter cursor movement over that monitor.
+                // Cap each secondary monitor to a conservative 60Hz cadence of its
+                // own, independent of the primary's pace, by skipping its entire
+                // render+present (not just the swap) until its own interval has
+                // elapsed. This is deliberately a blunt, temporary throttle to
+                // confirm that diagnosis -- the real fix is giving every monitor
+                // its own vsync'd render thread instead of sharing one loop.
+                final long secondaryIntervalNanos = 1_000_000_000L / 60;
+                long[] lastSecondarySwapNanos = new long[monitors.size()];
 
                 try {
                     while (!shutdownRequested.get()) {
@@ -241,6 +311,14 @@ public final class Wallpaper {
 
                         // Render + present each monitor independently, on its own surface.
                         for (int i = 0; i < monitors.size(); i++) {
+                            if (i != primaryIndex) {
+                                long nowForSecondary = System.nanoTime();
+                                if (nowForSecondary - lastSecondarySwapNanos[i] < secondaryIntervalNanos) {
+                                    continue; // not this secondary monitor's turn yet
+                                }
+                                lastSecondarySwapNanos[i] = nowForSecondary;
+                            }
+
                             Monitor mon = monitors.get(i);
                             X11Canvas.Surface surface = surfaces.get(i);
 

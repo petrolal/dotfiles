@@ -2,13 +2,18 @@
 // License: GPL-3.0-or-later
 package dev.petrolal.dotfiles.core;
 
+import java.io.IOException;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 import dev.petrolal.dotfiles.desktop.Xfconf;
 import dev.petrolal.dotfiles.linker.Linker;
 import dev.petrolal.dotfiles.system.ProcessRunner;
 import dev.petrolal.dotfiles.wallpaper.Wallpaper;
+
+import sun.misc.Signal;
 
 public final class Orchestrator {
 	private Orchestrator() {
@@ -132,11 +137,76 @@ public final class Orchestrator {
 			return new WallpaperResult(true, 0);
 		}
 
+		// On hybrid Intel+NVIDIA laptops where an output is physically wired to
+		// the discrete GPU (common for HDMI/DP on mux-less gaming laptops),
+		// rendering through the default (Intel) GLX driver forces every frame
+		// bound for that output through a cross-GPU copy before it can scan
+		// out -- confirmed on real hardware to cause visible cursor/animation
+		// stutter on that monitor specifically. Relaunching through the
+		// NixOS-provided `nvidia-offload` wrapper (hardware.nvidia.prime.offload
+		// in nixos/modules/nvidia.nix) renders the whole scene on the GPU that
+		// already owns the display pipeline instead of whichever one GLX's
+		// default vendor selection happens to pick.
+		//
+		// __NV_PRIME_RENDER_OFFLOAD is the guard against relaunching forever:
+		// nvidia-offload sets it before exec-ing into us again, so the second
+		// run through here sees it already set and renders in-process as normal.
+		if (System.getenv("__NV_PRIME_RENDER_OFFLOAD") == null && DotfilePaths.commandExists("nvidia-offload")) {
+			Optional<String> exePath = ProcessHandle.current().info().command();
+			if (exePath.isPresent()) {
+				return relaunchWithNvidiaOffload(exePath.get(), verbose);
+			}
+			// Can't determine our own executable path to relaunch -- fall through
+			// and render in-process on whatever GPU GLX picks by default.
+		}
+
 		try {
 			new Wallpaper().start();
 			return new WallpaperResult(true, 0);
 		} catch (Throwable ex) {
 			System.err.println("Error on wallpaper application: " + ex.getMessage());
+			return new WallpaperResult(false, 1);
+		}
+	}
+
+	/** Re-execs this same command through `nvidia-offload`, inheriting this
+	 * process's stdio/terminal so the relaunched process stays in the same
+	 * foreground process group -- Ctrl+C (terminal SIGINT) reaches both
+	 * processes directly via normal job-control semantics, no forwarding
+	 * needed for that case. But an explicit `kill -TERM <this-pid>` (not a
+	 * terminal signal, not process-group-wide) targets only this thin
+	 * launcher by default, leaving the real daemon orphaned but still
+	 * running -- confirmed on real hardware before this forwarding was
+	 * added. So TERM and INT are both explicitly forwarded to the child
+	 * here too, making this launcher transparent to either shutdown path.
+	 * Blocks until the relaunched daemon exits and relays its status. */
+	private static WallpaperResult relaunchWithNvidiaOffload(String exePath, boolean verbose) {
+		if (verbose) {
+			System.out.println("Relaunching via nvidia-offload (an output on this machine is wired to the discrete GPU)...");
+		}
+		List<String> cmd = new ArrayList<>(List.of("nvidia-offload", exePath, "wallpaper"));
+		if (!verbose)
+			cmd.add("--quiet");
+		try {
+			Process child = new ProcessBuilder(cmd).inheritIO().start();
+
+			Signal.handle(new Signal("TERM"), sig -> child.destroy());
+			Signal.handle(new Signal("INT"), sig -> {
+				try {
+					new ProcessBuilder("kill", "-INT", String.valueOf(child.pid())).start().waitFor();
+				} catch (IOException | InterruptedException ignored) {
+					if (ignored instanceof InterruptedException)
+						Thread.currentThread().interrupt();
+				}
+			});
+
+			int exitCode = child.waitFor();
+			return new WallpaperResult(exitCode == 0, exitCode == 0 ? 0 : 1);
+		} catch (IOException e) {
+			System.err.println("Error relaunching wallpaper via nvidia-offload: " + e.getMessage());
+			return new WallpaperResult(false, 1);
+		} catch (InterruptedException e) {
+			Thread.currentThread().interrupt();
 			return new WallpaperResult(false, 1);
 		}
 	}
