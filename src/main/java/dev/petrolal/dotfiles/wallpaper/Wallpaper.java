@@ -171,6 +171,25 @@ public final class Wallpaper {
         return Math.max(1, Math.round(realSize * RENDER_SCALE));
     }
 
+    /** Optional cap independent of vsync: trades motion smoothness for
+     * battery/thermal headroom on weak hardware. The primary surface's vsync
+     * already paces the loop; this only adds a floor under that pace when the
+     * caller wants fewer frames/sec than vsync alone would deliver -- it
+     * never speeds anything up. Not a busy-wait: frameStartNanos is the start
+     * of a frame that already did real GPU work, and this sleeps once for
+     * whatever's left of the target interval, not in a spin-check loop. */
+    private static void throttleToMaxFps(long frameStartNanos, int maxFps) {
+        if (maxFps <= 0) return;
+        long targetFrameNanos = 1_000_000_000L / maxFps;
+        long remainingNanos = frameStartNanos + targetFrameNanos - System.nanoTime();
+        if (remainingNanos <= 0) return;
+        try {
+            Thread.sleep(remainingNanos / 1_000_000L, (int) (remainingNanos % 1_000_000L));
+        } catch (InterruptedException ignored) {
+            Thread.currentThread().interrupt();
+        }
+    }
+
     /** @param maxFps Caps the render loop to this many frames/sec, independent
      *                of vsync -- useful on weak hardware to trade motion
      *                smoothness for battery/thermal headroom even below what
@@ -372,23 +391,7 @@ public final class Wallpaper {
                             canvas.swapBuffers(surface);
                         }
 
-                        // Optional cap independent of vsync: trades motion
-                        // smoothness for battery/thermal headroom on weak
-                        // hardware. The primary surface's vsync already paces
-                        // the loop; this only adds a floor under that pace
-                        // when the caller wants fewer frames/sec than vsync
-                        // alone would deliver -- it never speeds anything up.
-                        if (maxFps > 0) {
-                            long targetFrameNanos = 1_000_000_000L / maxFps;
-                            long remainingNanos = frameStartNanos + targetFrameNanos - System.nanoTime();
-                            if (remainingNanos > 0) {
-                                try {
-                                    Thread.sleep(remainingNanos / 1_000_000L, (int) (remainingNanos % 1_000_000L));
-                                } catch (InterruptedException ignored) {
-                                    Thread.currentThread().interrupt();
-                                }
-                            }
-                        }
+                        throttleToMaxFps(frameStartNanos, maxFps);
                     }
                 } finally {
                     // Fails with IllegalStateException when the JVM is already

@@ -264,9 +264,10 @@ public final class Orchestrator {
 			Signal.handle(new Signal("INT"), _ -> {
 				try {
 					new ProcessBuilder("kill", "-INT", String.valueOf(child.pid())).start().waitFor();
-				} catch (IOException | InterruptedException ignored) {
-					if (ignored instanceof InterruptedException)
-						Thread.currentThread().interrupt();
+				} catch (IOException ignored) {
+					// best-effort signal relay -- nothing to do if `kill` itself fails to run
+				} catch (InterruptedException e) {
+					Thread.currentThread().interrupt();
 				}
 			});
 
