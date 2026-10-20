@@ -1,14 +1,13 @@
 package dev.petrolal.dotfiles.wallpaper;
 
-import java.lang.foreign.*;
-import java.lang.invoke.MethodHandle;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.FileTime;
 
 /**
  * ShaderPipeline manages compilation, linking, uniform binding, and live hot-reloading
- * of OpenGL shaders.
+ * of OpenGL shaders. All GL access goes through X11Canvas's typed wrapper
+ * methods -- this class never touches a MethodHandle, Arena, or MemorySegment.
  */
 public class ShaderPipeline {
 
@@ -40,22 +39,19 @@ public class ShaderPipeline {
     }
 
     public void bind() throws Throwable {
-        canvas.glUseProgram.invokeExact(programId);
+        canvas.useProgram(programId);
     }
 
     public void updateUniforms(WallpaperEvents.WallpaperState state, float viewportOffsetX, float viewportOffsetY) throws Throwable {
-        if (locRes >= 0) canvas.glUniform2f.invokeExact(locRes, state.width(), state.height());
-        if (locTime >= 0) canvas.glUniform1f.invokeExact(locTime, state.time());
-        if (locMouse >= 0) {
-            float left = state.mouseLeftDown() ? 1.0f : 0.0f;
-            float right = state.mouseRightDown() ? 1.0f : 0.0f;
-            canvas.glUniform4f.invokeExact(locMouse, state.mouseX(), state.mouseY(), left, right);
-        }
-        if (locWorkspace >= 0) canvas.glUniform1f.invokeExact(locWorkspace, (float) state.workspace());
-        if (locAudio >= 0) canvas.glUniform1f.invokeExact(locAudio, state.audioActivity());
-        if (locCpu >= 0) canvas.glUniform1f.invokeExact(locCpu, state.cpu());
-        if (locRam >= 0) canvas.glUniform1f.invokeExact(locRam, state.ram());
-        if (locViewportOffset >= 0) canvas.glUniform2f.invokeExact(locViewportOffset, viewportOffsetX, viewportOffsetY);
+        canvas.uniform2f(locRes, state.width(), state.height());
+        canvas.uniform1f(locTime, state.time());
+        canvas.uniform4f(locMouse, state.mouseX(), state.mouseY(),
+                state.mouseLeftDown() ? 1.0f : 0.0f, state.mouseRightDown() ? 1.0f : 0.0f);
+        canvas.uniform1f(locWorkspace, (float) state.workspace());
+        canvas.uniform1f(locAudio, state.audioActivity());
+        canvas.uniform1f(locCpu, state.cpu());
+        canvas.uniform1f(locRam, state.ram());
+        canvas.uniform2f(locViewportOffset, viewportOffsetX, viewportOffsetY);
     }
 
     /**
@@ -66,7 +62,7 @@ public class ShaderPipeline {
             FileTime currentMtime = Files.getLastModifiedTime(fragPath);
             if (currentMtime.compareTo(lastMtime) > 0) {
                 int newProg = compileProgram();
-                canvas.glDeleteProgram.invokeExact(programId);
+                canvas.deleteProgram(programId);
                 programId = newProg;
                 bind();
                 cacheUniformLocations();
@@ -79,71 +75,48 @@ public class ShaderPipeline {
     }
 
     private int compileProgram() throws Throwable {
-        try (Arena arena = Arena.ofConfined()) {
-            int vs = compileShader(vertPath, X11Canvas.GL_VERTEX_SHADER, arena);
-            int fs = compileShader(fragPath, X11Canvas.GL_FRAGMENT_SHADER, arena);
+        int vs = compileShader(vertPath, X11Canvas.GL_VERTEX_SHADER);
+        int fs = compileShader(fragPath, X11Canvas.GL_FRAGMENT_SHADER);
 
-            int prog = (int) canvas.glCreateProgram.invokeExact();
-            canvas.glAttachShader.invokeExact(prog, vs);
-            canvas.glAttachShader.invokeExact(prog, fs);
-            canvas.glLinkProgram.invokeExact(prog);
+        int prog = canvas.createProgram();
+        canvas.attachShader(prog, vs);
+        canvas.attachShader(prog, fs);
+        canvas.linkProgram(prog);
+        boolean linked = canvas.getProgramLinkStatus(prog);
 
-            MemorySegment linkStatus = arena.allocate(ValueLayout.JAVA_INT);
-            canvas.glGetProgramiv.invokeExact(prog, X11Canvas.GL_LINK_STATUS, linkStatus);
-            boolean linked = linkStatus.get(ValueLayout.JAVA_INT, 0) != 0;
+        canvas.deleteShader(vs);
+        canvas.deleteShader(fs);
 
-            canvas.glDeleteShader.invokeExact(vs);
-            canvas.glDeleteShader.invokeExact(fs);
-
-            if (!linked) {
-                String log = fetchInfoLog(canvas.glGetProgramInfoLog, prog, arena);
-                canvas.glDeleteProgram.invokeExact(prog);
-                throw new IllegalStateException(
-                        "Shader program link failed (" + fragPath.getFileName() + "): " + log);
-            }
-            return prog;
+        if (!linked) {
+            String log = canvas.getProgramInfoLog(prog);
+            canvas.deleteProgram(prog);
+            throw new IllegalStateException(
+                    "Shader program link failed (" + fragPath.getFileName() + "): " + log);
         }
+        return prog;
     }
 
-    private int compileShader(Path path, int type, Arena arena) throws Throwable {
-        String code = Files.readString(path);
-        int shader = (int) canvas.glCreateShader.invokeExact(type);
-        MemorySegment ptr = arena.allocateFrom(code);
-        MemorySegment ptrArray = arena.allocateFrom(ValueLayout.ADDRESS, ptr);
-        canvas.glShaderSource.invokeExact(shader, 1, ptrArray, MemorySegment.NULL);
-        canvas.glCompileShader.invokeExact(shader);
+    private int compileShader(Path path, int type) throws Throwable {
+        int shader = canvas.createShader(type);
+        canvas.shaderSource(shader, Files.readString(path));
+        canvas.compileShader(shader);
 
-        MemorySegment compileStatus = arena.allocate(ValueLayout.JAVA_INT);
-        canvas.glGetShaderiv.invokeExact(shader, X11Canvas.GL_COMPILE_STATUS, compileStatus);
-        if (compileStatus.get(ValueLayout.JAVA_INT, 0) == 0) {
-            String log = fetchInfoLog(canvas.glGetShaderInfoLog, shader, arena);
-            canvas.glDeleteShader.invokeExact(shader);
+        if (!canvas.getShaderCompileStatus(shader)) {
+            String log = canvas.getShaderInfoLog(shader);
+            canvas.deleteShader(shader);
             throw new IllegalStateException("Shader compile failed (" + path.getFileName() + "): " + log);
         }
         return shader;
     }
 
-    /** Reads an info log via either glGetShaderInfoLog or glGetProgramInfoLog
-     * (both share the (id, maxLength, *length, *infoLog) signature). */
-    private String fetchInfoLog(MethodHandle getInfoLog, int id, Arena arena) throws Throwable {
-        final int maxLength = 4096;
-        MemorySegment buffer = arena.allocate(maxLength);
-        MemorySegment lengthOut = arena.allocate(ValueLayout.JAVA_INT);
-        getInfoLog.invokeExact(id, maxLength, lengthOut, buffer);
-        int length = lengthOut.get(ValueLayout.JAVA_INT, 0);
-        return length > 0 ? buffer.getString(0) : "(no log)";
-    }
-
     private void cacheUniformLocations() throws Throwable {
-        try (Arena arena = Arena.ofConfined()) {
-            locRes = (int) canvas.glGetUniformLocation.invokeExact(programId, arena.allocateFrom("u_resolution"));
-            locTime = (int) canvas.glGetUniformLocation.invokeExact(programId, arena.allocateFrom("u_time"));
-            locMouse = (int) canvas.glGetUniformLocation.invokeExact(programId, arena.allocateFrom("u_mouse"));
-            locWorkspace = (int) canvas.glGetUniformLocation.invokeExact(programId, arena.allocateFrom("u_workspace"));
-            locAudio = (int) canvas.glGetUniformLocation.invokeExact(programId, arena.allocateFrom("u_audio"));
-            locCpu = (int) canvas.glGetUniformLocation.invokeExact(programId, arena.allocateFrom("u_cpu"));
-            locRam = (int) canvas.glGetUniformLocation.invokeExact(programId, arena.allocateFrom("u_ram"));
-            locViewportOffset = (int) canvas.glGetUniformLocation.invokeExact(programId, arena.allocateFrom("u_viewportOffset"));
-        }
+        locRes = canvas.getUniformLocation(programId, "u_resolution");
+        locTime = canvas.getUniformLocation(programId, "u_time");
+        locMouse = canvas.getUniformLocation(programId, "u_mouse");
+        locWorkspace = canvas.getUniformLocation(programId, "u_workspace");
+        locAudio = canvas.getUniformLocation(programId, "u_audio");
+        locCpu = canvas.getUniformLocation(programId, "u_cpu");
+        locRam = canvas.getUniformLocation(programId, "u_ram");
+        locViewportOffset = canvas.getUniformLocation(programId, "u_viewportOffset");
     }
 }

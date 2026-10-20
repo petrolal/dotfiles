@@ -104,30 +104,33 @@ public class X11Canvas implements AutoCloseable {
     // Direct OpenGL function handles -- resolved once in initGL(), after the
     // first surface's context is current (see initGL for why this can't
     // happen in the constructor: it needs the first monitor's real rectangle).
-    public MethodHandle glCreateShader;
-    public MethodHandle glShaderSource;
-    public MethodHandle glCompileShader;
-    public MethodHandle glGetShaderiv;
-    public MethodHandle glGetShaderInfoLog;
-    public MethodHandle glCreateProgram;
-    public MethodHandle glAttachShader;
-    public MethodHandle glLinkProgram;
-    public MethodHandle glGetProgramiv;
-    public MethodHandle glGetProgramInfoLog;
-    public MethodHandle glUseProgram;
-    public MethodHandle glDeleteShader;
-    public MethodHandle glDeleteProgram;
-    public MethodHandle glGetUniformLocation;
-    public MethodHandle glUniform1f;
-    public MethodHandle glUniform2f;
-    public MethodHandle glUniform4f;
-    public MethodHandle glViewport;
-    public MethodHandle glGenBuffers;
-    public MethodHandle glBindBuffer;
-    public MethodHandle glBufferData;
-    public MethodHandle glEnableVertexAttribArray;
-    public MethodHandle glVertexAttribPointer;
-    public MethodHandle glDrawArrays;
+    // Private: callers (e.g. ShaderPipeline) go through the typed wrapper
+    // methods below instead of invoking these handles directly, so GL call
+    // signatures and Arena/MemorySegment bookkeeping stay in one place.
+    private MethodHandle glCreateShader;
+    private MethodHandle glShaderSource;
+    private MethodHandle glCompileShader;
+    private MethodHandle glGetShaderiv;
+    private MethodHandle glGetShaderInfoLog;
+    private MethodHandle glCreateProgram;
+    private MethodHandle glAttachShader;
+    private MethodHandle glLinkProgram;
+    private MethodHandle glGetProgramiv;
+    private MethodHandle glGetProgramInfoLog;
+    private MethodHandle glUseProgram;
+    private MethodHandle glDeleteShader;
+    private MethodHandle glDeleteProgram;
+    private MethodHandle glGetUniformLocation;
+    private MethodHandle glUniform1f;
+    private MethodHandle glUniform2f;
+    private MethodHandle glUniform4f;
+    private MethodHandle glViewport;
+    private MethodHandle glGenBuffers;
+    private MethodHandle glBindBuffer;
+    private MethodHandle glBufferData;
+    private MethodHandle glEnableVertexAttribArray;
+    private MethodHandle glVertexAttribPointer;
+    private MethodHandle glDrawArrays;
 
     private static SymbolLookup loadLibrary(String libName, Arena arena) {
         try {
@@ -466,6 +469,108 @@ public class X11Canvas implements AutoCloseable {
 
     public void drawQuad() throws Throwable {
         glDrawArrays.invokeExact(GL_TRIANGLE_STRIP, 0, 4);
+    }
+
+    // -------------------------------------------------------------------
+    // Shader / program lifecycle -- the only GL surface ShaderPipeline
+    // needs; it never touches a MethodHandle, Arena, or MemorySegment.
+    // -------------------------------------------------------------------
+
+    public int createShader(int type) throws Throwable {
+        return (int) glCreateShader.invokeExact(type);
+    }
+
+    public void shaderSource(int shader, String source) throws Throwable {
+        try (Arena arena = Arena.ofConfined()) {
+            MemorySegment ptr = arena.allocateFrom(source);
+            MemorySegment ptrArray = arena.allocateFrom(ValueLayout.ADDRESS, ptr);
+            glShaderSource.invokeExact(shader, 1, ptrArray, MemorySegment.NULL);
+        }
+    }
+
+    public void compileShader(int shader) throws Throwable {
+        glCompileShader.invokeExact(shader);
+    }
+
+    public boolean getShaderCompileStatus(int shader) throws Throwable {
+        try (Arena arena = Arena.ofConfined()) {
+            MemorySegment status = arena.allocate(ValueLayout.JAVA_INT);
+            glGetShaderiv.invokeExact(shader, GL_COMPILE_STATUS, status);
+            return status.get(ValueLayout.JAVA_INT, 0) != 0;
+        }
+    }
+
+    public String getShaderInfoLog(int shader) throws Throwable {
+        return fetchInfoLog(glGetShaderInfoLog, shader);
+    }
+
+    public void deleteShader(int shader) throws Throwable {
+        glDeleteShader.invokeExact(shader);
+    }
+
+    public int createProgram() throws Throwable {
+        return (int) glCreateProgram.invokeExact();
+    }
+
+    public void attachShader(int program, int shader) throws Throwable {
+        glAttachShader.invokeExact(program, shader);
+    }
+
+    public void linkProgram(int program) throws Throwable {
+        glLinkProgram.invokeExact(program);
+    }
+
+    public boolean getProgramLinkStatus(int program) throws Throwable {
+        try (Arena arena = Arena.ofConfined()) {
+            MemorySegment status = arena.allocate(ValueLayout.JAVA_INT);
+            glGetProgramiv.invokeExact(program, GL_LINK_STATUS, status);
+            return status.get(ValueLayout.JAVA_INT, 0) != 0;
+        }
+    }
+
+    public String getProgramInfoLog(int program) throws Throwable {
+        return fetchInfoLog(glGetProgramInfoLog, program);
+    }
+
+    public void deleteProgram(int program) throws Throwable {
+        glDeleteProgram.invokeExact(program);
+    }
+
+    public void useProgram(int program) throws Throwable {
+        glUseProgram.invokeExact(program);
+    }
+
+    public int getUniformLocation(int program, String name) throws Throwable {
+        try (Arena arena = Arena.ofConfined()) {
+            return (int) glGetUniformLocation.invokeExact(program, arena.allocateFrom(name));
+        }
+    }
+
+    /** No-op when location is -1 (uniform not present in this shader),
+     * matching GL's own "unused uniform" semantics for the caller. */
+    public void uniform1f(int location, float v) throws Throwable {
+        if (location >= 0) glUniform1f.invokeExact(location, v);
+    }
+
+    public void uniform2f(int location, float a, float b) throws Throwable {
+        if (location >= 0) glUniform2f.invokeExact(location, a, b);
+    }
+
+    public void uniform4f(int location, float a, float b, float c, float d) throws Throwable {
+        if (location >= 0) glUniform4f.invokeExact(location, a, b, c, d);
+    }
+
+    /** Reads an info log via either glGetShaderInfoLog or glGetProgramInfoLog
+     * (both share the (id, maxLength, *length, *infoLog) signature). */
+    private String fetchInfoLog(MethodHandle getInfoLog, int id) throws Throwable {
+        final int maxLength = 4096;
+        try (Arena arena = Arena.ofConfined()) {
+            MemorySegment buffer = arena.allocate(maxLength);
+            MemorySegment lengthOut = arena.allocate(ValueLayout.JAVA_INT);
+            getInfoLog.invokeExact(id, maxLength, lengthOut, buffer);
+            int length = lengthOut.get(ValueLayout.JAVA_INT, 0);
+            return length > 0 ? buffer.getString(0) : "(no log)";
+        }
     }
 
     public void swapBuffers(Surface surface) throws Throwable {
