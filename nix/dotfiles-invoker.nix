@@ -65,6 +65,8 @@ stdenv.mkDerivation {
       $out/src/main/resources/static/wallpaper.vert
     install -Dm644 resources/static/wallpaper.frag \
       $out/src/main/resources/static/wallpaper.frag
+    install -Dm644 resources/static/blit.frag \
+      $out/src/main/resources/static/blit.frag
 
     runHook postInstall
   '';

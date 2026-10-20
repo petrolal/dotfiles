@@ -8,6 +8,7 @@ uniform float u_audio;          // Media/playback indicator
 uniform float u_cpu;            // CPU load (0.0 to 1.0)
 uniform float u_ram;            // RAM consumption (0.0 to 1.0)
 uniform vec2 u_viewportOffset;  // This monitor's pixel offset within full desktop
+uniform float u_renderScale;    // This pass's framebuffer size / real monitor size (e.g. 0.5)
 
 in vec2 v_uv;
 out vec4 fragColor;
@@ -319,13 +320,17 @@ vec3 calcNormal(vec3 p) {
 }
 
 void main() {
-    // Continuous global pixel coordinate across multi-monitor setup
-    vec2 globalPx = gl_FragCoord.xy + u_viewportOffset;
-
-    // Chunky low-res PS1-style pixelation: snap camera rays to a 2x2 block grid
-    const float pixelBlock = 2.0;
-    vec2 blockPx = (floor(globalPx / pixelBlock) + 0.5) * pixelBlock;
-    vec2 uv = (blockPx - 0.5 * u_resolution) / u_resolution.y;
+    // This pass renders into a reduced-resolution offscreen target (see
+    // X11Canvas.RenderTarget / Wallpaper's render loop), so gl_FragCoord is
+    // in THIS framebuffer's own smaller pixel grid, not the real monitor's.
+    // Rescale back up to real-pixel-equivalent coordinates before combining
+    // with u_viewportOffset (which IS in real pixels), so the panorama
+    // camera stays geometrically continuous across monitors regardless of
+    // render scale. The resulting chunky look comes from the GL_NEAREST
+    // upscale blit (see blit.frag), not from quantizing uv at full
+    // resolution the way this used to work -- that only wasted GPU work.
+    vec2 globalPx = (gl_FragCoord.xy / u_renderScale) + u_viewportOffset;
+    vec2 uv = (globalPx - 0.5 * u_resolution) / u_resolution.y;
 
     // Wide panorama examination camera
     vec3 ro = vec3(0.0, 0.65, -1.2);
@@ -629,8 +634,8 @@ void main() {
     // =========================================================================
     // POST-PROCESS: Retro PS1 Ordered-Dither & Color Quantization
     // =========================================================================
-    int bx = int(mod(blockPx.x / pixelBlock, 4.0));
-    int by = int(mod(blockPx.y / pixelBlock, 4.0));
+    int bx = int(mod(gl_FragCoord.x, 4.0));
+    int by = int(mod(gl_FragCoord.y, 4.0));
     float dither = (bayer[by * 4 + bx] + 0.5) / 16.0 - 0.5;
 
     // Authentic retro color depth with dither transition

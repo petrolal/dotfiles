@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=Imp98 3D Wallpaper
+Comment=Starts the OpenGL 3D wallpaper daemon for this session
+Exec=sh -c "$HOME/dotfiles/bin/invoker wallpaper"
+Terminal=false
+NoDisplay=true
+OnlyShowIn=XFCE;
+X-GNOME-Autostart-enabled=true

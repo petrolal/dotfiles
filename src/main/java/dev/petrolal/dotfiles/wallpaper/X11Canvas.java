@@ -29,6 +29,21 @@ public class X11Canvas implements AutoCloseable {
     public static final int GL_COMPILE_STATUS = 0x8B81;
     public static final int GL_LINK_STATUS = 0x8B82;
 
+    // Offscreen render-target constants (low-res raymarch pass -> nearest-upscale blit)
+    public static final int GL_FRAMEBUFFER = 0x8D40;
+    public static final int GL_COLOR_ATTACHMENT0 = 0x8CE0;
+    public static final int GL_FRAMEBUFFER_COMPLETE = 0x8CD5;
+    public static final int GL_TEXTURE_2D = 0x0DE1;
+    public static final int GL_RGBA = 0x1908;
+    public static final int GL_UNSIGNED_BYTE = 0x1401;
+    public static final int GL_TEXTURE_MIN_FILTER = 0x2801;
+    public static final int GL_TEXTURE_MAG_FILTER = 0x2800;
+    public static final int GL_NEAREST = 0x2600;
+    public static final int GL_TEXTURE_WRAP_S = 0x2802;
+    public static final int GL_TEXTURE_WRAP_T = 0x2803;
+    public static final int GL_CLAMP_TO_EDGE = 0x812F;
+    public static final int GL_TEXTURE0 = 0x84C0;
+
     public static final int GLX_RGBA = 4;
     public static final int GLX_DOUBLEBUFFER = 5;
 
@@ -131,6 +146,16 @@ public class X11Canvas implements AutoCloseable {
     private MethodHandle glEnableVertexAttribArray;
     private MethodHandle glVertexAttribPointer;
     private MethodHandle glDrawArrays;
+    private MethodHandle glGenFramebuffers;
+    private MethodHandle glBindFramebuffer;
+    private MethodHandle glFramebufferTexture2D;
+    private MethodHandle glCheckFramebufferStatus;
+    private MethodHandle glGenTextures;
+    private MethodHandle glBindTexture;
+    private MethodHandle glTexImage2D;
+    private MethodHandle glTexParameteri;
+    private MethodHandle glActiveTexture;
+    private MethodHandle glUniform1i;
 
     private static SymbolLookup loadLibrary(String libName, Arena arena) {
         try {
@@ -273,6 +298,16 @@ public class X11Canvas implements AutoCloseable {
         glEnableVertexAttribArray = getProc(linker, "glEnableVertexAttribArray", FunctionDescriptor.ofVoid(ValueLayout.JAVA_INT));
         glVertexAttribPointer = getProc(linker, "glVertexAttribPointer", FunctionDescriptor.ofVoid(ValueLayout.JAVA_INT, ValueLayout.JAVA_INT, ValueLayout.JAVA_INT, ValueLayout.JAVA_BYTE, ValueLayout.JAVA_INT, ValueLayout.ADDRESS));
         glDrawArrays = getProc(linker, "glDrawArrays", FunctionDescriptor.ofVoid(ValueLayout.JAVA_INT, ValueLayout.JAVA_INT, ValueLayout.JAVA_INT));
+        glGenFramebuffers = getProc(linker, "glGenFramebuffers", FunctionDescriptor.ofVoid(ValueLayout.JAVA_INT, ValueLayout.ADDRESS));
+        glBindFramebuffer = getProc(linker, "glBindFramebuffer", FunctionDescriptor.ofVoid(ValueLayout.JAVA_INT, ValueLayout.JAVA_INT));
+        glFramebufferTexture2D = getProc(linker, "glFramebufferTexture2D", FunctionDescriptor.ofVoid(ValueLayout.JAVA_INT, ValueLayout.JAVA_INT, ValueLayout.JAVA_INT, ValueLayout.JAVA_INT, ValueLayout.JAVA_INT));
+        glCheckFramebufferStatus = getProc(linker, "glCheckFramebufferStatus", FunctionDescriptor.of(ValueLayout.JAVA_INT, ValueLayout.JAVA_INT));
+        glGenTextures = getProc(linker, "glGenTextures", FunctionDescriptor.ofVoid(ValueLayout.JAVA_INT, ValueLayout.ADDRESS));
+        glBindTexture = getProc(linker, "glBindTexture", FunctionDescriptor.ofVoid(ValueLayout.JAVA_INT, ValueLayout.JAVA_INT));
+        glTexImage2D = getProc(linker, "glTexImage2D", FunctionDescriptor.ofVoid(ValueLayout.JAVA_INT, ValueLayout.JAVA_INT, ValueLayout.JAVA_INT, ValueLayout.JAVA_INT, ValueLayout.JAVA_INT, ValueLayout.JAVA_INT, ValueLayout.JAVA_INT, ValueLayout.JAVA_INT, ValueLayout.ADDRESS));
+        glTexParameteri = getProc(linker, "glTexParameteri", FunctionDescriptor.ofVoid(ValueLayout.JAVA_INT, ValueLayout.JAVA_INT, ValueLayout.JAVA_INT));
+        glActiveTexture = getProc(linker, "glActiveTexture", FunctionDescriptor.ofVoid(ValueLayout.JAVA_INT));
+        glUniform1i = getProc(linker, "glUniform1i", FunctionDescriptor.ofVoid(ValueLayout.JAVA_INT, ValueLayout.JAVA_INT));
 
         createSharedQuadBuffer();
         bindQuadAttribs();
@@ -558,6 +593,61 @@ public class X11Canvas implements AutoCloseable {
 
     public void uniform4f(int location, float a, float b, float c, float d) throws Throwable {
         if (location >= 0) glUniform4f.invokeExact(location, a, b, c, d);
+    }
+
+    public void uniform1i(int location, int v) throws Throwable {
+        if (location >= 0) glUniform1i.invokeExact(location, v);
+    }
+
+    // -------------------------------------------------------------------
+    // Offscreen render targets: the expensive raymarch shader draws into a
+    // reduced-resolution texture instead of the real window-sized backbuffer,
+    // which is then upscaled with GL_NEAREST filtering (see blit.frag) --
+    // cutting actual fragment-shader invocations for the expensive pass by
+    // (1/renderScale)^2, which is the dominant cost on weak/integrated GPUs.
+    // -------------------------------------------------------------------
+
+    /** One monitor's low-resolution color target: an FBO plus its backing texture. */
+    public record RenderTarget(int framebuffer, int texture, int width, int height) {}
+
+    public RenderTarget createRenderTarget(int width, int height) throws Throwable {
+        try (Arena arena = Arena.ofConfined()) {
+            MemorySegment texBuf = arena.allocate(ValueLayout.JAVA_INT);
+            glGenTextures.invokeExact(1, texBuf);
+            int texture = texBuf.get(ValueLayout.JAVA_INT, 0);
+
+            glBindTexture.invokeExact(GL_TEXTURE_2D, texture);
+            glTexImage2D.invokeExact(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, MemorySegment.NULL);
+            glTexParameteri.invokeExact(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+            glTexParameteri.invokeExact(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+            glTexParameteri.invokeExact(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+            glTexParameteri.invokeExact(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+            MemorySegment fboBuf = arena.allocate(ValueLayout.JAVA_INT);
+            glGenFramebuffers.invokeExact(1, fboBuf);
+            int framebuffer = fboBuf.get(ValueLayout.JAVA_INT, 0);
+
+            glBindFramebuffer.invokeExact(GL_FRAMEBUFFER, framebuffer);
+            glFramebufferTexture2D.invokeExact(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0);
+            int status = (int) glCheckFramebufferStatus.invokeExact(GL_FRAMEBUFFER);
+            if (status != GL_FRAMEBUFFER_COMPLETE) {
+                throw new IllegalStateException("Offscreen framebuffer incomplete (status 0x"
+                        + Integer.toHexString(status) + ")");
+            }
+            glBindFramebuffer.invokeExact(GL_FRAMEBUFFER, 0);
+
+            return new RenderTarget(framebuffer, texture, width, height);
+        }
+    }
+
+    public void bindFramebuffer(int framebuffer) throws Throwable {
+        glBindFramebuffer.invokeExact(GL_FRAMEBUFFER, framebuffer);
+    }
+
+    /** Binds TEXTURE to texture unit 0 (the only unit the blit shader uses). */
+    public void bindTexture(int texture) throws Throwable {
+        glActiveTexture.invokeExact(GL_TEXTURE0);
+        glBindTexture.invokeExact(GL_TEXTURE_2D, texture);
     }
 
     /** Reads an info log via either glGetShaderInfoLog or glGetProgramInfoLog

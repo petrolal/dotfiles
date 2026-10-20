@@ -167,9 +167,29 @@ public final class Wallpaper {
         return list;
     }
 
-    public void start() throws Throwable {
+    /** Fraction of each monitor's real resolution the expensive raymarch
+     * shader actually renders at, before a GL_NEAREST upscale blit back to
+     * full size. The dominant per-frame cost is the raymarch, which runs
+     * once per rendered pixel -- halving each axis cuts that work 4x, which
+     * is what makes this wallpaper viable on entry-level/integrated GPUs
+     * instead of requiring a discrete one. 0.5 was chosen as a default that
+     * still upscales to a reasonably detailed image; this is also now the
+     * ONLY source of the retro chunky-pixel look (see wallpaper.frag). */
+    private static final float RENDER_SCALE = 0.5f;
+
+    private static int scaledSize(int realSize) {
+        return Math.max(1, Math.round(realSize * RENDER_SCALE));
+    }
+
+    /** @param maxFps Caps the render loop to this many frames/sec, independent
+     *                of vsync -- useful on weak hardware to trade motion
+     *                smoothness for battery/thermal headroom even below what
+     *                RENDER_SCALE alone saves. 0 (or less) disables the cap,
+     *                leaving the primary surface's vsync as the only pacing. */
+    public void start(int maxFps) throws Throwable {
         Path vertPath = resolveShader("wallpaper.vert");
         Path panoramaFrag = resolveShader("wallpaper.frag");
+        Path blitFrag = resolveShader("blit.frag");
 
         // Ensure XFCE desktop background is transparent if xfdesktop is active
         configureXfdesktopTransparency();
@@ -198,20 +218,38 @@ public final class Wallpaper {
                 }
             }
 
+            // Each monitor also gets its own low-resolution offscreen render
+            // target (see RENDER_SCALE). Framebuffer Objects are NOT shared
+            // across GL contexts the way programs/textures/buffers are (they're
+            // "container objects"), so each one must be created while that
+            // monitor's own context is current -- which createSurface/initGL
+            // already leave current right when they return, hence creating it
+            // immediately, inline, rather than in a separate pass afterward.
             List<X11Canvas.Surface> surfaces = new ArrayList<>(Collections.nCopies(monitors.size(), null));
+            List<X11Canvas.RenderTarget> renderTargets = new ArrayList<>(Collections.nCopies(monitors.size(), null));
+
             Monitor primaryMon = monitors.get(primaryIndex);
-            surfaces.set(primaryIndex,
-                    canvas.initGL(primaryMon.x(), primaryMon.y(), primaryMon.width(), primaryMon.height()));
+            X11Canvas.Surface primarySurface =
+                    canvas.initGL(primaryMon.x(), primaryMon.y(), primaryMon.width(), primaryMon.height());
+            surfaces.set(primaryIndex, primarySurface);
+            renderTargets.set(primaryIndex, canvas.createRenderTarget(
+                    scaledSize(primaryMon.width()), scaledSize(primaryMon.height())));
+
             for (int i = 0; i < monitors.size(); i++) {
                 if (i == primaryIndex) continue;
                 Monitor mon = monitors.get(i);
                 surfaces.set(i, canvas.createSurface(mon.x(), mon.y(), mon.width(), mon.height(), 0));
+                renderTargets.set(i, canvas.createRenderTarget(scaledSize(mon.width()), scaledSize(mon.height())));
             }
 
-            // One shared program for every surface: all contexts share the same
-            // GL object namespace (see X11Canvas), so it's a single continuous
-            // panorama scene, rendered by one camera and split only by the bezels.
+            // One shared raymarch program for every surface: programs (unlike
+            // FBOs) ARE shared across contexts in the same GL object namespace
+            // (see X11Canvas), so it's a single continuous panorama scene,
+            // rendered by one camera and split only by the bezels. It draws
+            // into each monitor's small RenderTarget; sharedBlitPipeline then
+            // upscales that into the real window-sized backbuffer.
             ShaderPipeline sharedPipeline = new ShaderPipeline(canvas, vertPath, panoramaFrag);
+            BlitPipeline sharedBlitPipeline = new BlitPipeline(canvas, vertPath, blitFrag);
 
             try (WallpaperEvents events = new WallpaperEvents(canvas)) {
                 // A background-launched process typically has SIGINT left at
@@ -321,16 +359,45 @@ public final class Wallpaper {
 
                             Monitor mon = monitors.get(i);
                             X11Canvas.Surface surface = surfaces.get(i);
+                            X11Canvas.RenderTarget target = renderTargets.get(i);
 
                             float viewportOffsetX = mon.x();
                             float viewportOffsetY = totalScreenHeight - (mon.y() + mon.height());
 
                             canvas.makeCurrent(surface);
-                            canvas.setViewport(0, 0, mon.width(), mon.height());
+
+                            // Pass 1: the expensive raymarch, at reduced resolution.
+                            canvas.bindFramebuffer(target.framebuffer());
+                            canvas.setViewport(0, 0, target.width(), target.height());
                             sharedPipeline.bind();
-                            sharedPipeline.updateUniforms(rawState, viewportOffsetX, viewportOffsetY);
+                            sharedPipeline.updateUniforms(rawState, viewportOffsetX, viewportOffsetY, RENDER_SCALE);
                             canvas.drawQuad();
+
+                            // Pass 2: cheap GL_NEAREST upscale of that into the real backbuffer.
+                            canvas.bindFramebuffer(0);
+                            canvas.setViewport(0, 0, mon.width(), mon.height());
+                            sharedBlitPipeline.bind(target.texture());
+                            canvas.drawQuad();
+
                             canvas.swapBuffers(surface);
+                        }
+
+                        // Optional cap independent of vsync: trades motion
+                        // smoothness for battery/thermal headroom on weak
+                        // hardware. The primary surface's vsync already paces
+                        // the loop; this only adds a floor under that pace
+                        // when the caller wants fewer frames/sec than vsync
+                        // alone would deliver -- it never speeds anything up.
+                        if (maxFps > 0) {
+                            long targetFrameNanos = 1_000_000_000L / maxFps;
+                            long remainingNanos = frameStartNanos + targetFrameNanos - System.nanoTime();
+                            if (remainingNanos > 0) {
+                                try {
+                                    Thread.sleep(remainingNanos / 1_000_000L, (int) (remainingNanos % 1_000_000L));
+                                } catch (InterruptedException ignored) {
+                                    Thread.currentThread().interrupt();
+                                }
+                            }
                         }
                     }
                 } finally {

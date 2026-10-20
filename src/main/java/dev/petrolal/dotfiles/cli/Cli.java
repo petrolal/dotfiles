@@ -23,9 +23,13 @@ public final class Cli {
 		System.out.println("  -u, --uninstall   remove all deployed dotfile symlinks safely");
 		System.out.println("  -n, --dry-run     simulate actions without modifying filesystem or xfconf");
 		System.out.println("  -q, --quiet       suppress non-error output");
-		System.out.println("      --links-only  only symlink dotfiles (implies --no-xfconf --no-reload)");
+		System.out.println("      --links-only  only symlink dotfiles (implies --no-xfconf --no-reload --no-wallpaper)");
 		System.out.println("      --no-xfconf   do not apply XFCE desktop settings via xfconf");
 		System.out.println("      --no-reload   do not reload XFCE desktop services");
+		System.out.println("      --no-wallpaper  do not (re)start the 3D wallpaper daemon");
+		System.out.println("      --max-fps=N   (wallpaper) cap the render loop to N frames/sec,");
+		System.out.println("                    independent of vsync -- trade smoothness for");
+		System.out.println("                    battery/thermal headroom on weak hardware");
 		System.out.println("  -h, --help        display this help text and exit");
 		System.out.println("  -v, --version     display version information and exit");
 	}
@@ -50,9 +54,24 @@ public final class Cli {
 		boolean verbose = true;
 		boolean reload = true;
 		boolean applySettings = true;
+		boolean applyWallpaper = true;
+		int maxFps = 0;
 		Action action = Action.DEPLOY;
 
 		for (String arg : argv) {
+			if (arg.startsWith("--max-fps=")) {
+				String value = arg.substring("--max-fps=".length());
+				try {
+					maxFps = Integer.parseInt(value);
+				} catch (NumberFormatException e) {
+					maxFps = -1;
+				}
+				if (maxFps <= 0) {
+					System.err.println(PROGRAM_NAME + ": --max-fps requires a positive integer, got '" + value + "'");
+					return 1;
+				}
+				continue;
+			}
 			switch (arg) {
 			case "-h", "--help" -> {
 				printHelp();
@@ -67,9 +86,11 @@ public final class Cli {
 			case "--links-only" -> {
 				applySettings = false;
 				reload = false;
+				applyWallpaper = false;
 			}
 			case "--no-xfconf" -> applySettings = false;
 			case "--no-reload" -> reload = false;
+			case "--no-wallpaper" -> applyWallpaper = false;
 			case "-u", "--uninstall", "uninstall" -> action = Action.UNINSTALL;
 			case "deploy" -> action = Action.DEPLOY;
 			case "wallpaper" -> action = Action.WALLPAPER;
@@ -83,8 +104,8 @@ public final class Cli {
 
 		boolean ok = switch (action) {
 		case UNINSTALL -> Orchestrator.uninstall(dryRun, verbose).ok();
-		case DEPLOY -> Orchestrator.deploy(dryRun, verbose, reload, applySettings).ok();
-		case WALLPAPER -> Orchestrator.set3DWallpaper(dryRun, verbose).ok();
+		case DEPLOY -> Orchestrator.deploy(dryRun, verbose, reload, applySettings, applyWallpaper).ok();
+		case WALLPAPER -> Orchestrator.set3DWallpaper(dryRun, verbose, maxFps).ok();
 		};
 		return ok ? 0 : 1;
 	}

@@ -7,6 +7,8 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 
 import dev.petrolal.dotfiles.desktop.Xfconf;
 import dev.petrolal.dotfiles.linker.Linker;
@@ -60,7 +62,8 @@ public final class Orchestrator {
 		}
 	}
 
-	public static DeployResult deploy(boolean dryRun, boolean verbose, boolean reload, boolean applySettings) {
+	public static DeployResult deploy(boolean dryRun, boolean verbose, boolean reload, boolean applySettings,
+			boolean applyWallpaper) {
 		if (verbose)
 			System.out.println("=== Deploying " + Theme.NAME + " Dotfiles ===");
 		Path root = DotfilePaths.findDotfilesRoot();
@@ -84,6 +87,24 @@ public final class Orchestrator {
 			if (reload)
 				reloadDesktopServices(dryRun, verbose);
 		}
+
+		// The config/autostart/invoker-wallpaper.desktop entry (symlinked by
+		// the loop above like any other config/ file) covers future logins;
+		// this covers the current session, so `deploy` leaves the freshest
+		// build actually running immediately instead of only promising it for
+		// next time.
+		if (applyWallpaper) {
+			if (System.getenv("DISPLAY") == null) {
+				if (verbose)
+					System.out.println("[SKIP] No DISPLAY available, skipping wallpaper daemon (re)start.");
+			} else if (dryRun) {
+				if (verbose)
+					System.out.println("[DRY-RUN] Would (re)start the 3D wallpaper daemon.");
+			} else {
+				restartWallpaperDaemon(verbose);
+			}
+		}
+
 		if (verbose) {
 			if (failures == 0) {
 				System.out.println("Deployment finished successfully.");
@@ -92,6 +113,53 @@ public final class Orchestrator {
 			}
 		}
 		return new DeployResult(failures == 0, failures, successes);
+	}
+
+	/** Stops any already-running `invoker wallpaper` daemon (so a redeploy
+	 * actually picks up a freshly rebuilt binary or shader instead of leaving
+	 * the old process running alongside a new one) and starts a fresh one,
+	 * detached from this process. */
+	private static void restartWallpaperDaemon(boolean verbose) {
+		stopRunningWallpaperDaemons(verbose);
+
+		Optional<String> exePath = ProcessHandle.current().info().command();
+		if (exePath.isEmpty()) {
+			if (verbose)
+				System.out.println("[SKIP] Could not determine this executable's path; not starting the wallpaper daemon.");
+			return;
+		}
+		if (verbose)
+			System.out.println("Starting 3D wallpaper daemon...");
+		ProcessRunner.spawnDetached(List.of(exePath.get(), "wallpaper", "--quiet"));
+	}
+
+	private static boolean isWallpaperDaemon(ProcessHandle ph) {
+		String commandLine = ph.info().commandLine().orElse("");
+		return commandLine.contains("invoker") && commandLine.contains("wallpaper");
+	}
+
+	private static void stopRunningWallpaperDaemons(boolean verbose) {
+		List<ProcessHandle> existing = ProcessHandle.allProcesses()
+				.filter(Orchestrator::isWallpaperDaemon)
+				.toList();
+		if (existing.isEmpty())
+			return;
+
+		if (verbose)
+			System.out.println("Stopping " + existing.size() + " running wallpaper daemon process(es)...");
+		List<CompletableFuture<ProcessHandle>> exits = new ArrayList<>();
+		for (ProcessHandle ph : existing) {
+			ph.destroy();
+			exits.add(ph.onExit());
+		}
+		try {
+			// Our own daemon's shutdown-hook watchdog gives up after 2s (see
+			// Wallpaper.start()); wait slightly longer than that for a clean
+			// handoff, but this is best-effort -- if it's still not gone, the
+			// new instance starts anyway rather than blocking deploy on it.
+			CompletableFuture.allOf(exits.toArray(new CompletableFuture[0])).get(3, TimeUnit.SECONDS);
+		} catch (Exception ignored) {
+		}
 	}
 
 	public static UninstallResult uninstall(boolean dryRun, boolean verbose) {
@@ -125,7 +193,7 @@ public final class Orchestrator {
 		return new UninstallResult(failures == 0, failures, removedCount);
 	}
 
-	public static WallpaperResult set3DWallpaper(boolean dryRun, boolean verbose) {
+	public static WallpaperResult set3DWallpaper(boolean dryRun, boolean verbose, int maxFps) {
 		if (verbose) {
 			System.out.println("=== Applying 3D Wallpaper ===");
 		}
@@ -154,14 +222,14 @@ public final class Orchestrator {
 		if (System.getenv("__NV_PRIME_RENDER_OFFLOAD") == null && DotfilePaths.commandExists("nvidia-offload")) {
 			Optional<String> exePath = ProcessHandle.current().info().command();
 			if (exePath.isPresent()) {
-				return relaunchWithNvidiaOffload(exePath.get(), verbose);
+				return relaunchWithNvidiaOffload(exePath.get(), verbose, maxFps);
 			}
 			// Can't determine our own executable path to relaunch -- fall through
 			// and render in-process on whatever GPU GLX picks by default.
 		}
 
 		try {
-			new Wallpaper().start();
+			new Wallpaper().start(maxFps);
 			return new WallpaperResult(true, 0);
 		} catch (Throwable ex) {
 			System.err.println("Error on wallpaper application: " + ex.getMessage());
@@ -180,13 +248,15 @@ public final class Orchestrator {
 	 * added. So TERM and INT are both explicitly forwarded to the child
 	 * here too, making this launcher transparent to either shutdown path.
 	 * Blocks until the relaunched daemon exits and relays its status. */
-	private static WallpaperResult relaunchWithNvidiaOffload(String exePath, boolean verbose) {
+	private static WallpaperResult relaunchWithNvidiaOffload(String exePath, boolean verbose, int maxFps) {
 		if (verbose) {
 			System.out.println("Relaunching via nvidia-offload (an output on this machine is wired to the discrete GPU)...");
 		}
 		List<String> cmd = new ArrayList<>(List.of("nvidia-offload", exePath, "wallpaper"));
 		if (!verbose)
 			cmd.add("--quiet");
+		if (maxFps > 0)
+			cmd.add("--max-fps=" + maxFps);
 		try {
 			Process child = new ProcessBuilder(cmd).inheritIO().start();
 

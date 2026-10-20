@@ -27,6 +27,7 @@ public class ShaderPipeline {
     private int locCpu = -1;
     private int locRam = -1;
     private int locViewportOffset = -1;
+    private int locRenderScale = -1;
 
     public ShaderPipeline(X11Canvas canvas, Path vertPath, Path fragPath) throws Throwable {
         this.canvas = canvas;
@@ -42,7 +43,8 @@ public class ShaderPipeline {
         canvas.useProgram(programId);
     }
 
-    public void updateUniforms(WallpaperEvents.WallpaperState state, float viewportOffsetX, float viewportOffsetY) throws Throwable {
+    public void updateUniforms(WallpaperEvents.WallpaperState state, float viewportOffsetX, float viewportOffsetY,
+                                float renderScale) throws Throwable {
         canvas.uniform2f(locRes, state.width(), state.height());
         canvas.uniform1f(locTime, state.time());
         canvas.uniform4f(locMouse, state.mouseX(), state.mouseY(),
@@ -52,6 +54,7 @@ public class ShaderPipeline {
         canvas.uniform1f(locCpu, state.cpu());
         canvas.uniform1f(locRam, state.ram());
         canvas.uniform2f(locViewportOffset, viewportOffsetX, viewportOffsetY);
+        canvas.uniform1f(locRenderScale, renderScale);
     }
 
     /**
@@ -127,5 +130,6 @@ public class ShaderPipeline {
         locCpu = canvas.getUniformLocation(programId, "u_cpu");
         locRam = canvas.getUniformLocation(programId, "u_ram");
         locViewportOffset = canvas.getUniformLocation(programId, "u_viewportOffset");
+        locRenderScale = canvas.getUniformLocation(programId, "u_renderScale");
     }
 }
