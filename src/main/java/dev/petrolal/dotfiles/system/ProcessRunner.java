@@ -6,6 +6,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -35,7 +36,7 @@ public final class ProcessRunner {
             String stderr = stderrFuture.get();
 
             if (exitCode != 0) {
-                String binary = cmd.isEmpty() ? "" : cmd.get(0);
+                String binary = cmd.isEmpty() ? "" : cmd.getFirst();
                 String detail = stderr.isBlank() ? binary : binary + ": " + stderr.trim();
                 return Result.err(new DotfileError.CommandFailed(detail, exitCode));
             }
@@ -62,7 +63,7 @@ public final class ProcessRunner {
                     .start();
             int exitCode = p.waitFor();
             if (exitCode != 0) {
-                String binary = cmd.isEmpty() ? "" : cmd.get(0);
+                String binary = cmd.isEmpty() ? "" : cmd.getFirst();
                 return Result.err(new DotfileError.CommandFailed(binary, exitCode));
             }
             return Result.ok(exitCode);
@@ -79,12 +80,19 @@ public final class ProcessRunner {
      * process instead of blocking for its lifetime.
      */
     public static void spawnDetached(List<String> cmd) {
+        spawnDetached(cmd, Map.of());
+    }
+
+    /** Same as {@link #spawnDetached(List)}, with additional environment
+     * variables merged in on top of Theme.ENV (e.g. MANGOHUD=1). */
+    public static void spawnDetached(List<String> cmd, Map<String, String> extraEnv) {
         try {
             ProcessBuilder pb = new ProcessBuilder(cmd)
                     .redirectOutput(ProcessBuilder.Redirect.DISCARD)
                     .redirectError(ProcessBuilder.Redirect.DISCARD)
                     .redirectInput(ProcessBuilder.Redirect.from(new File("/dev/null")));
             pb.environment().putAll(Theme.ENV);
+            pb.environment().putAll(extraEnv);
             pb.start();
         } catch (IOException _) {
             // best-effort: service reload is not fatal to deployment

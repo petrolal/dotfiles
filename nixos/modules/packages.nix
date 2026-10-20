@@ -16,6 +16,7 @@ let
     mpv
     xwinwrap
     feh
+    mangohud  # FPS/frametime/GPU overlay for testing the OpenGL wallpaper's performance
   ];
 
   devTools = with pkgs; [

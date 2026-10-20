@@ -18,7 +18,8 @@ public final class Cli {
 		System.out.println("Commands:");
 		System.out.println("  deploy            perform full deployment (link, configure, reload) [default]");
 		System.out.println("  uninstall         remove all deployed dotfile symlinks safely");
-		System.out.println("  wallpaper         start OpenGL 3D wallpaper\n");
+		System.out.println("  wallpaper         start OpenGL 3D wallpaper");
+		System.out.println("  toggle-hud        toggle the running wallpaper's MangoHud performance overlay\n");
 		System.out.println("Options:");
 		System.out.println("  -u, --uninstall   remove all deployed dotfile symlinks safely");
 		System.out.println("  -n, --dry-run     simulate actions without modifying filesystem or xfconf");
@@ -42,7 +43,7 @@ public final class Cli {
 	}
 
 	private enum Action {
-		DEPLOY, UNINSTALL, WALLPAPER
+		DEPLOY, UNINSTALL, WALLPAPER, TOGGLE_HUD
 	}
 
 	static void main(String[] argv) {
@@ -94,6 +95,7 @@ public final class Cli {
 			case "-u", "--uninstall", "uninstall" -> action = Action.UNINSTALL;
 			case "deploy" -> action = Action.DEPLOY;
 			case "wallpaper" -> action = Action.WALLPAPER;
+			case "toggle-hud" -> action = Action.TOGGLE_HUD;
 			default -> {
 				System.err.println(PROGRAM_NAME + ": unrecognized option '" + arg + "'");
 				System.err.println("Try '" + PROGRAM_NAME + " --help' for more information.");
@@ -106,6 +108,7 @@ public final class Cli {
 		case UNINSTALL -> Orchestrator.uninstall(dryRun, verbose).ok();
 		case DEPLOY -> Orchestrator.deploy(dryRun, verbose, reload, applySettings, applyWallpaper).ok();
 		case WALLPAPER -> Orchestrator.set3DWallpaper(dryRun, verbose, maxFps).ok();
+		case TOGGLE_HUD -> Orchestrator.toggleWallpaperHud(verbose);
 		};
 		return ok ? 0 : 1;
 	}

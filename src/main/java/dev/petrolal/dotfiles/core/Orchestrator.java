@@ -2,21 +2,31 @@
 // License: GPL-3.0-or-later
 package dev.petrolal.dotfiles.core;
 
-import java.io.IOException;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
 
+import dev.petrolal.dotfiles.desktop.DesktopServices;
 import dev.petrolal.dotfiles.desktop.Xfconf;
 import dev.petrolal.dotfiles.linker.Linker;
-import dev.petrolal.dotfiles.system.ProcessRunner;
+import dev.petrolal.dotfiles.wallpaper.GpuOffloadLauncher;
 import dev.petrolal.dotfiles.wallpaper.Wallpaper;
+import dev.petrolal.dotfiles.wallpaper.WallpaperDaemonManager;
 
-import sun.misc.Signal;
-
+/**
+ * Composes the focused, single-purpose collaborators below into the CLI's
+ * four commands (deploy, uninstall, wallpaper, toggle-hud). This class's one
+ * reason to change is how those commands are sequenced -- not how linking,
+ * settings, desktop reloads, or the wallpaper daemon's lifecycle actually
+ * work, each of which lives in its own class:
+ * <ul>
+ *   <li>{@link Linker} -- symlink discovery/creation/removal</li>
+ *   <li>{@link Xfconf} -- XFCE/GNOME settings</li>
+ *   <li>{@link dev.petrolal.dotfiles.desktop.KeyboardShortcuts} -- keybinding catalog</li>
+ *   <li>{@link DesktopServices} -- reloading live desktop components</li>
+ *   <li>{@link WallpaperDaemonManager} -- daemon lifecycle from another invocation</li>
+ *   <li>{@link GpuOffloadLauncher} -- the daemon's own self-relaunch decision</li>
+ * </ul>
+ */
 public final class Orchestrator {
 	private Orchestrator() {
 	}
@@ -28,38 +38,6 @@ public final class Orchestrator {
 	}
 
 	public record WallpaperResult(boolean ok, int failures) {
-	}
-
-	/** Spawned with Theme.ENV by ProcessRunner.spawnDetached, so restarted
-	 * components pick up the theme regardless of the session environment. */
-	private static final List<List<String>> RELOAD_COMMANDS = List.of(
-			List.of("xfsettingsd", "--replace"),
-			List.of("sh", "-c", "if pgrep -x xfce4-panel >/dev/null 2>&1; then xfce4-panel -r; else xfce4-panel & fi"),
-			List.of("xfwm4", "--replace"),
-			List.of("pkill", "-f", "xfce4-notifyd"),
-			List.of("thunar", "-q"));
-
-	/** Reloads active XFCE desktop components if running in an X11 session. */
-	public static void reloadDesktopServices(boolean dryRun, boolean verbose) {
-		if (System.getenv("DISPLAY") == null) {
-			if (verbose)
-				System.out.println("[SKIP] No DISPLAY available, skipping desktop reload.");
-			return;
-		}
-		if (verbose)
-			System.out.println("Reloading XFCE services...");
-
-		for (List<String> args : RELOAD_COMMANDS) {
-			String binary = args.getFirst();
-			if (!DotfilePaths.commandExists(binary)) {
-				if (verbose)
-					System.out.println("[SKIP] " + binary + " not found, skipping.");
-			} else if (dryRun) {
-				System.out.println("[DRY-RUN] Would execute: " + String.join(" ", args));
-			} else {
-				ProcessRunner.spawnDetached(args);
-			}
-		}
 	}
 
 	public static DeployResult deploy(boolean dryRun, boolean verbose, boolean reload, boolean applySettings,
@@ -85,7 +63,7 @@ public final class Orchestrator {
 		if (applySettings) {
 			failures += Xfconf.applyXfceSettings(dryRun, verbose);
 			if (reload)
-				reloadDesktopServices(dryRun, verbose);
+				DesktopServices.reload(dryRun, verbose);
 		}
 
 		// The config/autostart/invoker-wallpaper.desktop entry (symlinked by
@@ -101,7 +79,7 @@ public final class Orchestrator {
 				if (verbose)
 					System.out.println("[DRY-RUN] Would (re)start the 3D wallpaper daemon.");
 			} else {
-				restartWallpaperDaemon(verbose);
+				WallpaperDaemonManager.restart(verbose);
 			}
 		}
 
@@ -113,53 +91,6 @@ public final class Orchestrator {
 			}
 		}
 		return new DeployResult(failures == 0, failures, successes);
-	}
-
-	/** Stops any already-running `invoker wallpaper` daemon (so a redeploy
-	 * actually picks up a freshly rebuilt binary or shader instead of leaving
-	 * the old process running alongside a new one) and starts a fresh one,
-	 * detached from this process. */
-	private static void restartWallpaperDaemon(boolean verbose) {
-		stopRunningWallpaperDaemons(verbose);
-
-		Optional<String> exePath = ProcessHandle.current().info().command();
-		if (exePath.isEmpty()) {
-			if (verbose)
-				System.out.println("[SKIP] Could not determine this executable's path; not starting the wallpaper daemon.");
-			return;
-		}
-		if (verbose)
-			System.out.println("Starting 3D wallpaper daemon...");
-		ProcessRunner.spawnDetached(List.of(exePath.get(), "wallpaper", "--quiet"));
-	}
-
-	private static boolean isWallpaperDaemon(ProcessHandle ph) {
-		String commandLine = ph.info().commandLine().orElse("");
-		return commandLine.contains("invoker") && commandLine.contains("wallpaper");
-	}
-
-	private static void stopRunningWallpaperDaemons(boolean verbose) {
-		List<ProcessHandle> existing = ProcessHandle.allProcesses()
-				.filter(Orchestrator::isWallpaperDaemon)
-				.toList();
-		if (existing.isEmpty())
-			return;
-
-		if (verbose)
-			System.out.println("Stopping " + existing.size() + " running wallpaper daemon process(es)...");
-		List<CompletableFuture<ProcessHandle>> exits = new ArrayList<>();
-		for (ProcessHandle ph : existing) {
-			ph.destroy();
-			exits.add(ph.onExit());
-		}
-		try {
-			// Our own daemon's shutdown-hook watchdog gives up after 2s (see
-			// Wallpaper.start()); wait slightly longer than that for a clean
-			// handoff, but this is best-effort -- if it's still not gone, the
-			// new instance starts anyway rather than blocking deploy on it.
-			CompletableFuture.allOf(exits.toArray(new CompletableFuture[0])).get(3, TimeUnit.SECONDS);
-		} catch (Exception ignored) {
-		}
 	}
 
 	public static UninstallResult uninstall(boolean dryRun, boolean verbose) {
@@ -205,27 +136,15 @@ public final class Orchestrator {
 			return new WallpaperResult(true, 0);
 		}
 
-		// On hybrid Intel+NVIDIA laptops where an output is physically wired to
-		// the discrete GPU (common for HDMI/DP on mux-less gaming laptops),
-		// rendering through the default (Intel) GLX driver forces every frame
-		// bound for that output through a cross-GPU copy before it can scan
-		// out -- confirmed on real hardware to cause visible cursor/animation
-		// stutter on that monitor specifically. Relaunching through the
-		// NixOS-provided `nvidia-offload` wrapper (hardware.nvidia.prime.offload
-		// in nixos/modules/nvidia.nix) renders the whole scene on the GPU that
-		// already owns the display pipeline instead of whichever one GLX's
-		// default vendor selection happens to pick.
-		//
-		// __NV_PRIME_RENDER_OFFLOAD is the guard against relaunching forever:
-		// nvidia-offload sets it before exec-ing into us again, so the second
-		// run through here sees it already set and renders in-process as normal.
-		if (System.getenv("__NV_PRIME_RENDER_OFFLOAD") == null && DotfilePaths.commandExists("nvidia-offload")) {
-			Optional<String> exePath = ProcessHandle.current().info().command();
-			if (exePath.isPresent()) {
-				return relaunchWithNvidiaOffload(exePath.get(), verbose, maxFps);
+		if (GpuOffloadLauncher.offloadAvailableAndNotActive()) {
+			// Empty means "couldn't resolve this executable's own path, never
+			// attempted the relaunch" -- fall through to render in-process
+			// instead of reporting a failure for something that never ran.
+			Optional<GpuOffloadLauncher.LaunchResult> result = GpuOffloadLauncher.relaunch(verbose, maxFps);
+			if (result.isPresent()) {
+				boolean ok = result.get().ok();
+				return new WallpaperResult(ok, ok ? 0 : 1);
 			}
-			// Can't determine our own executable path to relaunch -- fall through
-			// and render in-process on whatever GPU GLX picks by default.
 		}
 
 		try {
@@ -237,48 +156,10 @@ public final class Orchestrator {
 		}
 	}
 
-	/** Re-execs this same command through `nvidia-offload`, inheriting this
-	 * process's stdio/terminal so the relaunched process stays in the same
-	 * foreground process group -- Ctrl+C (terminal SIGINT) reaches both
-	 * processes directly via normal job-control semantics, no forwarding
-	 * needed for that case. But an explicit `kill -TERM <this-pid>` (not a
-	 * terminal signal, not process-group-wide) targets only this thin
-	 * launcher by default, leaving the real daemon orphaned but still
-	 * running -- confirmed on real hardware before this forwarding was
-	 * added. So TERM and INT are both explicitly forwarded to the child
-	 * here too, making this launcher transparent to either shutdown path.
-	 * Blocks until the relaunched daemon exits and relays its status. */
-	private static WallpaperResult relaunchWithNvidiaOffload(String exePath, boolean verbose, int maxFps) {
-		if (verbose) {
-			System.out.println("Relaunching via nvidia-offload (an output on this machine is wired to the discrete GPU)...");
-		}
-		List<String> cmd = new ArrayList<>(List.of("nvidia-offload", exePath, "wallpaper"));
-		if (!verbose)
-			cmd.add("--quiet");
-		if (maxFps > 0)
-			cmd.add("--max-fps=" + maxFps);
-		try {
-			Process child = new ProcessBuilder(cmd).inheritIO().start();
-
-			Signal.handle(new Signal("TERM"), _ -> child.destroy());
-			Signal.handle(new Signal("INT"), _ -> {
-				try {
-					new ProcessBuilder("kill", "-INT", String.valueOf(child.pid())).start().waitFor();
-				} catch (IOException ignored) {
-					// best-effort signal relay -- nothing to do if `kill` itself fails to run
-				} catch (InterruptedException e) {
-					Thread.currentThread().interrupt();
-				}
-			});
-
-			int exitCode = child.waitFor();
-			return new WallpaperResult(exitCode == 0, exitCode == 0 ? 0 : 1);
-		} catch (IOException e) {
-			System.err.println("Error relaunching wallpaper via nvidia-offload: " + e.getMessage());
-			return new WallpaperResult(false, 1);
-		} catch (InterruptedException e) {
-			Thread.currentThread().interrupt();
-			return new WallpaperResult(false, 1);
-		}
+	/** Toggles the running wallpaper daemon's MangoHud performance overlay
+	 * on or off. See {@link dev.petrolal.dotfiles.desktop.KeyboardShortcuts}
+	 * for the keybinding that invokes this (via `invoker toggle-hud`). */
+	public static boolean toggleWallpaperHud(boolean verbose) {
+		return WallpaperDaemonManager.toggleHud(verbose);
 	}
 }

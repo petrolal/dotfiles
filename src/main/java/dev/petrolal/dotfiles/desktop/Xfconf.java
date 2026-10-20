@@ -51,10 +51,6 @@ public final class Xfconf {
         return setting("xfwm4", "/general/" + key, type, value);
     }
 
-    private static XfceSetting shortcut(String property, String command) {
-        return setting("xfce4-keyboard-shortcuts", property, "string", command);
-    }
-
     static final List<XfceSetting> XFCE_SETTINGS = buildXfceSettings();
 
     private static List<XfceSetting> buildXfceSettings() {
@@ -133,29 +129,10 @@ public final class Xfconf {
                 panel("/panels/panel-1/length", "uint", "100"),
                 panel("/panels/panel-1/position-locked", "bool", "true"),
                 panel("/panels/panel-1/size", "uint", "28"),
-                panel("/panels/panel-1/icon-size", "uint", "16"),
+                panel("/panels/panel-1/icon-size", "uint", "16")));
 
-                // Keybindings
-                shortcut("/commands/custom/<Super>Return", "xfce4-terminal"),
-                shortcut("/commands/custom/<Primary><Alt>t", "xfce4-terminal"),
-                shortcut("/commands/custom/<Super>e", "thunar"),
-                shortcut("/commands/custom/<Super>r", "xfce4-appfinder"),
-                shortcut("/commands/custom/<Shift><Super>s", "xfce4-screenshooter -r"),
-                shortcut("/xfwm4/custom/<Super>q", "close_window_key"),
-                shortcut("/xfwm4/custom/<Super>f", "fullscreen_key"),
-
-                // Multimedia keys (PipeWire via wpctl, playerctl)
-                shortcut("/commands/custom/XF86AudioRaiseVolume", "~/.config/xfce4/scripts/volume.sh up"),
-                shortcut("/commands/custom/XF86AudioLowerVolume", "~/.config/xfce4/scripts/volume.sh down"),
-                shortcut("/commands/custom/XF86AudioMute", "~/.config/xfce4/scripts/volume.sh mute"),
-                shortcut("/commands/custom/XF86AudioMicMute", "~/.config/xfce4/scripts/volume.sh mic-mute"),
-                shortcut("/commands/custom/XF86AudioPlay", "playerctl play-pause"),
-                shortcut("/commands/custom/XF86AudioNext", "playerctl next"),
-                shortcut("/commands/custom/XF86AudioPrev", "playerctl previous")));
-
-        for (int i = 1; i <= 4; i++) {
-            s.add(shortcut("/xfwm4/custom/<Super>" + i, "workspace_" + i + "_key"));
-            s.add(shortcut("/xfwm4/custom/<Shift><Super>" + i, "move_window_workspace_" + i + "_key"));
+        for (KeyboardShortcuts.Shortcut sc : KeyboardShortcuts.ALL) {
+            s.add(setting("xfce4-keyboard-shortcuts", sc.property(), "string", sc.command()));
         }
         for (int i = 0; i < LAUNCHERS.size(); i++) {
             s.add(panel("/plugins/plugin-" + (FIRST_LAUNCHER + i), "string", "launcher"));
@@ -175,7 +152,7 @@ public final class Xfconf {
 
     /** Expands a leading ~/ to $HOME. */
     static String expandHomeTilde(String valStr) {
-        if (valStr.length() >= 2 && valStr.startsWith("~/")) {
+        if (valStr.startsWith("~/")) {
             String home = DotfilePaths.userHomeDirectory().toString();
             String trimmed = home.endsWith("/") ? home.substring(0, home.length() - 1) : home;
             return trimmed + valStr.substring(1);
