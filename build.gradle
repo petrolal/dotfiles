@@ -71,7 +71,7 @@ tasks.test {
 // Helpers
 // ---------------------------------------------------------------------------
 
-String resolveGraalVmHome() {
+static String resolveGraalVmHome() {
     def env = System.getenv('GRAALVM_HOME')
     if (env) {
         return env
@@ -190,7 +190,7 @@ tasks.named('check') {
     }
 }
 
-tasks.register('installcheck', Exec) {
+tasks.register('install-check', Exec) {
     group = 'Verification'
     description = 'Verify the installed invoker runs.'
     dependsOn('nativeCompile')
@@ -407,6 +407,7 @@ tasks.register('upgrade') {
 tasks.named('deploy') {
     mustRunAfter('nix-switch')
 }
+
 tasks.named('system-install') {
     mustRunAfter('nix-update')
 }
@@ -415,7 +416,7 @@ tasks.named('system-install') {
 // Cleaning Tasks
 // ---------------------------------------------------------------------------
 
-tasks.register('mostlyclean') {
+tasks.register('mostly-clean') {
     group = 'Clean'
     description = 'Remove the build directory and editor backup files.'
     dependsOn('clean')
@@ -437,10 +438,10 @@ tasks.named('clean') {
     }
 }
 
-tasks.register('distclean') {
+tasks.register('dist-clean') {
     group = 'Clean'
     description = 'clean + remove Nix result links.'
-    dependsOn('clean', 'mostlyclean')
+    dependsOn('clean', 'mostly-clean')
     doLast {
         projectDir.listFiles()
             ?.findAll { it.name == 'result' || it.name.startsWith('result-') }
@@ -450,6 +451,6 @@ tasks.register('distclean') {
 
 tasks.register('maintainer-clean') {
     group = 'Clean'
-    description = 'distclean + remove additional maintainer files.'
-    dependsOn('distclean')
+    description = 'dist-clean + remove additional maintainer files.'
+    dependsOn('dist-clean')
 }
