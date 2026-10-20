@@ -1,6 +1,7 @@
 package dev.petrolal.dotfiles.wallpaper;
 
 import java.lang.foreign.*;
+import java.lang.invoke.MethodHandle;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.FileTime;
@@ -87,8 +88,19 @@ public class ShaderPipeline {
             canvas.glAttachShader.invokeExact(prog, fs);
             canvas.glLinkProgram.invokeExact(prog);
 
+            MemorySegment linkStatus = arena.allocate(ValueLayout.JAVA_INT);
+            canvas.glGetProgramiv.invokeExact(prog, X11Canvas.GL_LINK_STATUS, linkStatus);
+            boolean linked = linkStatus.get(ValueLayout.JAVA_INT, 0) != 0;
+
             canvas.glDeleteShader.invokeExact(vs);
             canvas.glDeleteShader.invokeExact(fs);
+
+            if (!linked) {
+                String log = fetchInfoLog(canvas.glGetProgramInfoLog, prog, arena);
+                canvas.glDeleteProgram.invokeExact(prog);
+                throw new IllegalStateException(
+                        "Shader program link failed (" + fragPath.getFileName() + "): " + log);
+            }
             return prog;
         }
     }
@@ -100,7 +112,26 @@ public class ShaderPipeline {
         MemorySegment ptrArray = arena.allocateFrom(ValueLayout.ADDRESS, ptr);
         canvas.glShaderSource.invokeExact(shader, 1, ptrArray, MemorySegment.NULL);
         canvas.glCompileShader.invokeExact(shader);
+
+        MemorySegment compileStatus = arena.allocate(ValueLayout.JAVA_INT);
+        canvas.glGetShaderiv.invokeExact(shader, X11Canvas.GL_COMPILE_STATUS, compileStatus);
+        if (compileStatus.get(ValueLayout.JAVA_INT, 0) == 0) {
+            String log = fetchInfoLog(canvas.glGetShaderInfoLog, shader, arena);
+            canvas.glDeleteShader.invokeExact(shader);
+            throw new IllegalStateException("Shader compile failed (" + path.getFileName() + "): " + log);
+        }
         return shader;
+    }
+
+    /** Reads an info log via either glGetShaderInfoLog or glGetProgramInfoLog
+     * (both share the (id, maxLength, *length, *infoLog) signature). */
+    private String fetchInfoLog(MethodHandle getInfoLog, int id, Arena arena) throws Throwable {
+        final int maxLength = 4096;
+        MemorySegment buffer = arena.allocate(maxLength);
+        MemorySegment lengthOut = arena.allocate(ValueLayout.JAVA_INT);
+        getInfoLog.invokeExact(id, maxLength, lengthOut, buffer);
+        int length = lengthOut.get(ValueLayout.JAVA_INT, 0);
+        return length > 0 ? buffer.getString(0) : "(no log)";
     }
 
     private void cacheUniformLocations() throws Throwable {

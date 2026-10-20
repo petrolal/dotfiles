@@ -26,6 +26,8 @@ public class X11Canvas implements AutoCloseable {
     public static final int GL_STATIC_DRAW = 0x88E4;
     public static final int GL_FLOAT = 0x1406;
     public static final int GL_TRIANGLE_STRIP = 0x0005;
+    public static final int GL_COMPILE_STATUS = 0x8B81;
+    public static final int GL_LINK_STATUS = 0x8B82;
 
     public static final int GLX_RGBA = 4;
     public static final int GLX_DOUBLEBUFFER = 5;
@@ -105,9 +107,13 @@ public class X11Canvas implements AutoCloseable {
     public MethodHandle glCreateShader;
     public MethodHandle glShaderSource;
     public MethodHandle glCompileShader;
+    public MethodHandle glGetShaderiv;
+    public MethodHandle glGetShaderInfoLog;
     public MethodHandle glCreateProgram;
     public MethodHandle glAttachShader;
     public MethodHandle glLinkProgram;
+    public MethodHandle glGetProgramiv;
+    public MethodHandle glGetProgramInfoLog;
     public MethodHandle glUseProgram;
     public MethodHandle glDeleteShader;
     public MethodHandle glDeleteProgram;
@@ -243,9 +249,13 @@ public class X11Canvas implements AutoCloseable {
         glCreateShader = getProc(linker, "glCreateShader", FunctionDescriptor.of(ValueLayout.JAVA_INT, ValueLayout.JAVA_INT));
         glShaderSource = getProc(linker, "glShaderSource", FunctionDescriptor.ofVoid(ValueLayout.JAVA_INT, ValueLayout.JAVA_INT, ValueLayout.ADDRESS, ValueLayout.ADDRESS));
         glCompileShader = getProc(linker, "glCompileShader", FunctionDescriptor.ofVoid(ValueLayout.JAVA_INT));
+        glGetShaderiv = getProc(linker, "glGetShaderiv", FunctionDescriptor.ofVoid(ValueLayout.JAVA_INT, ValueLayout.JAVA_INT, ValueLayout.ADDRESS));
+        glGetShaderInfoLog = getProc(linker, "glGetShaderInfoLog", FunctionDescriptor.ofVoid(ValueLayout.JAVA_INT, ValueLayout.JAVA_INT, ValueLayout.ADDRESS, ValueLayout.ADDRESS));
         glCreateProgram = getProc(linker, "glCreateProgram", FunctionDescriptor.of(ValueLayout.JAVA_INT));
         glAttachShader = getProc(linker, "glAttachShader", FunctionDescriptor.ofVoid(ValueLayout.JAVA_INT, ValueLayout.JAVA_INT));
         glLinkProgram = getProc(linker, "glLinkProgram", FunctionDescriptor.ofVoid(ValueLayout.JAVA_INT));
+        glGetProgramiv = getProc(linker, "glGetProgramiv", FunctionDescriptor.ofVoid(ValueLayout.JAVA_INT, ValueLayout.JAVA_INT, ValueLayout.ADDRESS));
+        glGetProgramInfoLog = getProc(linker, "glGetProgramInfoLog", FunctionDescriptor.ofVoid(ValueLayout.JAVA_INT, ValueLayout.JAVA_INT, ValueLayout.ADDRESS, ValueLayout.ADDRESS));
         glUseProgram = getProc(linker, "glUseProgram", FunctionDescriptor.ofVoid(ValueLayout.JAVA_INT));
         glDeleteShader = getProc(linker, "glDeleteShader", FunctionDescriptor.ofVoid(ValueLayout.JAVA_INT));
         glDeleteProgram = getProc(linker, "glDeleteProgram", FunctionDescriptor.ofVoid(ValueLayout.JAVA_INT));
@@ -304,6 +314,10 @@ public class X11Canvas implements AutoCloseable {
         try (Arena arena = Arena.ofConfined()) {
             MemorySegment glAttrs = arena.allocateFrom(ValueLayout.JAVA_INT, GLX_RGBA, GLX_DOUBLEBUFFER, 0);
             MemorySegment visInfo = (MemorySegment) glXChooseVisual.invokeExact(display, screen, glAttrs);
+            if (visInfo.equals(MemorySegment.NULL)) {
+                throw new IllegalStateException(
+                        "glXChooseVisual found no matching GLX visual (RGBA, double-buffered) for this X11 screen.");
+            }
             MemorySegment shareWith = sharedGlContext == null ? MemorySegment.NULL : sharedGlContext;
             glContext = (MemorySegment) glXCreateContext.invokeExact(display, visInfo, shareWith, 1);
             int ignoredCurrent = (int) glXMakeCurrent.invokeExact(display, window, glContext);

@@ -7,6 +7,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -186,12 +187,25 @@ public final class Wallpaper {
             ShaderPipeline sharedPipeline = new ShaderPipeline(canvas, vertPath, panoramaFrag);
 
             try (WallpaperEvents events = new WallpaperEvents(canvas)) {
-                // SIGINT/SIGTERM halt the JVM via shutdown hooks, not by
-                // unwinding the stack -- the try-with-resources close() calls
-                // below never run on that path. Release the X11/GL state
-                // explicitly so a killed daemon doesn't leak the display
-                // connection, GLX contexts, and override-redirect windows.
-                Thread shutdownHook = new Thread(canvas::close, "wallpaper-shutdown");
+                // SIGINT/SIGTERM run shutdown hooks on a separate thread while
+                // this render loop keeps executing concurrently -- Xlib/GLX
+                // calls and the X11Canvas native state are not safe to touch
+                // from two threads at once (no XInitThreads(), and closing
+                // the shared Arena while this thread still dereferences its
+                // segments is undefined behavior). So the hook never touches
+                // canvas state itself: it only flips a flag and blocks the
+                // JVM's exit until this thread observes it, exits the loop,
+                // and runs its own try-with-resources close() below.
+                AtomicBoolean shutdownRequested = new AtomicBoolean(false);
+                Thread renderThread = Thread.currentThread();
+                Thread shutdownHook = new Thread(() -> {
+                    shutdownRequested.set(true);
+                    try {
+                        renderThread.join();
+                    } catch (InterruptedException ignored) {
+                        Thread.currentThread().interrupt();
+                    }
+                }, "wallpaper-shutdown");
                 Runtime.getRuntime().addShutdownHook(shutdownHook);
 
                 long startTimeNanos = System.nanoTime();
@@ -201,7 +215,7 @@ public final class Wallpaper {
                 final long reloadCheckIntervalNanos = 1_000_000_000L;
 
                 try {
-                    while (true) {
+                    while (!shutdownRequested.get()) {
                         // Hot-reload is a developer convenience, not a per-frame need:
                         // stat()-ing the shader file 60x/sec forever is wasted syscalls.
                         long nowForReload = System.nanoTime();
@@ -242,7 +256,14 @@ public final class Wallpaper {
                         }
                     }
                 } finally {
-                    Runtime.getRuntime().removeShutdownHook(shutdownHook);
+                    // Fails with IllegalStateException when the JVM is already
+                    // shutting down (the hook that is about to join us is
+                    // already running) -- that's expected on the signal path,
+                    // not an error.
+                    try {
+                        Runtime.getRuntime().removeShutdownHook(shutdownHook);
+                    } catch (IllegalStateException ignored) {
+                    }
                 }
             }
         }
