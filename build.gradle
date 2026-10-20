@@ -100,7 +100,19 @@ List<String> getDeployFlags() {
 }
 
 def invokerFile = layout.projectDirectory.file('bin/invoker').asFile
-def themeName = 'Imp98' // keep in sync with dev.petrolal.dotfiles.core.Theme.NAME
+def themeName = resolveThemeName()
+
+/** Reads Theme.NAME straight out of the Java source instead of keeping a
+ * second hardcoded copy here that can silently drift from it. */
+String resolveThemeName() {
+    def themeSource = layout.projectDirectory
+            .file('src/main/java/dev/petrolal/dotfiles/core/Theme.java').asFile
+    def matcher = themeSource.text =~ /NAME\s*=\s*"([^"]+)"/
+    if (!matcher.find()) {
+        throw new GradleException("Could not find Theme.NAME in ${themeSource}")
+    }
+    return matcher.group(1)
+}
 
 // ---------------------------------------------------------------------------
 // Native Image Configuration
