@@ -168,24 +168,7 @@ void main() {
         float totalNeonWire = clamp(gridMask * 0.9 + topoMask, 0.0, 1.0);
         col = mix(col, C_CYBER_ACID * 1.25, totalNeonWire * 0.85);
 
-        // --- Blood Red Terror Glitches Across the Ground ---
-        // 1. Sprawling geometric blood fissures tearing through the green hills
-        vec2 floorTile = floor(p.xz * 1.2);
-        float floorTileRand = hash(floorTile + floor(u_time * 8.0) * 11.7);
-        float bloodPatchTrigger = step(0.82 - (0.28 * min(glitchPulse, 1.0)), floorTileRand);
 
-        if (bloodPatchTrigger > 0.5) {
-            float patchType = hash1(floorTileRand * 70.0);
-            vec3 bloodGlitchCol = (patchType < 0.6) ? C_BLOOD_RED : C_CRIMSON;
-            float veinNoise = noise(p.xz * 12.0 + u_time * 2.0);
-            col = mix(col, bloodGlitchCol * 1.4, clamp(veinNoise * 1.4, 0.45, 1.0));
-        }
-
-        // 2. High-frequency blood scanline pulses ripping across terrain during active glitches
-        if (glitchPulse > 0.3) {
-            float floorRip = step(0.92, sin(p.z * 18.0 + u_time * 25.0) * cos(p.x * 6.0));
-            col = mix(col, C_BLOOD_RED * 1.3, floorRip * min(glitchPulse, 1.0) * 0.85);
-        }
 
         // Distance atmospheric fog into horizon
         float fog = exp(-0.035 * t * t);
@@ -196,35 +179,7 @@ void main() {
     float scanline = sin(gl_FragCoord.y * 1.4) * (0.03 + 0.04 * isNight * hourGlitchScale);
     col -= scanline;
 
-    // --- Cyberpunk / Retro Terror Edge Square Glitches (Horror Palette) ---
-    vec2 edgeDist = min(v_uv, 1.0 - v_uv);
-    float borderReach = mix(0.12, 0.28, hourGlitchScale);
-    float borderFactor = 1.0 - smoothstep(0.0, borderReach, min(edgeDist.x, edgeDist.y));
 
-    if (borderFactor > 0.01) {
-        float tileSize = mix(18.0, 28.0, midnightFactor);
-        vec2 blockPos = floor(gl_FragCoord.xy / tileSize);
-        float blockHash = hash(blockPos + floor(u_time * 12.0) * 19.3);
-        float blockTriggerThreshold = mix(0.88, 0.55, min(glitchPulse, 1.0));
-        float blockTrigger = step(blockTriggerThreshold, blockHash);
-
-        if (blockTrigger > 0.5) {
-            float blockType = hash1(blockHash * 100.0);
-            vec3 glitchBlockCol;
-            if (blockType < 0.35) {
-                // Inverted corrupted block
-                glitchBlockCol = 1.0 - col;
-            } else if (blockType < 0.70) {
-                // Blood Red / Crimson horror data tile
-                glitchBlockCol = mix(C_BLOOD_RED, C_CRIMSON, blockType * 2.0);
-            } else {
-                // Crushed dark block
-                glitchBlockCol = C_BG_DEEP * 1.8;
-            }
-            float blockOpacity = borderFactor * (0.55 + 0.45 * min(glitchPulse, 1.0));
-            col = mix(col, glitchBlockCol, blockOpacity);
-        }
-    }
 
     // Vignette
     vec2 v = v_uv * (1.0 - v_uv.yx);
