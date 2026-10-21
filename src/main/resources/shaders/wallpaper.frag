@@ -36,6 +36,9 @@ const vec3 C_CRIMSON    = vec3(0.55, 0.02, 0.15); // #8c0526
 const vec3 C_PURPLE     = vec3(0.35, 0.05, 0.40); // #590d66
 const vec3 C_SICK_GREEN = vec3(0.18, 0.38, 0.15); // #2e6126
 const vec3 C_CYBER_ACID = vec3(0.20, 0.95, 0.30); // #33f24d (cyber acid neon)
+const vec3 C_GLITCH_MAGENTA = vec3(0.95, 0.08, 0.85); // #f215d9 -- paired with C_CYBER_ACID
+// for an RGB-channel-split "VHS glitch" look (magenta = R+B, green = G alone)
+// instead of flat solid-color blocks.
 
 // Iconic Windows XP Bliss Green Grass Tone
 const vec3 C_BLISS_GREEN = vec3(0.22, 0.62, 0.18); 
@@ -92,6 +95,27 @@ const float MONITOR_YAW = 0.0;
 float sdBox(vec3 p, vec3 b) {
     vec3 q = abs(p) - b;
     return length(max(q, 0.0)) + min(max(q.x, max(q.y, q.z)), 0.0);
+}
+
+/** Coverage [0,1] of one thin line segment through the origin, ANGLE
+ * degrees from horizontal -- used by asteriskMask() below to build a '*'
+ * out of three crossed strokes instead of a plain round password dot. */
+float lineSeg(vec2 p, float angleDeg, float halfLen, float thickness) {
+    float a = radians(angleDeg);
+    mat2 rot = mat2(cos(a), -sin(a), sin(a), cos(a));
+    vec2 q = rot * p;
+    float d = max(abs(q.x) - halfLen, abs(q.y) - thickness);
+    return smoothstep(0.0025, 0.0, d);
+}
+
+/** Password-mask glyph: a 3-stroke asterisk ('*'), not a round dot --
+ * matches how real password fields mask input. P is local offset from the
+ * glyph's center. */
+float asteriskMask(vec2 p, float halfLen, float thickness) {
+    float m = lineSeg(p, 0.0, halfLen, thickness);
+    m = max(m, lineSeg(p, 60.0, halfLen, thickness));
+    m = max(m, lineSeg(p, 120.0, halfLen, thickness));
+    return m;
 }
 
 /** Box-local (rotated) coordinates for a world-space point -- shared by
@@ -201,8 +225,14 @@ void main() {
     // monitorLocal() above).
     vec2 mNorm = u_lockerActive > 0.5 ? vec2(0.0) : clamp(u_mouse.xy / res - 0.5, vec2(-0.5), vec2(0.5));
     float quake = (hash(vec2(u_time * 30.0, gl_FragCoord.y)) - 0.5) * 0.025 * min(glitchPulse, 1.0);
-    vec3 ro = vec3(mNorm.x * 0.8 + quake, 1.8 - mNorm.y * 0.4, 4.0);
-    vec3 ta = vec3(mNorm.x * 0.4 - quake * 0.5, 0.5 - mNorm.y * 0.2, -4.0);
+    // While the locker is active, the camera must be perfectly level (ro.y
+    // == ta.y, both equal to MONITOR_CENTER.y) and look straight down -z --
+    // any vertical pitch perspective-foreshortens the login dialog box
+    // unevenly between its top/bottom edges, which reads as the dialog
+    // having the wrong aspect ratio even though MONITOR_HALF itself already
+    // matches LoginPromptTexture's true 440x320 aspect.
+    vec3 ro = u_lockerActive > 0.5 ? vec3(0.0, MONITOR_CENTER.y, 4.0) : vec3(mNorm.x * 0.8 + quake, 1.8 - mNorm.y * 0.4, 4.0);
+    vec3 ta = u_lockerActive > 0.5 ? vec3(0.0, MONITOR_CENTER.y, -4.0) : vec3(mNorm.x * 0.4 - quake * 0.5, 0.5 - mNorm.y * 0.2, -4.0);
     vec3 ww = normalize(ta - ro);
     vec3 uu = normalize(cross(ww, vec3(0.0, 1.0, 0.0)));
     vec3 vv = normalize(cross(uu, ww));
@@ -325,8 +355,8 @@ void main() {
                         for (int i = 0; i < dotCount; i++) {
                             float dx = local.x - (leftPad + float(i) * dotSpacing + dotSpacing * 0.5);
                             float dy = (local.y - dotY) * (fieldSize.y / fieldSize.x) * 3.5;
-                            float dot = smoothstep(0.018, 0.0, length(vec2(dx, dy)));
-                            screenCol = mix(screenCol, vec3(0.05), dot);
+                            float star = asteriskMask(vec2(dx, dy), 0.018, 0.0045);
+                            screenCol = mix(screenCol, vec3(0.05), star);
                         }
                     } else {
                         float blink = step(0.5, fract(u_time * 1.5));
@@ -343,14 +373,22 @@ void main() {
                     screenCol = mix(screenCol, C_CRIMSON, step(0.88, verifyStatic) * 0.4);
                 }
                 if (u_authError > 0.0) {
-                    screenCol = mix(screenCol, C_BLOOD_RED, 0.5 * u_authError);
+                    // Same magenta channel-gain wash as the full-screen
+                    // shockwave below, so the dialog face and the rest of
+                    // the scene glitch the same way during a failed attempt.
+                    screenCol.r = clamp(screenCol.r * (1.0 + 0.9 * u_authError), 0.0, 1.0);
+                    screenCol.b = clamp(screenCol.b * (1.0 + 0.7 * u_authError), 0.0, 1.0);
+                    screenCol.g = clamp(screenCol.g * (1.0 - 0.5 * u_authError), 0.0, 1.0);
                 }
 
                 // Still a haunted terminal, not a clean modern UI: a sparse
                 // corrupting flicker even over the "real" dialog chrome.
-                float corruptNoise = hash(vec2(floor(texUv.x * 50.0), floor(texUv.y * 30.0) + floor(u_time * 5.0)));
+                // Fine film-grain corruption speckle, magenta/green tinted
+                // like a real channel-split glitch -- not flat red squares.
+                float corruptNoise = hash(vec2(floor(texUv.x * 220.0), floor(texUv.y * 160.0) + floor(u_time * 5.0)));
                 float corruptFlicker = step(0.985, corruptNoise) * (0.5 + 0.5 * sin(u_time * 45.0));
-                screenCol = mix(screenCol, vec3(0.9, 0.1, 0.15), corruptFlicker * 0.4);
+                vec3 corruptCol = mix(C_GLITCH_MAGENTA, C_CYBER_ACID, hash1(corruptNoise * 17.0));
+                screenCol = mix(screenCol, corruptCol, corruptFlicker * 0.5);
 
                 col = screenCol;
             } else {
@@ -396,21 +434,25 @@ void main() {
     col -= scanline;
 
     // --- Cyberpunk / Matrix Post-Processing Glitches ---
-    // 1. Cyberpunk Chromatic Digital Tear Skew (Splitting channels along displaced slices)
+    // 1. Chromatic-split digital tear: real VHS/RGB-split glitch, not a flat
+    // solid-color block -- boosting R+B together while cutting G reads as
+    // magenta (and vice versa for green), the same split a real channel-
+    // offset chromatic aberration produces, so the scene's own detail stays
+    // visible through the tint instead of being flattened to one color.
     float activeSlice = sliceTrigger1 + sliceTrigger2;
     if (activeSlice > 0.5 && glitchPulse > 0.15) {
         vec3 cyberTear = col;
         float tearColorType = hash1(sliceY1 + sliceTime);
         if (tearColorType < 0.55) {
-            // Blood-red chromatic edge
-            cyberTear.r = clamp(col.r * 1.6 + 0.20, 0.0, 1.0);
-            cyberTear.g = col.g * 0.35;
-            cyberTear.b = col.b * 0.30;
+            // Magenta channel split (R+B up, G down)
+            cyberTear.r = clamp(col.r * 1.5 + 0.18, 0.0, 1.0);
+            cyberTear.b = clamp(col.b * 1.5 + 0.16, 0.0, 1.0);
+            cyberTear.g = col.g * 0.30;
         } else {
-            // Cyber-acid neon edge
+            // Green channel split (G up, R+B down)
             cyberTear.g = clamp(col.g * 1.7 + 0.15, 0.0, 1.0);
-            cyberTear.r = col.r * 0.40;
-            cyberTear.b = clamp(col.b * 1.3, 0.0, 1.0);
+            cyberTear.r = col.r * 0.35;
+            cyberTear.b = col.b * 0.35;
         }
         col = mix(col, cyberTear, 0.70 * min(glitchPulse, 1.3));
     }
@@ -419,16 +461,19 @@ void main() {
     float laserTrigger = step(0.992 - (0.018 * hourGlitchScale), hash(vec2(floor(gl_FragCoord.y * 0.5), floor(u_time * 28.0))));
     if (laserTrigger > 0.5 && glitchPulse > 0.20) {
         float laserHue = hash1(gl_FragCoord.y * 3.7 + u_time);
-        vec3 laserCol = (laserHue < 0.5) ? C_CYBER_ACID * 1.4 : C_BLOOD_RED * 1.5;
+        vec3 laserCol = (laserHue < 0.5) ? C_CYBER_ACID * 1.4 : C_GLITCH_MAGENTA * 1.4;
         col = mix(col, laserCol, 0.75 * min(glitchPulse, 1.2));
     }
 
-    // 3. Matrix Binary Packet Loss Static (Crisp, pixelated digital static snow bursts during peaks)
+    // 3. Fine-grained VHS static (film-grain-sized noise, magenta/green
+    // tinted like a real channel-split tape glitch -- deliberately NOT the
+    // old big flat-colored blocks, which read as "pixelated squares" rather
+    // than analog noise).
     if (glitchPulse > 0.35) {
-        float digitalStatic = hash(vec2(floor(gl_FragCoord.x / 3.0), floor(gl_FragCoord.y / 2.0) + floor(u_time * 24.0) * 19.3));
+        float digitalStatic = hash(vec2(floor(gl_FragCoord.x), floor(gl_FragCoord.y) + floor(u_time * 24.0) * 19.3));
         float staticMask = step(0.72 - (0.12 * demonHours), digitalStatic) * min(glitchPulse, 1.2) * 0.35;
-        vec3 staticCol = mix(vec3(0.9), C_CYBER_ACID, hash1(digitalStatic * 13.0));
-        col = mix(col, staticCol, staticMask);
+        vec3 staticCol = mix(C_GLITCH_MAGENTA, C_CYBER_ACID, hash1(digitalStatic * 13.0));
+        col = mix(col, col * 0.4 + staticCol * 0.6, staticMask);
     }
 
 
@@ -446,11 +491,18 @@ void main() {
     // strongest right after a failed attempt and decaying (decay itself
     // happens on the Java side, driving u_authError down over ~1.2s).
     if (u_authError > 0.0) {
-        col = mix(col, C_BLOOD_RED, 0.5 * u_authError);
+        // Channel-gain shockwave instead of a flat color flood: boosting
+        // R+B together while cutting G reads as a magenta chromatic-split
+        // wash, and the scene's own detail stays visible through it rather
+        // than being flattened to one solid color.
+        col.r = clamp(col.r * (1.0 + 0.9 * u_authError), 0.0, 1.0);
+        col.b = clamp(col.b * (1.0 + 0.7 * u_authError), 0.0, 1.0);
+        col.g = clamp(col.g * (1.0 - 0.5 * u_authError), 0.0, 1.0);
         float errorShake = (hash(vec2(u_time * 50.0, gl_FragCoord.y * 0.3)) - 0.5) * 0.04 * u_authError;
-        col.r = clamp(col.r + errorShake + 0.15 * u_authError, 0.0, 1.0);
+        col.r = clamp(col.r + errorShake + 0.1 * u_authError, 0.0, 1.0);
         float errorSlice = step(0.85, hash(vec2(floor(gl_FragCoord.y / 6.0), floor(u_time * 40.0))));
-        col = mix(col, vec3(1.0, 0.05, 0.1), errorSlice * 0.4 * u_authError);
+        vec3 errorSliceCol = mix(C_GLITCH_MAGENTA, C_CYBER_ACID, hash1(floor(gl_FragCoord.y / 6.0) * 0.37));
+        col = mix(col, errorSliceCol, errorSlice * 0.45 * u_authError);
     }
 
     // Verifying: fluctuating high-frequency crimson static while PAM is

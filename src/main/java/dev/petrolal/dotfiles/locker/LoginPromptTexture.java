@@ -149,8 +149,8 @@ public final class LoginPromptTexture {
         fillRect(canvas, flagX, flagY + half, half - 1, half - 1, 0x00A4EF);
         fillRect(canvas, flagX + half, flagY + half, half - 1, half - 1, 0xFFB900);
 
-        drawText(canvas, "Microsoft", flagX + flagSize + 10, flagY + 2, 2, BLACK);
-        drawText(canvas, "Windows98", flagX + flagSize + 8, flagY + 18, 3, BLACK);
+        drawText(canvas, "INFERNAPROJECT", flagX + flagSize + 10, flagY + 2, 2, BLACK);
+        drawText(canvas, "IMP98", flagX + flagSize + 8, flagY + 18, 3, BLACK);
 
         hLine(canvas, 14, WIDTH - 14, 92, SHADOW);
         hLine(canvas, 14, WIDTH - 14, 93, HIGHLIGHT);
