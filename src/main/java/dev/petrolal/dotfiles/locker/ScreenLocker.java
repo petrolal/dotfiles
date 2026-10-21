@@ -323,24 +323,15 @@ public final class ScreenLocker {
     }
 
     /** Reads the just-drawn default framebuffer back and saves it as a PNG
-     * -- see {@code --dump-frame} on the {@code lock} CLI command. Only
-     * ImageIO/BufferedImage are used here, never java.awt.Font/drawString
-     * (see LoginPromptTexture's header comment for why that combination
-     * crashes on this JDK build). */
+     * -- see {@code --dump-frame} on the {@code lock} CLI command. Uses
+     * PngWriter, never java.awt (BufferedImage/ImageIO) or
+     * java.awt.Font/drawString -- see PngWriter's and LoginPromptTexture's
+     * header comments for why both are avoided on this JDK/native-image
+     * build. */
     private static void dumpFrame(X11Canvas canvas, String path) throws Throwable {
         int w = canvas.getWidth();
         int h = canvas.getHeight();
         byte[] rgba = canvas.readPixelsRGBA(w, h);
-        java.awt.image.BufferedImage img = new java.awt.image.BufferedImage(
-                w, h, java.awt.image.BufferedImage.TYPE_INT_ARGB);
-        int[] argb = new int[w * h];
-        for (int i = 0; i < argb.length; i++) {
-            int o = i * 4;
-            int r = rgba[o] & 0xFF, g = rgba[o + 1] & 0xFF, b = rgba[o + 2] & 0xFF;
-            argb[i] = 0xFF000000 | (r << 16) | (g << 8) | b;
-        }
-        img.setRGB(0, 0, w, h, argb, 0, w);
-        java.io.File file = new java.io.File(path);
-        javax.imageio.ImageIO.write(img, "png", file);
+        PngWriter.write(rgba, w, h, Path.of(path));
     }
 }

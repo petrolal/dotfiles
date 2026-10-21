@@ -1,28 +1,35 @@
 // LoginPromptTexture.java --- Rasterizes a faithful classic Windows 98
 // "Enter Password" dialog as a texture for the screen locker's 3D monitor
 // object. The raymarch shader has no font/text rendering of its own, so the
-// static chrome (titlebar, logo, labels, listbox, buttons) is baked here
-// with java.awt.Graphics2D -- the only part of this feature doing 2D
-// rasterization instead of raymarching, and deliberately so: there's no SDF
-// font substitute for crisp, readable dialog text. The live password field
-// is left blank here; ScreenLocker overlays the actual typed-character
-// dots/caret procedurally in the shader, aligned via the UV rect returned
-// alongside the image.
+// static chrome (titlebar, logo, labels, listbox, buttons) is baked here --
+// the only part of this feature doing 2D rasterization instead of
+// raymarching, and deliberately so: there's no SDF font substitute for
+// crisp, readable dialog text. The live password field is left blank here;
+// ScreenLocker overlays the actual typed-character dots/caret procedurally
+// in the shader, aligned via the UV rect returned alongside the image.
 //
-// Text is NOT drawn via Graphics2D.drawString/java.awt.Font: this JDK build
-// ships with no lib/fontconfig.properties at all, so the very first
-// drawString call anywhere in the process throws
-// "Fontconfig head is null, check your fonts or fonts configuration" from
-// sun.awt.FontConfiguration, regardless of which Font is used -- confirmed
-// via a minimal repro, not fixable by picking a different/physical font.
-// Text is instead plotted with a small built-in 5x7 bitmap font (see
-// FONT_5X7 below), which only touches Graphics2D.fillRect and never enters
-// the native font subsystem.
+// This rasterizes onto a plain int[] ARGB buffer with hand-rolled
+// fillRect/hLine/vLine/text helpers -- NOT java.awt.Graphics2D/BufferedImage
+// at all. Two independent reasons converged on that:
+//  1. Text: this JDK build ships with no lib/fontconfig.properties, so the
+//     very first Graphics2D.drawString call anywhere in the process throws
+//     "Fontconfig head is null, check your fonts or fonts configuration"
+//     from sun.awt.FontConfiguration, regardless of which Font is used.
+//     Fixed by plotting text with a small built-in 5x7 bitmap font instead
+//     (see FONT_5X7 below).
+//  2. Everything else: under this project's GraalVM native-image build,
+//     merely touching java.awt.image.BufferedImage (even with no text
+//     involved) throws "NoClassDefFoundError: java.awt.GraphicsEnvironment"
+//     at runtime -- BufferedImage's static init loads the bundled native
+//     libawt.so, whose JNI_OnLoad does a JNI FindClass the image's
+//     reflection metadata doesn't cover, and which the native-image tracing
+//     agent cannot pick up (it happens inside native code, not through an
+//     instrumentable Java reflection call). Confirmed by reproducing with a
+//     BufferedImage-only (no drawString) native-image test. Avoiding
+//     java.awt entirely sidesteps both problems at once.
 // License: GPL-3.0-or-later
 package dev.petrolal.dotfiles.locker;
 
-import java.awt.*;
-import java.awt.image.BufferedImage;
 import java.util.Map;
 
 public final class LoginPromptTexture {
@@ -38,12 +45,15 @@ public final class LoginPromptTexture {
      * made here. */
     public record Layout(byte[] rgba, float fieldU0, float fieldV0, float fieldU1, float fieldV1) {}
 
-    private static final Color WIN_GRAY = new Color(192, 192, 192);
-    private static final Color TITLEBAR = new Color(128, 0, 0);
-    private static final Color TITLEBAR_TEXT = Color.WHITE;
-    private static final Color SHADOW = new Color(128, 128, 128);
-    private static final Color HIGHLIGHT = Color.WHITE;
-    private static final Color SELECTION = new Color(128, 0, 0);
+    // Packed 0xRRGGBB colors (alpha is always opaque -- see toRgba).
+    private static final int WIN_GRAY = 0xC0C0C0;
+    private static final int TITLEBAR = 0x800000;
+    private static final int TITLEBAR_TEXT = 0xFFFFFF;
+    private static final int SHADOW = 0x808080;
+    private static final int HIGHLIGHT = 0xFFFFFF;
+    private static final int SELECTION = 0x800000;
+    private static final int BLACK = 0x000000;
+    private static final int WHITE = 0xFFFFFF;
 
     /** Built-in 5-wide x 7-tall bitmap font, uppercase + digits + ':' only
      * (plenty for this dialog's fixed chrome strings and an uppercased
@@ -93,11 +103,11 @@ public final class LoginPromptTexture {
     private static final int GLYPH_W = 5;
     private static final int GLYPH_H = 7;
 
-    /** Plots text using {@link #FONT_5X7} at the given pixel scale; unknown
-     * characters (anything not in the table, e.g. lowercase) render as a
-     * blank cell rather than throwing. Returns the text's pixel width. */
-    private static int drawText(Graphics2D g, String text, int x, int y, int scale, Color color) {
-        g.setColor(color);
+    /** Plots text using {@link #FONT_5X7} at the given pixel scale onto a
+     * top-down WIDTHxHEIGHT ARGB CANVAS; unknown characters (anything not in
+     * the table, e.g. lowercase) render as a blank cell rather than
+     * throwing. */
+    private static void drawText(int[] canvas, String text, int x, int y, int scale, int color) {
         int cellW = (GLYPH_W + 1) * scale;
         int cursorX = x;
         for (char c : text.toUpperCase().toCharArray()) {
@@ -107,14 +117,13 @@ public final class LoginPromptTexture {
                     String bits = glyph[row];
                     for (int col = 0; col < GLYPH_W; col++) {
                         if (bits.charAt(col) == '#') {
-                            g.fillRect(cursorX + col * scale, y + row * scale, scale, scale);
+                            fillRect(canvas, cursorX + col * scale, y + row * scale, scale, scale, color);
                         }
                     }
                 }
             }
             cursorX += cellW;
         }
-        return cursorX - x - scale;
     }
 
     private static int textWidth(String text, int scale) {
@@ -122,72 +131,57 @@ public final class LoginPromptTexture {
     }
 
     public static Layout render(String username) {
-        System.setProperty("java.awt.headless", "true");
-        BufferedImage img = new BufferedImage(WIDTH, HEIGHT, BufferedImage.TYPE_INT_ARGB);
-        Graphics2D g = img.createGraphics();
-        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-        g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+        int[] canvas = new int[WIDTH * HEIGHT];
 
-        g.setColor(WIN_GRAY);
-        g.fillRect(0, 0, WIDTH, HEIGHT);
+        fillRect(canvas, 0, 0, WIDTH, HEIGHT, WIN_GRAY);
 
         // Titlebar
         int titleH = 28;
-        g.setColor(TITLEBAR);
-        g.fillRect(0, 0, WIDTH, titleH);
-        drawText(g, "Enter Password", 10, 9, 2, TITLEBAR_TEXT);
-        drawRaisedBox(g, WIDTH - 26, 4, 20, 20);
-        drawText(g, "X", WIDTH - 19, 8, 2, Color.BLACK);
+        fillRect(canvas, 0, 0, WIDTH, titleH, TITLEBAR);
+        drawText(canvas, "Enter Password", 10, 9, 2, TITLEBAR_TEXT);
+        drawRaisedBox(canvas, WIDTH - 26, 4, 20, 20);
+        drawText(canvas, "X", WIDTH - 19, 8, 2, BLACK);
 
         // Logo: a small 4-quadrant "flag" + Microsoft/Windows98 wordmark
         int flagX = 16, flagY = 42, flagSize = 32, half = flagSize / 2;
-        g.setColor(new Color(0xF2, 0x55, 0x22));
-        g.fillRect(flagX, flagY, half - 1, half - 1);
-        g.setColor(new Color(0x7F, 0xBA, 0x00));
-        g.fillRect(flagX + half, flagY, half - 1, half - 1);
-        g.setColor(new Color(0x00, 0xA4, 0xEF));
-        g.fillRect(flagX, flagY + half, half - 1, half - 1);
-        g.setColor(new Color(0xFF, 0xB9, 0x00));
-        g.fillRect(flagX + half, flagY + half, half - 1, half - 1);
+        fillRect(canvas, flagX, flagY, half - 1, half - 1, 0xF25522);
+        fillRect(canvas, flagX + half, flagY, half - 1, half - 1, 0x7FBA00);
+        fillRect(canvas, flagX, flagY + half, half - 1, half - 1, 0x00A4EF);
+        fillRect(canvas, flagX + half, flagY + half, half - 1, half - 1, 0xFFB900);
 
-        drawText(g, "Microsoft", flagX + flagSize + 10, flagY + 2, 2, Color.BLACK);
-        drawText(g, "Windows98", flagX + flagSize + 8, flagY + 18, 3, Color.BLACK);
+        drawText(canvas, "Microsoft", flagX + flagSize + 10, flagY + 2, 2, BLACK);
+        drawText(canvas, "Windows98", flagX + flagSize + 8, flagY + 18, 3, BLACK);
 
-        g.setColor(SHADOW);
-        g.drawLine(14, 92, WIDTH - 14, 92);
-        g.setColor(HIGHLIGHT);
-        g.drawLine(14, 93, WIDTH - 14, 93);
+        hLine(canvas, 14, WIDTH - 14, 92, SHADOW);
+        hLine(canvas, 14, WIDTH - 14, 93, HIGHLIGHT);
 
         // "Select user name:" label + a single-entry listbox (the real PAM
         // target user, pre-selected -- there's only ever one account to
         // unlock as here, unlike the multi-user reference screenshot).
-        drawText(g, "Select user name:", 16, 101, 2, Color.BLACK);
+        drawText(canvas, "Select user name:", 16, 101, 2, BLACK);
 
         int listY = 122, listH = 46;
-        drawSunkenBox(g, 16, listY, WIDTH - 32, listH);
-        g.setColor(SELECTION);
-        g.fillRect(18, listY + 2, WIDTH - 36, 20);
-        drawText(g, username, 24, listY + 6, 2, Color.WHITE);
+        drawSunkenBox(canvas, 16, listY, WIDTH - 32, listH);
+        fillRect(canvas, 18, listY + 2, WIDTH - 36, 20, SELECTION);
+        drawText(canvas, username, 24, listY + 6, 2, WHITE);
 
         // "Password:" label + empty sunken field (live dots drawn by the
         // shader -- see Layout.fieldU0..fieldV1).
         int labelY = listY + listH + 20;
-        drawText(g, "Password:", 16, labelY - 9, 2, Color.BLACK);
+        drawText(canvas, "Password:", 16, labelY - 9, 2, BLACK);
 
         int fieldY = labelY + 8, fieldH = 26;
         int fieldX = 16, fieldW = WIDTH - 32;
-        drawSunkenBox(g, fieldX, fieldY, fieldW, fieldH);
+        drawSunkenBox(canvas, fieldX, fieldY, fieldW, fieldH);
 
         // OK / Cancel buttons
         int btnY = fieldY + fieldH + 24, btnH = 28;
         int cancelX = WIDTH - 16 - 74, cancelW = 74;
         int okX = cancelX - 10 - 74, okW = 74;
-        drawRaisedBox(g, okX, btnY, okW, btnH);
-        drawRaisedBox(g, cancelX, btnY, cancelW, btnH);
-        drawCentered(g, "OK", okX, btnY, okW, btnH, Color.BLACK);
-        drawCentered(g, "Cancel", cancelX, btnY, cancelW, btnH, Color.BLACK);
-
-        g.dispose();
+        drawRaisedBox(canvas, okX, btnY, okW, btnH);
+        drawRaisedBox(canvas, cancelX, btnY, cancelW, btnH);
+        drawCentered(canvas, "OK", okX, btnY, okW, btnH, BLACK);
+        drawCentered(canvas, "Cancel", cancelX, btnY, cancelW, btnH, BLACK);
 
         // Password field rect, pixel -> GL texture UV (v=0 at the image's
         // bottom row, matching the vertical flip toRgba() applies below).
@@ -196,54 +190,67 @@ public final class LoginPromptTexture {
         float v0 = 1f - (float) (fieldY + fieldH) / HEIGHT;
         float v1 = 1f - (float) fieldY / HEIGHT;
 
-        return new Layout(toRgba(img), u0, v0, u1, v1);
+        return new Layout(toRgba(canvas), u0, v0, u1, v1);
     }
 
-    private static void drawCentered(Graphics2D g, String text, int x, int y, int w, int h, Color color) {
+    private static void drawCentered(int[] canvas, String text, int x, int y, int w, int h, int color) {
         int scale = 2;
         int tw = textWidth(text, scale);
         int th = GLYPH_H * scale;
         int tx = x + (w - tw) / 2;
         int ty = y + (h - th) / 2;
-        drawText(g, text, tx, ty, scale, color);
+        drawText(canvas, text, tx, ty, scale, color);
     }
 
     /** Classic Win98 "outset" bevel: light top/left, dark bottom/right. */
-    private static void drawRaisedBox(Graphics2D g, int x, int y, int w, int h) {
-        g.setColor(WIN_GRAY);
-        g.fillRect(x, y, w, h);
-        g.setColor(HIGHLIGHT);
-        g.drawLine(x, y, x + w - 1, y);
-        g.drawLine(x, y, x, y + h - 1);
-        g.setColor(SHADOW);
-        g.drawLine(x, y + h - 1, x + w - 1, y + h - 1);
-        g.drawLine(x + w - 1, y, x + w - 1, y + h - 1);
+    private static void drawRaisedBox(int[] canvas, int x, int y, int w, int h) {
+        fillRect(canvas, x, y, w, h, WIN_GRAY);
+        hLine(canvas, x, x + w - 1, y, HIGHLIGHT);
+        vLine(canvas, x, y, y + h - 1, HIGHLIGHT);
+        hLine(canvas, x, x + w - 1, y + h - 1, SHADOW);
+        vLine(canvas, x + w - 1, y, y + h - 1, SHADOW);
     }
 
     /** Classic Win98 "inset" bevel (text fields, listboxes): dark top/left,
      * light bottom/right, white fill. */
-    private static void drawSunkenBox(Graphics2D g, int x, int y, int w, int h) {
-        g.setColor(Color.WHITE);
-        g.fillRect(x, y, w, h);
-        g.setColor(SHADOW);
-        g.drawLine(x, y, x + w - 1, y);
-        g.drawLine(x, y, x, y + h - 1);
-        g.setColor(HIGHLIGHT);
-        g.drawLine(x, y + h - 1, x + w - 1, y + h - 1);
-        g.drawLine(x + w - 1, y, x + w - 1, y + h - 1);
+    private static void drawSunkenBox(int[] canvas, int x, int y, int w, int h) {
+        fillRect(canvas, x, y, w, h, WHITE);
+        hLine(canvas, x, x + w - 1, y, SHADOW);
+        vLine(canvas, x, y, y + h - 1, SHADOW);
+        hLine(canvas, x, x + w - 1, y + h - 1, HIGHLIGHT);
+        vLine(canvas, x + w - 1, y, y + h - 1, HIGHLIGHT);
+    }
+
+    private static void fillRect(int[] canvas, int x, int y, int w, int h, int color) {
+        int x0 = Math.max(0, x), y0 = Math.max(0, y);
+        int x1 = Math.min(WIDTH, x + w), y1 = Math.min(HEIGHT, y + h);
+        for (int py = y0; py < y1; py++) {
+            int row = py * WIDTH;
+            for (int px = x0; px < x1; px++) {
+                canvas[row + px] = color;
+            }
+        }
+    }
+
+    private static void hLine(int[] canvas, int x0, int x1, int y, int color) {
+        fillRect(canvas, Math.min(x0, x1), y, Math.abs(x1 - x0) + 1, 1, color);
+    }
+
+    private static void vLine(int[] canvas, int x, int y0, int y1, int color) {
+        fillRect(canvas, x, Math.min(y0, y1), 1, Math.abs(y1 - y0) + 1, color);
     }
 
     /** Same tightly-packed, vertically-flipped RGBA convention as
      * {@link dev.petrolal.dotfiles.wallpaper.ImageLoader} -- row 0 is the
-     * bottom of the image, matching GL's texture coordinate convention. */
-    private static byte[] toRgba(BufferedImage img) {
-        int w = img.getWidth(), h = img.getHeight();
-        int[] argb = img.getRGB(0, 0, w, h, null, 0, w);
-        byte[] out = new byte[w * h * 4];
-        for (int y = 0; y < h; y++) {
-            int dstRow = (h - 1 - y) * w * 4;
-            for (int x = 0; x < w; x++) {
-                int p = argb[y * w + x];
+     * bottom of the image, matching GL's texture coordinate convention.
+     * CANVAS is top-down 0xRRGGBB (opaque), as filled by render() above. */
+    private static byte[] toRgba(int[] canvas) {
+        byte[] out = new byte[WIDTH * HEIGHT * 4];
+        for (int y = 0; y < HEIGHT; y++) {
+            int dstRow = (HEIGHT - 1 - y) * WIDTH * 4;
+            int srcRow = y * WIDTH;
+            for (int x = 0; x < WIDTH; x++) {
+                int p = canvas[srcRow + x];
                 int o = dstRow + x * 4;
                 out[o] = (byte) (p >> 16);
                 out[o + 1] = (byte) (p >> 8);

@@ -94,20 +94,16 @@ float sdBox(vec3 p, vec3 b) {
     return length(max(q, 0.0)) + min(max(q.x, max(q.y, q.z)), 0.0);
 }
 
-/** Box-local (rotated, parallaxed) coordinates for a world-space point --
- * shared by monitorDist() (raymarch distance) and the hit-shading code
- * below (face selection/UV), so both always agree on where the box
- * actually is this frame. The mouse offset here is a dedicated foreground
- * parallax for the object itself, independent of the camera's own
- * mouse-driven ro/ta offset -- the two combined previously left the object
- * sitting too close to that camera transform's pivot depth to visibly
- * react to the mouse at all. */
+/** Box-local (rotated) coordinates for a world-space point -- shared by
+ * monitorDist() (raymarch distance) and the hit-shading code below (face
+ * selection/UV), so both always agree on where the box actually is this
+ * frame. Deliberately has NO mouse-driven offset: the login dialog must
+ * read as a fixed, centered real login prompt, not an object drifting
+ * around the screen -- see also main()'s camera setup, which freezes ro/ta
+ * (no mouse parallax at all) while u_lockerActive is set, so the dialog
+ * can't drift from camera movement either. */
 vec3 monitorLocal(vec3 p) {
-    vec2 res = (u_resolution.x > 1.0 && u_resolution.y > 1.0) ? u_resolution : vec2(1920.0, 1080.0);
-    vec2 mNorm = clamp(u_mouse.xy / res - 0.5, vec2(-0.5), vec2(0.5));
-    vec3 center = MONITOR_CENTER + vec3(-mNorm.x * 0.5, mNorm.y * 0.25, 0.0);
-
-    vec3 lp = p - center;
+    vec3 lp = p - MONITOR_CENTER;
     float ca = cos(MONITOR_YAW), sa = sin(MONITOR_YAW);
     lp.xz = mat2(ca, -sa, sa, ca) * lp.xz;
     return lp;
@@ -199,8 +195,11 @@ void main() {
     float totalTear = sliceOffset1 + sliceOffset2;
     uv.x += totalTear;
 
-    // Jittered Camera Parallax & Subtle Tremor on Glitch
-    vec2 mNorm = clamp(u_mouse.xy / res - 0.5, vec2(-0.5), vec2(0.5));
+    // Jittered Camera Parallax & Subtle Tremor on Glitch -- disabled while
+    // the locker is active so the login dialog reads as a fixed, centered
+    // prompt rather than something that drifts around with the mouse (see
+    // monitorLocal() above).
+    vec2 mNorm = u_lockerActive > 0.5 ? vec2(0.0) : clamp(u_mouse.xy / res - 0.5, vec2(-0.5), vec2(0.5));
     float quake = (hash(vec2(u_time * 30.0, gl_FragCoord.y)) - 0.5) * 0.025 * min(glitchPulse, 1.0);
     vec3 ro = vec3(mNorm.x * 0.8 + quake, 1.8 - mNorm.y * 0.4, 4.0);
     vec3 ta = vec3(mNorm.x * 0.4 - quake * 0.5, 0.5 - mNorm.y * 0.2, -4.0);
