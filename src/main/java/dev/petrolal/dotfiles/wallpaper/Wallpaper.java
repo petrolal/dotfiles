@@ -268,19 +268,6 @@ public final class Wallpaper {
             ShaderPipeline sharedPipeline = new ShaderPipeline(canvas, vertPath, panoramaFrag);
             BlitPipeline sharedBlitPipeline = new BlitPipeline(canvas, vertPath, blitFrag);
 
-            // Pass-1 source image: the horror artwork. Bound to unit 0 every frame so the
-            // FBO's own texture is never sampled while being rendered to (feedback loop).
-            // Falls back to opaque black if the asset is missing or undecodable.
-            int sourceTexture;
-            try {
-                ImageLoader.Rgba art = ImageLoader.load(resolveAsset("horror_bliss.png"));
-                sourceTexture = canvas.createTextureRGBA(art.width(), art.height(), art.pixels());
-                sharedPipeline.setHasTexture(true);
-            } catch (Exception e) {
-                System.err.println("[Wallpaper] Could not load horror_bliss.png (" + e.getMessage() + "); falling back to black + TV static.");
-                sharedPipeline.setHasTexture(false);
-                sourceTexture = canvas.createSourceTexture(0, 0, 0, 255);
-            }
             int glErrorChecks = 120; // verify no GL errors over the first frames, then stop polling
 
             try (WallpaperEvents events = new WallpaperEvents(canvas)) {
@@ -398,13 +385,11 @@ public final class Wallpaper {
 
                             canvas.makeCurrent(surface);
 
-                            // Pass 1: the expensive raymarch, at reduced resolution.
-                            canvas.bindTexture(sourceTexture);
+                            // Pass 1: the procedural raymarch, at reduced resolution.
                             canvas.bindFramebuffer(target.framebuffer());
                             canvas.setViewport(0, 0, target.width(), target.height());
                             sharedPipeline.bind();
                             sharedPipeline.updateUniforms(rawState, viewportOffsetX, viewportOffsetY, RENDER_SCALE);
-                            canvas.uniform1i(sharedPipeline.textureLocation(), 0);
                             sharedPipeline.setResolution(target.width(), target.height());
                             canvas.drawQuad();
                             if (glErrorChecks-- > 0) {
