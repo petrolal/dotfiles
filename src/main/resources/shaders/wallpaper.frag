@@ -17,6 +17,17 @@ uniform float u_isAuthenticating; // 1.0 while a PAM check is in flight
 uniform vec2 u_mousePos;        // normalized [0,1] cursor position, for the lock UI's own parallax
 uniform float u_lockerActive;   // 1.0 only while ScreenLocker is running -- gates the persistent
                                  // input-slot/cursor so the ordinary desktop wallpaper never shows it
+// The locker's single window spans the WHOLE virtual desktop (every
+// monitor at once, so the input grab/background covers all of them), but
+// the 3D scene itself should be centered on one physical monitor -- without
+// this, on a multi-monitor setup the monitor object and camera center land
+// on the bezel boundary between two screens instead of being visible on
+// either one. Only meaningful (and only set by ScreenLocker) when
+// u_lockerActive is 1.0; ignored otherwise.
+uniform vec2 u_primaryOffsetPx; // primary monitor's bottom-left corner, in GL window (bottom-left-origin) pixels
+uniform vec2 u_primaryResPx;    // primary monitor's own width/height in pixels
+uniform sampler2D u_loginTexture; // baked Win98 "Enter Password" dialog chrome (see LoginPromptTexture.java)
+uniform vec4 u_passwordFieldUv;   // (u0,v0,u1,v1) rect of that texture's blank password field
 
 // Palette
 const vec3 C_BG_DEEP    = vec3(0.04, 0.01, 0.06); // #0a0210
@@ -65,8 +76,53 @@ float terrainHeight(vec2 p) {
     return h - 1.5;
 }
 
+// --- Screen-locker 3D UI (phase 2): a hovering, corrupted retro CRT monitor
+// -- Windows-98-cased, matching this dotfiles setup's existing Imp98/Chicago95
+// theme -- raymarched as a real SDF object in the world, not a 2D overlay.
+// Only part of the scene while u_lockerActive is set (see ScreenLocker); the
+// ordinary desktop wallpaper daemon never adds this term, so map() degrades
+// to exactly the plain terrain heightfield for it.
+// Proportions matched to LoginPromptTexture's 440x320 canvas (aspect
+// 1.375:1), facing the camera flat-on (no yaw) like a real XFCE/Windows
+// login dialog -- not tilted like a prop sitting at an angle in the scene.
+const vec3 MONITOR_CENTER = vec3(0.0, 1.0, -0.6);
+const vec3 MONITOR_HALF   = vec3(0.88, 0.64, 0.08);
+const float MONITOR_YAW = 0.0;
+
+float sdBox(vec3 p, vec3 b) {
+    vec3 q = abs(p) - b;
+    return length(max(q, 0.0)) + min(max(q.x, max(q.y, q.z)), 0.0);
+}
+
+/** Box-local (rotated, parallaxed) coordinates for a world-space point --
+ * shared by monitorDist() (raymarch distance) and the hit-shading code
+ * below (face selection/UV), so both always agree on where the box
+ * actually is this frame. The mouse offset here is a dedicated foreground
+ * parallax for the object itself, independent of the camera's own
+ * mouse-driven ro/ta offset -- the two combined previously left the object
+ * sitting too close to that camera transform's pivot depth to visibly
+ * react to the mouse at all. */
+vec3 monitorLocal(vec3 p) {
+    vec2 res = (u_resolution.x > 1.0 && u_resolution.y > 1.0) ? u_resolution : vec2(1920.0, 1080.0);
+    vec2 mNorm = clamp(u_mouse.xy / res - 0.5, vec2(-0.5), vec2(0.5));
+    vec3 center = MONITOR_CENTER + vec3(-mNorm.x * 0.5, mNorm.y * 0.25, 0.0);
+
+    vec3 lp = p - center;
+    float ca = cos(MONITOR_YAW), sa = sin(MONITOR_YAW);
+    lp.xz = mat2(ca, -sa, sa, ca) * lp.xz;
+    return lp;
+}
+
+float monitorDist(vec3 p) {
+    return sdBox(monitorLocal(p), MONITOR_HALF);
+}
+
 float map(vec3 p) {
-    return p.y - terrainHeight(p.xz);
+    float dTerrain = p.y - terrainHeight(p.xz);
+    if (u_lockerActive > 0.5) {
+        return min(dTerrain, monitorDist(p));
+    }
+    return dTerrain;
 }
 
 vec3 calcNormal(vec3 p) {
@@ -81,7 +137,22 @@ vec3 calcNormal(vec3 p) {
 
 void main() {
     vec2 res = (u_resolution.x > 1.0 && u_resolution.y > 1.0) ? u_resolution : vec2(1920.0, 1080.0);
-    vec2 uv = (gl_FragCoord.xy - 0.5 * res) / res.y;
+
+    // The locker's one window spans every monitor at once (see
+    // u_primaryOffsetPx/u_primaryResPx above); recenter the camera's pixel
+    // space on just the primary monitor so the scene -- and the 3D monitor
+    // object -- land in the middle of one real screen instead of straddling
+    // the bezel between two. On a single-monitor setup u_primaryResPx
+    // equals the full resolution and this is a no-op. The ordinary desktop
+    // wallpaper daemon never sets either uniform (both read back as zero),
+    // so it always takes the original whole-resolution path unchanged.
+    vec2 camRes = res;
+    vec2 camOffset = vec2(0.0);
+    if (u_lockerActive > 0.5 && u_primaryResPx.x > 1.0 && u_primaryResPx.y > 1.0) {
+        camRes = u_primaryResPx;
+        camOffset = u_primaryOffsetPx;
+    }
+    vec2 uv = (gl_FragCoord.xy - camOffset - 0.5 * camRes) / camRes.y;
 
     float hour = (u_timeOfDay >= 0.0 && u_timeOfDay <= 24.0) ? u_timeOfDay : 12.0;
 
@@ -199,33 +270,126 @@ void main() {
         vec3 lightDir = isDay > 0.5 ? sunDir : moonDir;
         float dif = clamp(dot(nor, lightDir), 0.2, 1.0);
 
-        // --- Recognizable Windows XP Bliss Rolling Green Hills ---
-        // Blend iconic vibrant Bliss green with atmospheric depth & twilight shadow
-        vec3 blissTerrain = mix(C_SICK_GREEN, C_BLISS_GREEN, 0.65 + 0.35 * isDay);
-        // Cast subtle shadow into valleys
-        float valleyShadow = clamp((p.y + 1.2) * 0.5, 0.25, 1.0);
-        blissTerrain *= valleyShadow;
-        col = blissTerrain * dif;
+        // Which SDF surface did the ray actually land on? map() returns the
+        // min() of both, so whichever term is smaller at the hit point is
+        // the real surface (the other may still be "near" p without being
+        // what the ray actually converged onto).
+        bool onMonitor = u_lockerActive > 0.5 && monitorDist(p) < (p.y - terrainHeight(p.xz));
 
-        // --- Cyber-Acid Neon Grid Lines (Consistent Green, No Multi-Colors) ---
-        // Clear, crisp wireframe so the hill contours and 3D terrain shape pop vividly
-        vec2 gridCoord = p.xz * 1.5;
-        vec2 grid = abs(fract(gridCoord - 0.5) - 0.5) / fwidth(gridCoord);
-        float gridMask = 1.0 - min(min(grid.x, grid.y), 1.0);
+        if (onMonitor) {
+            // --- Corrupted retro CRT monitor (Windows-98-cased, matching
+            // this dotfiles setup's Imp98/Chicago95 desktop theme) --
+            // a real 3D SDF object the raymarch actually lands on, not a
+            // flat overlay: it catches lightDir/fog/shadow like anything
+            // else in the scene. ---
+            vec3 lp = monitorLocal(p);
+            // Bring the world-space normal into that same rotated local
+            // frame (same yaw applied to it as to lp above) so face
+            // selection/UV always agree with where the box actually is,
+            // regardless of MONITOR_YAW or the mouse parallax offset.
+            vec3 norLocal = nor;
+            float ca = cos(MONITOR_YAW), sa = sin(MONITOR_YAW);
+            norLocal.xz = mat2(ca, -sa, sa, ca) * nor.xz;
+            vec3 an = abs(norLocal);
+            bool frontFace = an.z >= an.x && an.z >= an.y && norLocal.z > 0.0;
 
-        // Elevation topo lines that accentuate the undulating Bliss hill slopes
-        float topo = abs(fract(p.y * 3.0) - 0.5) / fwidth(p.y * 3.0);
-        float topoMask = (1.0 - min(topo, 1.0)) * 0.45;
+            vec2 faceUv;
+            if (frontFace) faceUv = lp.xy / MONITOR_HALF.xy;
+            else if (an.x >= an.y) faceUv = lp.zy / MONITOR_HALF.zy * vec2(sign(norLocal.x), 1.0);
+            else faceUv = lp.xz / MONITOR_HALF.xz;
+            faceUv = faceUv * 0.5 + 0.5; // [-1,1] box-local -> [0,1] face UV
 
-        // Single focused neon acid-green glow that highlights the wireframe cleanly
-        float totalNeonWire = clamp(gridMask * 0.9 + topoMask, 0.0, 1.0);
-        col = mix(col, C_CYBER_ACID * 1.25, totalNeonWire * 0.85);
+            if (frontFace) {
+                // The real Win98 "Enter Password" dialog chrome -- titlebar,
+                // logo, labels, listbox, OK/Cancel -- baked as a texture by
+                // LoginPromptTexture.java (there's no font rendering in a
+                // raymarch shader, so static text/UI is rasterized once on
+                // the Java side instead of faked with SDF shapes).
+                vec2 texUv = clamp(faceUv, 0.0, 1.0);
+                vec3 screenCol = texture(u_loginTexture, texUv).rgb;
 
+                // Live password-dot/caret overlay, precisely aligned to the
+                // texture's own blank password field via u_passwordFieldUv
+                // (computed from the exact same pixel rect the Java side
+                // drew that field at -- see LoginPromptTexture.Layout).
+                vec2 fieldMin = u_passwordFieldUv.xy;
+                vec2 fieldMax = u_passwordFieldUv.zw;
+                if (texUv.x > fieldMin.x && texUv.x < fieldMax.x && texUv.y > fieldMin.y && texUv.y < fieldMax.y) {
+                    vec2 fieldSize = fieldMax - fieldMin;
+                    vec2 local = (texUv - fieldMin) / fieldSize; // 0..1 within the field
+                    float dotY = 0.5;
+                    float leftPad = 0.04;
 
+                    int dotCount = min(u_charCount, 28);
+                    if (dotCount > 0) {
+                        float dotSpacing = min(0.85 / float(max(dotCount, 1)), 0.05);
+                        for (int i = 0; i < dotCount; i++) {
+                            float dx = local.x - (leftPad + float(i) * dotSpacing + dotSpacing * 0.5);
+                            float dy = (local.y - dotY) * (fieldSize.y / fieldSize.x) * 3.5;
+                            float dot = smoothstep(0.018, 0.0, length(vec2(dx, dy)));
+                            screenCol = mix(screenCol, vec3(0.05), dot);
+                        }
+                    } else {
+                        float blink = step(0.5, fract(u_time * 1.5));
+                        float dx = local.x - leftPad;
+                        float dy = (local.y - dotY) * (fieldSize.y / fieldSize.x) * 3.5;
+                        float caret = smoothstep(0.012, 0.0, length(vec2(dx - 0.01, dy)))
+                                + (1.0 - smoothstep(0.0, 0.03, abs(dx))) * step(abs(dy), 0.25);
+                        screenCol = mix(screenCol, vec3(0.1), caret * blink);
+                    }
+                }
 
-        // Distance atmospheric fog into horizon
-        float fog = exp(-0.035 * t * t);
-        col = mix(skyColor, col, fog);
+                if (u_isAuthenticating > 0.5) {
+                    float verifyStatic = hash(vec2(floor(texUv.x * 60.0), floor(texUv.y * 40.0) + floor(u_time * 24.0) * 7.0));
+                    screenCol = mix(screenCol, C_CRIMSON, step(0.88, verifyStatic) * 0.4);
+                }
+                if (u_authError > 0.0) {
+                    screenCol = mix(screenCol, C_BLOOD_RED, 0.5 * u_authError);
+                }
+
+                // Still a haunted terminal, not a clean modern UI: a sparse
+                // corrupting flicker even over the "real" dialog chrome.
+                float corruptNoise = hash(vec2(floor(texUv.x * 50.0), floor(texUv.y * 30.0) + floor(u_time * 5.0)));
+                float corruptFlicker = step(0.985, corruptNoise) * (0.5 + 0.5 * sin(u_time * 45.0));
+                screenCol = mix(screenCol, vec3(0.9, 0.1, 0.15), corruptFlicker * 0.4);
+
+                col = screenCol;
+            } else {
+                // Thin plastic edge -- barely visible face-on, but still a
+                // real lit surface rather than a hole in the object.
+                vec3 caseColor = vec3(0.3, 0.3, 0.3);
+                col = caseColor * dif;
+            }
+
+            float fog = exp(-0.035 * t * t);
+            col = mix(skyColor, col, fog);
+        } else {
+            // --- Recognizable Windows XP Bliss Rolling Green Hills ---
+            // Blend iconic vibrant Bliss green with atmospheric depth & twilight shadow
+            vec3 blissTerrain = mix(C_SICK_GREEN, C_BLISS_GREEN, 0.65 + 0.35 * isDay);
+            // Cast subtle shadow into valleys
+            float valleyShadow = clamp((p.y + 1.2) * 0.5, 0.25, 1.0);
+            blissTerrain *= valleyShadow;
+            col = blissTerrain * dif;
+
+            // --- Cyber-Acid Neon Grid Lines (Consistent Green, No Multi-Colors) ---
+            // Clear, crisp wireframe so the hill contours and 3D terrain shape pop vividly
+            vec2 gridCoord = p.xz * 1.5;
+            vec2 grid = abs(fract(gridCoord - 0.5) - 0.5) / fwidth(gridCoord);
+            float gridMask = 1.0 - min(min(grid.x, grid.y), 1.0);
+
+            // Elevation topo lines that accentuate the undulating Bliss hill slopes
+            float topo = abs(fract(p.y * 3.0) - 0.5) / fwidth(p.y * 3.0);
+            float topoMask = (1.0 - min(topo, 1.0)) * 0.45;
+
+            // Single focused neon acid-green glow that highlights the wireframe cleanly
+            float totalNeonWire = clamp(gridMask * 0.9 + topoMask, 0.0, 1.0);
+            col = mix(col, C_CYBER_ACID * 1.25, totalNeonWire * 0.85);
+
+            // Distance atmospheric fog into horizon
+            float fog = exp(-0.035 * t * t);
+            col = mix(skyColor, col, fog);
+        }
     }
 
     // --- CRT Scanlines ---
@@ -270,50 +434,14 @@ void main() {
 
 
 
-    // --- Screen-Locker Reactive UI (phase 1: minimal indicator + state
-    // flashes; see PamAuthService / ScreenLocker for the Java-side state
-    // machine driving these uniforms). Gated entirely on u_lockerActive so
-    // the ordinary desktop wallpaper daemon -- which never sets these
-    // uniforms and so would otherwise read charCount/authError as their
-    // GL-default zero anyway -- can never show any of this even by
-    // coincidence. ---
-    if (u_lockerActive > 0.5) {
-        vec2 lockUv = v_uv - 0.5;
-        lockUv.x -= (u_mousePos.x - 0.5) * 0.015; // subtle parallax, independent of the terrain camera
-
-        // Persistent input-slot: a glowing horizontal line always visible
-        // the instant the lock screen appears, so it's obvious where (and
-        // that) to type -- not something that only appears after the first
-        // keystroke, which would leave a first-time viewer with no prompt
-        // at all.
-        float slotHalfWidth = 0.14;
-        float slotLine = (1.0 - smoothstep(0.0, 0.0015, abs(lockUv.y - 0.40))) * step(abs(lockUv.x), slotHalfWidth);
-        col += C_CYBER_ACID * slotLine * 0.55;
-
-        int dotCount = min(u_charCount, 24);
-        if (dotCount > 0) {
-            // Password buffer indicator: a row of pulsing acid-green dots,
-            // one per typed character (capped so an absurdly long password
-            // can't run off-screen).
-            float dotSpacing = 0.022;
-            float rowWidth = float(max(dotCount - 1, 0)) * dotSpacing;
-            for (int i = 0; i < dotCount; i++) {
-                float dx = lockUv.x - (-rowWidth * 0.5 + float(i) * dotSpacing);
-                float dy = lockUv.y - 0.40;
-                float dot = smoothstep(0.006, 0.0, length(vec2(dx, dy * 1.2)));
-                float pulse = 0.75 + 0.25 * sin(u_time * 6.0 + float(i) * 0.6);
-                col += C_CYBER_ACID * dot * pulse * 1.4;
-            }
-        } else {
-            // No characters typed yet: a blinking caret at the slot's left
-            // edge is the only cue that this is a live input field.
-            float blink = step(0.5, fract(u_time * 1.5));
-            float dx = lockUv.x - (-slotHalfWidth + 0.01);
-            float dy = lockUv.y - 0.40;
-            float caret = smoothstep(0.007, 0.0, length(vec2(dx, dy * 1.2)));
-            col += C_CYBER_ACID * caret * blink * 1.6;
-        }
-    }
+    // --- Screen-Locker Reactive UI (phase 2): the password-dot/caret
+    // indicator now lives ON the 3D CRT monitor object above (see the
+    // onMonitor branch) instead of as a flat 2D overlay. What's left here
+    // is the whole-environment reaction to auth state -- a shockwave/static
+    // effect legitimately belongs to the whole frame, not just the monitor
+    // surface. Both still gate correctly on u_authError/u_isAuthenticating
+    // alone, which stay at GL's default zero for the ordinary desktop
+    // wallpaper daemon. ---
 
     // Error shockwave: violent Blood Moon flash + extra chromatic tear,
     // strongest right after a failed attempt and decaying (decay itself

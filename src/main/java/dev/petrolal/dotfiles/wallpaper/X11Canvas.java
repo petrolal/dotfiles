@@ -835,6 +835,15 @@ public class X11Canvas implements AutoCloseable {
         glBindTexture.invokeExact(GL_TEXTURE_2D, texture);
     }
 
+    /** Binds TEXTURE to an arbitrary texture unit (e.g. 1 for the screen
+     * locker's login-dialog texture, keeping unit 0 free -- the raymarch
+     * program doesn't otherwise sample anything there, but this leaves
+     * headroom instead of assuming that stays true forever). */
+    public void bindTextureUnit(int unit, int texture) throws Throwable {
+        glActiveTexture.invokeExact(GL_TEXTURE0 + unit);
+        glBindTexture.invokeExact(GL_TEXTURE_2D, texture);
+    }
+
     /** Reads an info log via either glGetShaderInfoLog or glGetProgramInfoLog
      * (both share the (id, maxLength, *length, *infoLog) signature). */
     private String fetchInfoLog(MethodHandle getInfoLog, int id) throws Throwable {

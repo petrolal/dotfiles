@@ -8,9 +8,12 @@ import java.nio.file.Path;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import java.util.List;
+
 import dev.petrolal.dotfiles.core.DotfilePaths;
 import dev.petrolal.dotfiles.wallpaper.BlitPipeline;
 import dev.petrolal.dotfiles.wallpaper.ShaderPipeline;
+import dev.petrolal.dotfiles.wallpaper.Wallpaper;
 import dev.petrolal.dotfiles.wallpaper.X11Canvas;
 
 import sun.misc.Signal;
@@ -73,10 +76,56 @@ public final class ScreenLocker {
                         "Could not grab keyboard/pointer -- refusing to show a lock screen that input could bypass.");
             }
 
+            // Everything from here on must guarantee the grab is released
+            // and the window destroyed on ANY exit path -- including a
+            // setup failure (shader compile error, texture/font loading
+            // trouble) that happens before the render loop's own try/finally
+            // below even starts. Without this outer finally, such a failure
+            // would leave the keyboard/pointer grab held until the JVM
+            // process actually exits (the X server does auto-release a
+            // client's grabs when its connection closes, so this was never
+            // an unrecoverable hang -- but relying on that implicitly rather
+            // than cleaning up explicitly is fragile).
+            try {
             ShaderPipeline pipeline = new ShaderPipeline(canvas, vertPath, fragPath);
             BlitPipeline blitPipeline = new BlitPipeline(canvas, vertPath, blitFrag);
             X11Canvas.RenderTarget target = canvas.createRenderTarget(
                     Math.max(1, canvas.getWidth() / 2), Math.max(1, canvas.getHeight() / 2));
+
+            // The real Win98 "Enter Password" dialog chrome, rasterized once
+            // (not per-frame -- it's static) and uploaded as a texture unit
+            // 1 the raymarch shader samples on the 3D monitor's front face.
+            LoginPromptTexture.Layout loginLayout = LoginPromptTexture.render(user);
+            int loginTexture = canvas.createTextureRGBA(
+                    LoginPromptTexture.WIDTH, LoginPromptTexture.HEIGHT, loginLayout.rgba());
+            // Bound once to unit 1 and left there -- nothing else in this
+            // pipeline's render loop touches that unit, so it stays bound
+            // across every subsequent frame without needing a rebind.
+            canvas.bindTextureUnit(1, loginTexture);
+            pipeline.bind();
+            pipeline.setLoginPromptTexture(1, loginLayout.fieldU0(), loginLayout.fieldV0(),
+                    loginLayout.fieldU1(), loginLayout.fieldV1());
+
+            // The lock window spans every monitor at once (see
+            // X11Canvas.createLockWindow), but with two or more screens the
+            // scene should still read clearly on one of them rather than
+            // straddling the bezel between two -- so recenter it on
+            // whichever monitor xrandr reports as primary (the same
+            // detection Wallpaper.java already uses). On a single-monitor
+            // setup this primary rect is just the whole display, so the
+            // uniforms below are a no-op (see wallpaper.frag).
+            List<Wallpaper.Monitor> monitors = new Wallpaper().detectMonitors(canvas.getWidth(), canvas.getHeight());
+            Wallpaper.Monitor primaryMonitor = monitors.get(0);
+            for (Wallpaper.Monitor mon : monitors) {
+                if (mon.primary()) {
+                    primaryMonitor = mon;
+                    break;
+                }
+            }
+            final float primaryOffsetX = primaryMonitor.x();
+            final float primaryOffsetY = canvas.getHeight() - (primaryMonitor.y() + primaryMonitor.height());
+            final float primaryResW = primaryMonitor.width();
+            final float primaryResH = primaryMonitor.height();
 
             AtomicBoolean shutdownRequested = new AtomicBoolean(false);
             AtomicBoolean unlocked = new AtomicBoolean(false);
@@ -185,8 +234,15 @@ public final class ScreenLocker {
                             0, 0.0f, 0.0f, 0.0f);
                     pipeline.updateUniforms(state, viewportOffsetX, viewportOffsetY, renderScale);
                     pipeline.setResolution(target.width(), target.height());
+                    // gl_FragCoord during this pass ranges over the low-res
+                    // RenderTarget (target.width/height), not the full
+                    // canvas -- the primary-monitor rect must be scaled down
+                    // to match, the same way u_resolution above is already
+                    // target.width/height rather than the full canvas size.
                     pipeline.updateLockUniforms(passwordBuffer.length, authError,
-                            authenticating ? 1.0f : 0.0f, mouseNormX, mouseNormY);
+                            authenticating ? 1.0f : 0.0f, mouseNormX, mouseNormY,
+                            primaryOffsetX * renderScale, primaryOffsetY * renderScale,
+                            primaryResW * renderScale, primaryResH * renderScale);
                     canvas.drawQuad();
 
                     canvas.bindFramebuffer(0);
@@ -198,6 +254,8 @@ public final class ScreenLocker {
                 }
             } finally {
                 java.util.Arrays.fill(passwordBuffer, '\0');
+            }
+            } finally {
                 canvas.destroyLockWindow(surface);
             }
         }

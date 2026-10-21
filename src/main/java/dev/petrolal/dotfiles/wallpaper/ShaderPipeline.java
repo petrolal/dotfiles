@@ -41,6 +41,10 @@ public class ShaderPipeline {
     private int locIsAuthenticating = -1;
     private int locMousePos = -1;
     private int locLockerActive = -1;
+    private int locPrimaryOffsetPx = -1;
+    private int locPrimaryResPx = -1;
+    private int locLoginTexture = -1;
+    private int locPasswordFieldUv = -1;
 
     public ShaderPipeline(X11Canvas canvas, Path vertPath, Path fragPath) throws Throwable {
         this.canvas = canvas;
@@ -88,14 +92,32 @@ public class ShaderPipeline {
      * @param charCount number of characters currently in the password buffer
      * @param authError 1.0 right after a failed attempt, decaying to 0.0
      * @param isAuthenticating 1.0 while a PAM check is in flight
-     * @param mouseNormX, mouseNormY normalized [0,1] cursor position for camera parallax */
+     * @param mouseNormX, mouseNormY normalized [0,1] cursor position for camera parallax
+     * @param primaryOffsetX, primaryOffsetY primary monitor's bottom-left corner, in GL
+     *        (bottom-left-origin) pixels within the locker's whole-virtual-desktop window
+     * @param primaryResW, primaryResH primary monitor's own pixel width/height -- recenters
+     *        the lock scene on one physical screen instead of the combined virtual desktop */
     public void updateLockUniforms(int charCount, float authError, float isAuthenticating,
-                                    float mouseNormX, float mouseNormY) throws Throwable {
+                                    float mouseNormX, float mouseNormY,
+                                    float primaryOffsetX, float primaryOffsetY,
+                                    float primaryResW, float primaryResH) throws Throwable {
         canvas.uniform1i(locCharCount, charCount);
         canvas.uniform1f(locAuthError, authError);
         canvas.uniform1f(locIsAuthenticating, isAuthenticating);
         canvas.uniform2f(locMousePos, mouseNormX, mouseNormY);
         canvas.uniform1f(locLockerActive, 1.0f);
+        canvas.uniform2f(locPrimaryOffsetPx, primaryOffsetX, primaryOffsetY);
+        canvas.uniform2f(locPrimaryResPx, primaryResW, primaryResH);
+    }
+
+    /** One-time setup for the screen locker's baked login-dialog texture
+     * (see dev.petrolal.dotfiles.locker.LoginPromptTexture) -- the sampler
+     * binding and the dialog's own password-field rect never change for the
+     * life of a lock session, so this is called once, not every frame. */
+    public void setLoginPromptTexture(int textureUnit, float fieldU0, float fieldV0,
+                                       float fieldU1, float fieldV1) throws Throwable {
+        canvas.uniform1i(locLoginTexture, textureUnit);
+        canvas.uniform4f(locPasswordFieldUv, fieldU0, fieldV0, fieldU1, fieldV1);
     }
 
     /**
@@ -189,5 +211,9 @@ public class ShaderPipeline {
         locIsAuthenticating = canvas.getUniformLocation(programId, "u_isAuthenticating");
         locMousePos = canvas.getUniformLocation(programId, "u_mousePos");
         locLockerActive = canvas.getUniformLocation(programId, "u_lockerActive");
+        locPrimaryOffsetPx = canvas.getUniformLocation(programId, "u_primaryOffsetPx");
+        locPrimaryResPx = canvas.getUniformLocation(programId, "u_primaryResPx");
+        locLoginTexture = canvas.getUniformLocation(programId, "u_loginTexture");
+        locPasswordFieldUv = canvas.getUniformLocation(programId, "u_passwordFieldUv");
     }
 }
