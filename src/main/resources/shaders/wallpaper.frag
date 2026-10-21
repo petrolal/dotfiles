@@ -35,6 +35,16 @@ float noise(vec2 p) {
                mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), u.x), u.y);
 }
 
+float fbmClouds(vec2 p) {
+    float v = 0.0;
+    mat2 rot = mat2(0.8, -0.6, 0.6, 0.8);
+    v += 0.500 * noise(p); p = rot * p * 2.02;
+    v += 0.250 * noise(p); p = rot * p * 2.03;
+    v += 0.125 * noise(p); p = rot * p * 2.01;
+    v += 0.062 * noise(p);
+    return v;
+}
+
 float terrainHeight(vec2 p) {
     float h = 0.0;
     mat2 rot = mat2(0.8, -0.6, 0.6, 0.8);
@@ -118,17 +128,40 @@ void main() {
     vec3 vv = normalize(cross(uu, ww));
     vec3 rd = normalize(uv.x * uu + uv.y * vv + 1.2 * ww);
 
-    vec3 daySky = mix(vec3(0.25, 0.05, 0.35), vec3(0.65, 0.15, 0.45), max(rd.y, 0.0));
-    vec3 nightSky = mix(C_BG_DEEP, C_PURPLE * 0.5, max(rd.y, 0.0));
+    // Baseline fixed celestial direction for sky, sun, moon, and clouds
+    // (Completely independent of mouse parallax so moving the mouse does NOT move the sky or clouds!)
+    vec3 fixedRd = normalize(vec3(uv.x, uv.y - 0.15, -1.2));
+
+    // Sky gradient
+    vec3 daySky = mix(vec3(0.22, 0.32, 0.46), vec3(0.10, 0.22, 0.42), clamp(fixedRd.y * 2.0, 0.0, 1.0));
+    vec3 nightSky = mix(C_BG_DEEP, vec3(0.015, 0.005, 0.025), clamp(fixedRd.y * 1.5, 0.0, 1.0));
     vec3 skyColor = mix(nightSky, daySky, isDay);
 
-    float sunDiff = max(dot(rd, sunDir), 0.0);
-    float sunDisc = smoothstep(0.996, 0.998, sunDiff);
-    vec3 sunVisual = vec3(1.0, 0.9, 0.7) * sunDisc * 2.0 + vec3(1.0, 0.2, 0.4) * pow(sunDiff, 16.0);
+    // --- Continually Animated Clouds at Day (Moving Independently of Mouse) ---
+    if (fixedRd.y > 0.005) {
+        float skyY = max(fixedRd.y, 0.025);
+        vec2 cloudPos = (fixedRd.xz / skyY) * 0.7;
+        
+        // Fluid dual-layer wind animation
+        vec2 wind1 = vec2(u_time * 0.045, u_time * 0.012);
+        vec2 wind2 = vec2(u_time * -0.025, u_time * 0.020);
+        
+        float cloudFBM = fbmClouds(cloudPos + wind1) * 0.65 + fbmClouds(cloudPos * 1.8 + wind2) * 0.35;
+        float cloudMask = smoothstep(0.38, 0.74, cloudFBM);
+        
+        vec3 cloudColor = mix(vec3(0.32, 0.38, 0.48), vec3(0.85, 0.88, 0.92), cloudFBM);
+        float cloudHorizonFade = smoothstep(0.005, 0.22, fixedRd.y);
+        skyColor = mix(skyColor, cloudColor, cloudMask * cloudHorizonFade * isDay * 0.92);
+    }
 
-    float moonDiff = max(dot(rd, moonDir), 0.0);
+    // Celestial Bodies (anchored to sky dome, independent of mouse parallax)
+    float sunDiff = max(dot(fixedRd, sunDir), 0.0);
+    float sunDisc = smoothstep(0.996, 0.998, sunDiff);
+    vec3 sunVisual = vec3(0.98, 0.95, 0.88) * sunDisc * 2.2 + vec3(0.90, 0.45, 0.25) * pow(sunDiff, 16.0);
+
+    float moonDiff = max(dot(fixedRd, moonDir), 0.0);
     float moonDisc = smoothstep(0.993, 0.995, moonDiff);
-    vec3 moonVisual = C_BLOOD_RED * moonDisc * 2.5 + C_CRIMSON * pow(moonDiff, 24.0);
+    vec3 moonVisual = C_BLOOD_RED * moonDisc * (2.8 + 1.2 * demonHours) + C_BLOOD_RED * pow(moonDiff, 80.0) * 0.55;
 
     skyColor += sunVisual * isDay;
     skyColor += moonVisual * isNight;
