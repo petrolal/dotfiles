@@ -2764,27 +2764,26 @@ messagedialog image {
 #XfcePanelWindow #clock-button,
 #XfcePanelWindow #clock-button:hover,
 #XfcePanelWindow #clock-button:checked {
-   margin-left: -2px;
+    margin-left: 3px;
    margin-right: 3px;
-   padding-left: 4px;
-   padding-right: 6px;
+    padding: 1px 6px;
+    min-height: 16px;
    margin-top: 2px;
    margin-bottom: 2px;
-   box-shadow: 0 1px @dark_shadow inset;
-   border-left: none;
+    box-shadow: 1px 1px @dark_shadow inset;
+    border-left: 1px solid @dark_shadow;
    border-top: 1px solid @dark_shadow;
    border-right: 1px solid @light_shadow;
    border-bottom: 1px solid @light_shadow;
    background-image: none;
-   background-color: @button_bg_color;
+    background-color: transparent;
    color: @fg_color;
    font-weight: normal; }
 
 #XfcePanelWindow #clock-button label {
   color: @fg_color;
-  margin-right: 2px;
-  margin-left: 2px;
-  margin-top: 0px;
+   margin: 0;
+   padding: 0;
 }
 
 #applicationmenu-button {
@@ -2867,9 +2866,51 @@ XfdesktopIconView:active {
    margin-right: 3px;
 }
 
+/* Sits immediately right of the systray with no panel gap between them, so
+   it reads as one continuous Win98 sunken tray rectangle: no left border/
+   shadow here (the systray's open right edge continues straight into this),
+   and this is the box that closes the group with the outer right edge. */
 #xfce4-notification-plugin {
-   border: 1px solid #000;
-   background-color: #000;
+   box-shadow: 0 1px @dark_shadow inset;
+   background-color: transparent;
+   min-width: 0;
+   min-height: 0;
+   margin-top: 2px;
+   margin-bottom: 2px;
+   padding-top: 1px;
+   padding-left: 4px;
+   padding-right: 4px;
+   padding-bottom: 1px;
+   border-top: 1px solid @dark_shadow;
+   border-left: none;
+   border-bottom: 1px solid @light_shadow;
+   border-right: 1px solid @light_shadow;
+}
+
+#xfce4-notification-plugin image {
+   margin: 0;
+}
+
+/* Match the systray's flat, non-interactive look: hover/active/focus must
+   render identically to the resting state (no bevel, no brighten, no
+   border change), overriding the generic button.flat:hover rule. */
+#xfce4-notification-plugin,
+#xfce4-notification-plugin:hover,
+#xfce4-notification-plugin:active,
+#xfce4-notification-plugin:focus {
+   box-shadow: 0 1px @dark_shadow inset;
+   background-color: transparent;
+   background-image: none;
+   border-top: 1px solid @dark_shadow;
+   border-left: none;
+   border-bottom: 1px solid @light_shadow;
+   border-right: 1px solid @light_shadow;
+}
+
+#xfce4-notification-plugin image,
+#xfce4-notification-plugin:hover image,
+#xfce4-notification-plugin image:hover {
+   color: alpha(currentColor, 0.75);
 }
 
 /* System tray box */
@@ -2887,6 +2928,31 @@ XfdesktopIconView:active {
    border-left: 1px solid @dark_shadow;
    border-bottom: 1px solid @light_shadow;
    border-right: none;
+}
+
+/* Legacy (XEmbed) tray icons, e.g. nm-applet, aren't themed GtkImages and
+   never brighten on hover. Neutralize the global image:hover brighten rule
+   inside the tray so themed icons (e.g. blueman) match that behavior. */
+#systray-1 image:hover, #systray-2 image:hover, #systray-3 image:hover, #systray-4 image:hover, #systray-5 image:hover,
+#systray-6 image:hover, #systray-7 image:hover, #systray-8 image:hover, #systray-9 image:hover, #systray-10 image:hover,
+#systray-11 image:hover, #systray-12 image:hover, #systray-13 image:hover, #systray-14 image:hover, #systray-15 image:hover,
+#systray-16 image:hover, #systray-17 image:hover, #systray-18 image:hover, #systray-19 image:hover, #systray-20 image:hover,
+#systray-21 image:hover {
+   color: alpha(currentColor, 0.75);
+}
+
+/* Likewise neutralize the flat-button hover bevel on SNI tray icons (e.g.
+   blueman), so they stay visually flat like the legacy XEmbed icons
+   (e.g. nm-applet) that have no button wrapper to bevel. */
+#systray-1 button.flat:hover, #systray-2 button.flat:hover, #systray-3 button.flat:hover, #systray-4 button.flat:hover, #systray-5 button.flat:hover,
+#systray-6 button.flat:hover, #systray-7 button.flat:hover, #systray-8 button.flat:hover, #systray-9 button.flat:hover, #systray-10 button.flat:hover,
+#systray-11 button.flat:hover, #systray-12 button.flat:hover, #systray-13 button.flat:hover, #systray-14 button.flat:hover, #systray-15 button.flat:hover,
+#systray-16 button.flat:hover, #systray-17 button.flat:hover, #systray-18 button.flat:hover, #systray-19 button.flat:hover, #systray-20 button.flat:hover,
+#systray-21 button.flat:hover {
+   color: @theme_fg_color;
+   border-color: transparent;
+   background-color: transparent;
+   box-shadow: none;
 }
 
 /* ==========================================================================
@@ -3072,9 +3138,11 @@ headerbar button:hover {
     inset 1px 1px 0px @mid_light_shadow,
     inset -1px -1px 0px @dark_shadow;
   padding: 4px;
+  min-width: 300px;
 }
 
 #XfceNotifyWindow label#summary {
+  min-height: 0;
   background-image: linear-gradient(to right, @active_title_color1, @active_title_color);
   color: @active_title_text;
   font-weight: bold;

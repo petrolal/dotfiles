@@ -30,3 +30,6 @@ MiscMiddleClickOpensUri=TRUE
 MiscRightClickAction=TERMINAL_RIGHT_CLICK_ACTION_CONTEXT_MENU
 MiscShowUnsafePasteDialog=TRUE
 TitleMode=TERMINAL_TITLE_REPLACE
+RunCustomCommand=TRUE
+CustomCommand=fish
+CommandLoginShell=FALSE

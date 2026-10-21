@@ -66,6 +66,8 @@ public final class Xfconf {
                 setting("xfce4-notifyd", "/theme", "string", "Default"),
                 setting("xfce4-notifyd", "/initial-opacity", "double", "1.0"),
                 setting("xfce4-notifyd", "/notify-location", "uint", "3"),
+                setting("xfce4-notifyd", "/expire-timeout", "int", "5"),
+                setting("xfce4-notifyd", "/expire-timeout-allow-override", "bool", "false"),
 
                 // Window manager: classic 3D frame, no shadows, flush margins
                 xfwm("theme", "string", Theme.NAME),

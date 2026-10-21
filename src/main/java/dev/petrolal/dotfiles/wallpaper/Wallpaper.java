@@ -32,17 +32,25 @@ public final class Wallpaper {
     public record Monitor(int id, int x, int y, int width, int height, boolean primary) {}
 
     private Path resolveShader(String name) {
+        return resolveResource("shaders", name);
+    }
+
+    private Path resolveAsset(String name) {
+        return resolveResource("assets", name);
+    }
+
+    private Path resolveResource(String dir, String name) {
         Path direct = Path.of(name);
         if (Files.exists(direct)) return direct;
-        Path inStaticDir = Path.of("static", name);
-        if (Files.exists(inStaticDir)) return inStaticDir;
+        Path inDir = Path.of(dir, name);
+        if (Files.exists(inDir)) return inDir;
         Path root = DotfilePaths.findDotfilesRoot();
-        Path inStatic = root.resolve("src/main/resources/static").resolve(name);
-        if (Files.exists(inStatic)) return inStatic;
+        Path inRes = root.resolve("src/main/resources").resolve(dir).resolve(name);
+        if (Files.exists(inRes)) return inRes;
         Path inRoot = root.resolve(name);
         if (Files.exists(inRoot)) return inRoot;
-        Path homeDotfiles = DotfilePaths.userHomeDirectory().resolve("dotfiles/src/main/resources/static").resolve(name);
-        if (Files.exists(homeDotfiles)) return homeDotfiles;
+        Path homeRes = DotfilePaths.userHomeDirectory().resolve("dotfiles/src/main/resources").resolve(dir).resolve(name);
+        if (Files.exists(homeRes)) return homeRes;
         return direct;
     }
 
@@ -260,6 +268,21 @@ public final class Wallpaper {
             ShaderPipeline sharedPipeline = new ShaderPipeline(canvas, vertPath, panoramaFrag);
             BlitPipeline sharedBlitPipeline = new BlitPipeline(canvas, vertPath, blitFrag);
 
+            // Pass-1 source image: the horror artwork. Bound to unit 0 every frame so the
+            // FBO's own texture is never sampled while being rendered to (feedback loop).
+            // Falls back to opaque black if the asset is missing or undecodable.
+            int sourceTexture;
+            try {
+                ImageLoader.Rgba art = ImageLoader.load(resolveAsset("horror_bliss.png"));
+                sourceTexture = canvas.createTextureRGBA(art.width(), art.height(), art.pixels());
+                sharedPipeline.setHasTexture(true);
+            } catch (Exception e) {
+                System.err.println("[Wallpaper] Could not load horror_bliss.png (" + e.getMessage() + "); falling back to black + TV static.");
+                sharedPipeline.setHasTexture(false);
+                sourceTexture = canvas.createSourceTexture(0, 0, 0, 255);
+            }
+            int glErrorChecks = 120; // verify no GL errors over the first frames, then stop polling
+
             try (WallpaperEvents events = new WallpaperEvents(canvas)) {
                 // A background-launched process typically has SIGINT left at
                 // its inherited disposition (often SIG_IGN, per job-control
@@ -376,11 +399,18 @@ public final class Wallpaper {
                             canvas.makeCurrent(surface);
 
                             // Pass 1: the expensive raymarch, at reduced resolution.
+                            canvas.bindTexture(sourceTexture);
                             canvas.bindFramebuffer(target.framebuffer());
                             canvas.setViewport(0, 0, target.width(), target.height());
                             sharedPipeline.bind();
                             sharedPipeline.updateUniforms(rawState, viewportOffsetX, viewportOffsetY, RENDER_SCALE);
+                            canvas.uniform1i(sharedPipeline.textureLocation(), 0);
+                            sharedPipeline.setResolution(target.width(), target.height());
                             canvas.drawQuad();
+                            if (glErrorChecks-- > 0) {
+                                int err = canvas.getError();
+                                if (err != 0) System.err.println("[GL] error 0x" + Integer.toHexString(err) + " after pass 1");
+                            }
 
                             // Pass 2: cheap GL_NEAREST upscale of that into the real backbuffer.
                             canvas.bindFramebuffer(0);

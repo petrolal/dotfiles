@@ -88,4 +88,8 @@ in
 
   # Portal and dconf management
   programs.dconf.enable = true;
+
+  # Bluetooth manager with tray applet (icon shows in the XFCE panel's
+  # notification area via the applet's XDG autostart entry)
+  services.blueman.enable = true;
 }

@@ -39,6 +39,8 @@ public class X11Canvas implements AutoCloseable {
     public static final int GL_TEXTURE_MIN_FILTER = 0x2801;
     public static final int GL_TEXTURE_MAG_FILTER = 0x2800;
     public static final int GL_NEAREST = 0x2600;
+    public static final int GL_LINEAR = 0x2601;
+    public static final int GL_UNPACK_ALIGNMENT = 0x0CF5;
     public static final int GL_TEXTURE_WRAP_S = 0x2802;
     public static final int GL_TEXTURE_WRAP_T = 0x2803;
     public static final int GL_CLAMP_TO_EDGE = 0x812F;
@@ -158,6 +160,8 @@ public class X11Canvas implements AutoCloseable {
     private MethodHandle glTexParameteri;
     private MethodHandle glActiveTexture;
     private MethodHandle glUniform1i;
+    private MethodHandle glGetError;
+    private MethodHandle glPixelStorei;
 
     private static SymbolLookup loadLibrary(String libName, Arena arena) {
         try {
@@ -322,6 +326,8 @@ public class X11Canvas implements AutoCloseable {
         glTexParameteri = getProc(linker, "glTexParameteri", FunctionDescriptor.ofVoid(ValueLayout.JAVA_INT, ValueLayout.JAVA_INT, ValueLayout.JAVA_INT));
         glActiveTexture = getProc(linker, "glActiveTexture", FunctionDescriptor.ofVoid(ValueLayout.JAVA_INT));
         glUniform1i = getProc(linker, "glUniform1i", FunctionDescriptor.ofVoid(ValueLayout.JAVA_INT, ValueLayout.JAVA_INT));
+        glGetError = getProc(linker, "glGetError", FunctionDescriptor.of(ValueLayout.JAVA_INT));
+        glPixelStorei = getProc(linker, "glPixelStorei", FunctionDescriptor.ofVoid(ValueLayout.JAVA_INT, ValueLayout.JAVA_INT));
 
         createSharedQuadBuffer();
         bindQuadAttribs();
@@ -667,6 +673,61 @@ public class X11Canvas implements AutoCloseable {
 
             return new RenderTarget(framebuffer, texture, width, height);
         }
+    }
+
+    /**
+     * Uploads tightly-packed RGBA pixels (first row = bottom) as a 2D texture
+     * with GL_LINEAR min/mag filters (no mipmaps needed) and clamped edges.
+     * Shared across surface contexts.
+     */
+    public int createTextureRGBA(int width, int height, byte[] rgba) throws Throwable {
+        try (Arena arena = Arena.ofConfined()) {
+            MemorySegment texBuf = arena.allocate(ValueLayout.JAVA_INT);
+            glGenTextures.invokeExact(1, texBuf);
+            int texture = texBuf.get(ValueLayout.JAVA_INT, 0);
+
+            MemorySegment pixels = arena.allocateFrom(ValueLayout.JAVA_BYTE, rgba);
+            glActiveTexture.invokeExact(GL_TEXTURE0);
+            glBindTexture.invokeExact(GL_TEXTURE_2D, texture);
+            glPixelStorei.invokeExact(GL_UNPACK_ALIGNMENT, 1);
+            glTexImage2D.invokeExact(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+            glTexParameteri.invokeExact(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+            glTexParameteri.invokeExact(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+            glTexParameteri.invokeExact(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+            glTexParameteri.invokeExact(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+            return texture;
+        }
+    }
+
+    /**
+     * Creates a 1x1 RGBA source texture (GL_LINEAR, no mipmaps, so it is
+     * always texture-complete) holding the given colour. It is the pass-1
+     * {@code u_texture} input: binding it to unit 0 before the offscreen draw
+     * guarantees unit 0 never still holds the FBO's own colour attachment from
+     * the previous frame's blit, which would be an OpenGL feedback loop.
+     * Texture objects are shared across the surfaces' contexts.
+     */
+    public int createSourceTexture(int r, int g, int b, int a) throws Throwable {
+        try (Arena arena = Arena.ofConfined()) {
+            MemorySegment texBuf = arena.allocate(ValueLayout.JAVA_INT);
+            glGenTextures.invokeExact(1, texBuf);
+            int texture = texBuf.get(ValueLayout.JAVA_INT, 0);
+
+            MemorySegment pixel = arena.allocateFrom(ValueLayout.JAVA_BYTE,
+                    (byte) r, (byte) g, (byte) b, (byte) a);
+            glBindTexture.invokeExact(GL_TEXTURE_2D, texture);
+            glTexImage2D.invokeExact(GL_TEXTURE_2D, 0, GL_RGBA, 1, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixel);
+            glTexParameteri.invokeExact(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+            glTexParameteri.invokeExact(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+            glTexParameteri.invokeExact(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+            glTexParameteri.invokeExact(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+            return texture;
+        }
+    }
+
+    /** Pops one pending GL error (0 == GL_NO_ERROR). */
+    public int getError() throws Throwable {
+        return (int) glGetError.invokeExact();
     }
 
     public void bindFramebuffer(int framebuffer) throws Throwable {

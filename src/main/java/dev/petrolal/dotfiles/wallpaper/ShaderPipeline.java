@@ -19,7 +19,11 @@ public class ShaderPipeline {
     private FileTime lastMtime;
 
     // Uniform locations
+    private int locTexture = -1;
     private int locRes = -1;
+    private int locTimeOfDay = -1;
+    private int locHasTexture = -1;
+    private boolean hasTexture = true;
     private int locTime = -1;
     private int locMouse = -1;
     private int locWorkspace = -1;
@@ -39,6 +43,16 @@ public class ShaderPipeline {
         cacheUniformLocations();
     }
 
+    /** Overrides u_resolution with the real size of the target being drawn into (the low-res FBO). */
+    public void setResolution(float w, float h) throws Throwable {
+        canvas.uniform2f(locRes, w, h);
+    }
+
+    /** False switches wallpaper.frag to its black + old-TV-static fallback. */
+    public void setHasTexture(boolean value) {
+        this.hasTexture = value;
+    }
+
     public void bind() throws Throwable {
         canvas.useProgram(programId);
     }
@@ -46,6 +60,8 @@ public class ShaderPipeline {
     public void updateUniforms(WallpaperEvents.WallpaperState state, float viewportOffsetX, float viewportOffsetY,
                                 float renderScale) throws Throwable {
         canvas.uniform2f(locRes, state.width(), state.height());
+        canvas.uniform1f(locTimeOfDay, localTimeOfDay());
+        canvas.uniform1f(locHasTexture, hasTexture ? 1.0f : 0.0f);
         canvas.uniform1f(locTime, state.time());
         canvas.uniform4f(locMouse, state.mouseX(), state.mouseY(),
                 state.mouseLeftDown() ? 1.0f : 0.0f, state.mouseRightDown() ? 1.0f : 0.0f);
@@ -121,8 +137,20 @@ public class ShaderPipeline {
         return shader;
     }
 
+    /** Local wall-clock time as a fractional hour in [0, 24): hour + minute/60 + second/3600. */
+    static float localTimeOfDay() {
+        java.time.LocalTime now = java.time.LocalTime.now();
+        return now.getHour() + now.getMinute() / 60.0f + now.getSecond() / 3600.0f;
+    }
+
+    /** Location of the {@code u_texture} sampler (-1 if the shader doesn't declare it). */
+    public int textureLocation() { return locTexture; }
+
     private void cacheUniformLocations() throws Throwable {
+        locTexture = canvas.getUniformLocation(programId, "u_texture");
         locRes = canvas.getUniformLocation(programId, "u_resolution");
+        locTimeOfDay = canvas.getUniformLocation(programId, "u_timeOfDay");
+        locHasTexture = canvas.getUniformLocation(programId, "u_hasTexture");
         locTime = canvas.getUniformLocation(programId, "u_time");
         locMouse = canvas.getUniformLocation(programId, "u_mouse");
         locWorkspace = canvas.getUniformLocation(programId, "u_workspace");
