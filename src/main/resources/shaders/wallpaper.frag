@@ -8,6 +8,16 @@ uniform float u_timeOfDay;
 uniform vec2 u_resolution;
 uniform vec4 u_mouse; // x, y, leftDown, rightDown
 
+// Screen-locker state (see dev.petrolal.dotfiles.locker.ScreenLocker). Left
+// at GL's default zero for the ordinary desktop wallpaper daemon, which
+// never sets these -- so none of the reactions below ever trigger there.
+uniform int u_charCount;        // characters currently typed into the password buffer
+uniform float u_authError;      // 1.0 right after a failed attempt, decaying to 0.0 over ~1.2s
+uniform float u_isAuthenticating; // 1.0 while a PAM check is in flight
+uniform vec2 u_mousePos;        // normalized [0,1] cursor position, for the lock UI's own parallax
+uniform float u_lockerActive;   // 1.0 only while ScreenLocker is running -- gates the persistent
+                                 // input-slot/cursor so the ordinary desktop wallpaper never shows it
+
 // Palette
 const vec3 C_BG_DEEP    = vec3(0.04, 0.01, 0.06); // #0a0210
 const vec3 C_BLOOD_RED  = vec3(0.85, 0.05, 0.20); // #d90d33
@@ -259,6 +269,70 @@ void main() {
     }
 
 
+
+    // --- Screen-Locker Reactive UI (phase 1: minimal indicator + state
+    // flashes; see PamAuthService / ScreenLocker for the Java-side state
+    // machine driving these uniforms). Gated entirely on u_lockerActive so
+    // the ordinary desktop wallpaper daemon -- which never sets these
+    // uniforms and so would otherwise read charCount/authError as their
+    // GL-default zero anyway -- can never show any of this even by
+    // coincidence. ---
+    if (u_lockerActive > 0.5) {
+        vec2 lockUv = v_uv - 0.5;
+        lockUv.x -= (u_mousePos.x - 0.5) * 0.015; // subtle parallax, independent of the terrain camera
+
+        // Persistent input-slot: a glowing horizontal line always visible
+        // the instant the lock screen appears, so it's obvious where (and
+        // that) to type -- not something that only appears after the first
+        // keystroke, which would leave a first-time viewer with no prompt
+        // at all.
+        float slotHalfWidth = 0.14;
+        float slotLine = (1.0 - smoothstep(0.0, 0.0015, abs(lockUv.y - 0.40))) * step(abs(lockUv.x), slotHalfWidth);
+        col += C_CYBER_ACID * slotLine * 0.55;
+
+        int dotCount = min(u_charCount, 24);
+        if (dotCount > 0) {
+            // Password buffer indicator: a row of pulsing acid-green dots,
+            // one per typed character (capped so an absurdly long password
+            // can't run off-screen).
+            float dotSpacing = 0.022;
+            float rowWidth = float(max(dotCount - 1, 0)) * dotSpacing;
+            for (int i = 0; i < dotCount; i++) {
+                float dx = lockUv.x - (-rowWidth * 0.5 + float(i) * dotSpacing);
+                float dy = lockUv.y - 0.40;
+                float dot = smoothstep(0.006, 0.0, length(vec2(dx, dy * 1.2)));
+                float pulse = 0.75 + 0.25 * sin(u_time * 6.0 + float(i) * 0.6);
+                col += C_CYBER_ACID * dot * pulse * 1.4;
+            }
+        } else {
+            // No characters typed yet: a blinking caret at the slot's left
+            // edge is the only cue that this is a live input field.
+            float blink = step(0.5, fract(u_time * 1.5));
+            float dx = lockUv.x - (-slotHalfWidth + 0.01);
+            float dy = lockUv.y - 0.40;
+            float caret = smoothstep(0.007, 0.0, length(vec2(dx, dy * 1.2)));
+            col += C_CYBER_ACID * caret * blink * 1.6;
+        }
+    }
+
+    // Error shockwave: violent Blood Moon flash + extra chromatic tear,
+    // strongest right after a failed attempt and decaying (decay itself
+    // happens on the Java side, driving u_authError down over ~1.2s).
+    if (u_authError > 0.0) {
+        col = mix(col, C_BLOOD_RED, 0.5 * u_authError);
+        float errorShake = (hash(vec2(u_time * 50.0, gl_FragCoord.y * 0.3)) - 0.5) * 0.04 * u_authError;
+        col.r = clamp(col.r + errorShake + 0.15 * u_authError, 0.0, 1.0);
+        float errorSlice = step(0.85, hash(vec2(floor(gl_FragCoord.y / 6.0), floor(u_time * 40.0))));
+        col = mix(col, vec3(1.0, 0.05, 0.1), errorSlice * 0.4 * u_authError);
+    }
+
+    // Verifying: fluctuating high-frequency crimson static while PAM is
+    // actually checking the password (keeps the screen visibly "alive"
+    // during what might be a slow authenticate() round-trip).
+    if (u_isAuthenticating > 0.5) {
+        float verifyStatic = hash(vec2(floor(gl_FragCoord.x / 2.0), floor(gl_FragCoord.y / 2.0) + floor(u_time * 30.0) * 7.0));
+        col = mix(col, C_CRIMSON, step(0.8, verifyStatic) * 0.18);
+    }
 
     // Vignette
     vec2 v = v_uv * (1.0 - v_uv.yx);

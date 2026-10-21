@@ -19,6 +19,7 @@ public final class Cli {
 		System.out.println("  deploy            perform full deployment (link, configure, reload) [default]");
 		System.out.println("  uninstall         remove all deployed dotfile symlinks safely");
 		System.out.println("  wallpaper         start OpenGL 3D wallpaper");
+		System.out.println("  lock              start the interactive PAM-authenticated screen locker");
 		System.out.println("  toggle-hud        toggle the running wallpaper's MangoHud performance overlay\n");
 		System.out.println("Options:");
 		System.out.println("  -u, --uninstall   remove all deployed dotfile symlinks safely");
@@ -31,6 +32,9 @@ public final class Cli {
 		System.out.println("      --max-fps=N   (wallpaper) cap the render loop to N frames/sec,");
 		System.out.println("                    independent of vsync -- trade smoothness for");
 		System.out.println("                    battery/thermal headroom on weak hardware");
+		System.out.println("      --test-timeout=N  (lock, DEV/TEST ONLY) auto-unlock after N");
+		System.out.println("                    seconds with no password check -- never use this");
+		System.out.println("                    for a real lock, only for safely testing the grab");
 		System.out.println("  -h, --help        display this help text and exit");
 		System.out.println("  -v, --version     display version information and exit");
 	}
@@ -43,7 +47,7 @@ public final class Cli {
 	}
 
 	private enum Action {
-		DEPLOY, UNINSTALL, WALLPAPER, TOGGLE_HUD
+		DEPLOY, UNINSTALL, WALLPAPER, TOGGLE_HUD, LOCK
 	}
 
 	static void main(String[] argv) {
@@ -57,6 +61,7 @@ public final class Cli {
 		boolean applySettings = true;
 		boolean applyWallpaper = true;
 		int maxFps = 0;
+		float testTimeoutSeconds = 0f;
 		Action action = Action.DEPLOY;
 
 		for (String arg : argv) {
@@ -69,6 +74,19 @@ public final class Cli {
 				}
 				if (maxFps <= 0) {
 					System.err.println(PROGRAM_NAME + ": --max-fps requires a positive integer, got '" + value + "'");
+					return 1;
+				}
+				continue;
+			}
+			if (arg.startsWith("--test-timeout=")) {
+				String value = arg.substring("--test-timeout=".length());
+				try {
+					testTimeoutSeconds = Float.parseFloat(value);
+				} catch (NumberFormatException e) {
+					testTimeoutSeconds = -1f;
+				}
+				if (testTimeoutSeconds <= 0f) {
+					System.err.println(PROGRAM_NAME + ": --test-timeout requires a positive number, got '" + value + "'");
 					return 1;
 				}
 				continue;
@@ -95,6 +113,7 @@ public final class Cli {
 			case "-u", "--uninstall", "uninstall" -> action = Action.UNINSTALL;
 			case "deploy" -> action = Action.DEPLOY;
 			case "wallpaper" -> action = Action.WALLPAPER;
+			case "lock" -> action = Action.LOCK;
 			case "toggle-hud" -> action = Action.TOGGLE_HUD;
 			default -> {
 				System.err.println(PROGRAM_NAME + ": unrecognized option '" + arg + "'");
@@ -108,6 +127,7 @@ public final class Cli {
 		case UNINSTALL -> Orchestrator.uninstall(dryRun, verbose).ok();
 		case DEPLOY -> Orchestrator.deploy(dryRun, verbose, reload, applySettings, applyWallpaper).ok();
 		case WALLPAPER -> Orchestrator.set3DWallpaper(dryRun, verbose, maxFps).ok();
+		case LOCK -> Orchestrator.lockScreen(dryRun, testTimeoutSeconds);
 		case TOGGLE_HUD -> Orchestrator.toggleWallpaperHud(verbose);
 		};
 		return ok ? 0 : 1;

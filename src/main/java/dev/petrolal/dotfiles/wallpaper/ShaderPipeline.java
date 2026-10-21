@@ -33,6 +33,15 @@ public class ShaderPipeline {
     private int locViewportOffset = -1;
     private int locRenderScale = -1;
 
+    // Screen-locker state uniforms (see dev.petrolal.dotfiles.locker.ScreenLocker).
+    // Unused -- and left at GL's default-zero -- for the ordinary desktop
+    // wallpaper daemon, which never calls updateLockUniforms().
+    private int locCharCount = -1;
+    private int locAuthError = -1;
+    private int locIsAuthenticating = -1;
+    private int locMousePos = -1;
+    private int locLockerActive = -1;
+
     public ShaderPipeline(X11Canvas canvas, Path vertPath, Path fragPath) throws Throwable {
         this.canvas = canvas;
         this.vertPath = vertPath;
@@ -71,6 +80,22 @@ public class ShaderPipeline {
         canvas.uniform1f(locRam, state.ram());
         canvas.uniform2f(locViewportOffset, viewportOffsetX, viewportOffsetY);
         canvas.uniform1f(locRenderScale, renderScale);
+    }
+
+    /** Screen-locker-only uniforms, pushed in a separate call from
+     * {@link #updateUniforms} so the ordinary wallpaper daemon's render loop
+     * never has to know these exist.
+     * @param charCount number of characters currently in the password buffer
+     * @param authError 1.0 right after a failed attempt, decaying to 0.0
+     * @param isAuthenticating 1.0 while a PAM check is in flight
+     * @param mouseNormX, mouseNormY normalized [0,1] cursor position for camera parallax */
+    public void updateLockUniforms(int charCount, float authError, float isAuthenticating,
+                                    float mouseNormX, float mouseNormY) throws Throwable {
+        canvas.uniform1i(locCharCount, charCount);
+        canvas.uniform1f(locAuthError, authError);
+        canvas.uniform1f(locIsAuthenticating, isAuthenticating);
+        canvas.uniform2f(locMousePos, mouseNormX, mouseNormY);
+        canvas.uniform1f(locLockerActive, 1.0f);
     }
 
     /**
@@ -159,5 +184,10 @@ public class ShaderPipeline {
         locRam = canvas.getUniformLocation(programId, "u_ram");
         locViewportOffset = canvas.getUniformLocation(programId, "u_viewportOffset");
         locRenderScale = canvas.getUniformLocation(programId, "u_renderScale");
+        locCharCount = canvas.getUniformLocation(programId, "u_charCount");
+        locAuthError = canvas.getUniformLocation(programId, "u_authError");
+        locIsAuthenticating = canvas.getUniformLocation(programId, "u_isAuthenticating");
+        locMousePos = canvas.getUniformLocation(programId, "u_mousePos");
+        locLockerActive = canvas.getUniformLocation(programId, "u_lockerActive");
     }
 }

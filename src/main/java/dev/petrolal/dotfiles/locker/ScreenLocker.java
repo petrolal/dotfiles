@@ -1,0 +1,210 @@
+// ScreenLocker.java --- Interactive X11 screen locker: full-screen raymarched
+// cyber-horror UI, keyboard/pointer grab, PAM-backed password check.
+// License: GPL-3.0-or-later
+package dev.petrolal.dotfiles.locker;
+
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicBoolean;
+
+import dev.petrolal.dotfiles.core.DotfilePaths;
+import dev.petrolal.dotfiles.wallpaper.BlitPipeline;
+import dev.petrolal.dotfiles.wallpaper.ShaderPipeline;
+import dev.petrolal.dotfiles.wallpaper.X11Canvas;
+
+import sun.misc.Signal;
+
+/**
+ * Phase 1 of the screen-locker spec: a real PAM-authenticated, input-grabbing
+ * full-screen lock, reusing the existing raymarch shader pipeline with a
+ * minimal reactive UI (password-buffer dots, error flash, verifying static
+ * -- see wallpaper.frag's "Screen-Locker Reactive UI" section). The full
+ * cyber-monolith / floating-rune SDF terminal from the spec is intentionally
+ * deferred to a follow-up pass once this core lock/unlock path is verified
+ * safe and correct.
+ */
+public final class ScreenLocker {
+
+    /** 0.5s own-interval cap for the error-flash decay and password-dot
+     * animation -- this loop otherwise runs at whatever rate vsync paces it. */
+    private static final float ERROR_DECAY_SECONDS = 1.2f;
+    private static final int MAX_PASSWORD_LENGTH = 128;
+
+    private Path resolveShader(String name) {
+        Path direct = Path.of("shaders", name);
+        if (Files.exists(direct)) return direct;
+        Path root = DotfilePaths.findDotfilesRoot();
+        Path inRes = root.resolve("src/main/resources/shaders").resolve(name);
+        if (Files.exists(inRes)) return inRes;
+        Path homeRes = DotfilePaths.userHomeDirectory().resolve("dotfiles/src/main/resources/shaders").resolve(name);
+        if (Files.exists(homeRes)) return homeRes;
+        return direct;
+    }
+
+    /**
+     * @param testTimeoutSeconds DEV/TEST-ONLY escape hatch: if positive, the
+     *                           lock auto-releases after this many seconds
+     *                           with no password, independent of PAM. Loudly
+     *                           logged. Exists solely so a grab/event-loop
+     *                           bug can never require a hard reboot to
+     *                           recover from while this is being developed
+     *                           -- never pass this for a real lock.
+     */
+    public void start(float testTimeoutSeconds) throws Throwable {
+        Path vertPath = resolveShader("wallpaper.vert");
+        Path fragPath = resolveShader("wallpaper.frag");
+        Path blitFrag = resolveShader("blit.frag");
+        String user = System.getProperty("user.name");
+
+        if (testTimeoutSeconds > 0) {
+            System.err.println("[locker] TEST MODE: auto-unlocking after " + testTimeoutSeconds
+                    + "s with NO password check. Do not use this flag for a real lock.");
+        }
+
+        try (X11Canvas canvas = new X11Canvas();
+             PamAuthService pam = new PamAuthService()) {
+
+            X11Canvas.Surface surface = canvas.createLockWindow();
+            boolean grabbed = canvas.grabInputWithRetry(surface);
+            if (!grabbed) {
+                canvas.destroyLockWindow(surface);
+                throw new IllegalStateException(
+                        "Could not grab keyboard/pointer -- refusing to show a lock screen that input could bypass.");
+            }
+
+            ShaderPipeline pipeline = new ShaderPipeline(canvas, vertPath, fragPath);
+            BlitPipeline blitPipeline = new BlitPipeline(canvas, vertPath, blitFrag);
+            X11Canvas.RenderTarget target = canvas.createRenderTarget(
+                    Math.max(1, canvas.getWidth() / 2), Math.max(1, canvas.getHeight() / 2));
+
+            AtomicBoolean shutdownRequested = new AtomicBoolean(false);
+            AtomicBoolean unlocked = new AtomicBoolean(false);
+            Thread renderThread = Thread.currentThread();
+
+            // Mirrors Wallpaper.start()'s shutdown-hook pattern: SIGINT/SIGTERM
+            // (e.g. `kill <pid>` from another terminal while testing) always
+            // works regardless of X11 grab state -- a keyboard/pointer grab
+            // only affects which window X routes input events to, never
+            // process signal delivery, so this is a safe way to recover from
+            // a misbehaving lock screen without touching the grab/event code.
+            Signal.handle(new Signal("TERM"), _ -> { shutdownRequested.set(true); });
+            Signal.handle(new Signal("INT"), _ -> { shutdownRequested.set(true); });
+
+            char[] passwordBuffer = new char[0];
+            float authError = 0.0f;
+            boolean authenticating = false;
+            Future<PamAuthService.Status> pendingAuth = null;
+
+            long startNanos = System.nanoTime();
+            long lastFrameNanos = startNanos;
+            float viewportOffsetX = 0.0f;
+            float viewportOffsetY = 0.0f;
+            final float renderScale = 0.5f;
+
+            try {
+                while (!shutdownRequested.get() && !unlocked.get()) {
+                    long now = System.nanoTime();
+                    float elapsed = (now - startNanos) / 1_000_000_000.0f;
+                    float dt = (now - lastFrameNanos) / 1_000_000_000.0f;
+                    lastFrameNanos = now;
+
+                    if (testTimeoutSeconds > 0 && elapsed >= testTimeoutSeconds) {
+                        System.err.println("[locker] TEST MODE timeout reached -- auto-unlocking without a password check.");
+                        unlocked.set(true);
+                        break;
+                    }
+
+                    // Drain every queued X11 key event this frame -- fast typing
+                    // can queue several KeyPress/KeyRelease pairs between frames.
+                    X11Canvas.KeyEvent ev;
+                    while ((ev = canvas.pollKeyEvent()) != null) {
+                        if (!ev.press()) continue; // only act on key-down
+
+                        if (ev.keysym() == X11Canvas.XK_ESCAPE) {
+                            passwordBuffer = clearBuffer(passwordBuffer);
+                        } else if (ev.keysym() == X11Canvas.XK_BACKSPACE) {
+                            if (passwordBuffer.length > 0) {
+                                char[] shorter = new char[passwordBuffer.length - 1];
+                                System.arraycopy(passwordBuffer, 0, shorter, 0, shorter.length);
+                                passwordBuffer[passwordBuffer.length - 1] = '\0';
+                                passwordBuffer = shorter;
+                            }
+                        } else if (ev.keysym() == X11Canvas.XK_RETURN || ev.keysym() == X11Canvas.XK_KP_ENTER) {
+                            if (!authenticating) {
+                                System.err.println("[locker] Enter pressed (" + passwordBuffer.length
+                                        + " chars buffered) -- checking against PAM for user '" + user + "'...");
+                                authenticating = true;
+                                char[] toCheck = passwordBuffer;
+                                passwordBuffer = new char[0]; // PamAuthService takes ownership and zeroes toCheck
+                                pendingAuth = pam.authenticateAsync(user, toCheck);
+                            }
+                        } else if (!ev.text().isEmpty()) {
+                            char c = ev.text().charAt(0);
+                            if (c >= 0x20 && c != 0x7F && passwordBuffer.length < MAX_PASSWORD_LENGTH) {
+                                char[] longer = new char[passwordBuffer.length + 1];
+                                System.arraycopy(passwordBuffer, 0, longer, 0, passwordBuffer.length);
+                                longer[passwordBuffer.length] = c;
+                                passwordBuffer = longer;
+                            }
+                        }
+                    }
+
+                    if (authenticating && pendingAuth != null && pendingAuth.isDone()) {
+                        PamAuthService.Status status;
+                        try {
+                            status = pendingAuth.get();
+                        } catch (Exception ex) {
+                            status = PamAuthService.Status.ERROR;
+                        }
+                        authenticating = false;
+                        pendingAuth = null;
+                        if (status == PamAuthService.Status.SUCCESS) {
+                            System.err.println("[locker] PAM authentication succeeded -- unlocking.");
+                            unlocked.set(true);
+                        } else {
+                            System.err.println("[locker] PAM authentication failed (" + status + ") -- staying locked.");
+                            authError = 1.0f;
+                        }
+                    }
+
+                    authError = Math.max(0.0f, authError - dt / ERROR_DECAY_SECONDS);
+
+                    X11Canvas.MouseInfo mouse = canvas.queryMouse();
+                    float mouseNormX = canvas.getWidth() > 0 ? mouse.x() / canvas.getWidth() : 0.5f;
+                    float mouseNormY = canvas.getHeight() > 0 ? mouse.y() / canvas.getHeight() : 0.5f;
+
+                    canvas.makeCurrent(surface);
+
+                    canvas.bindFramebuffer(target.framebuffer());
+                    canvas.setViewport(0, 0, target.width(), target.height());
+                    pipeline.bind();
+                    var state = new dev.petrolal.dotfiles.wallpaper.WallpaperEvents.WallpaperState(
+                            canvas.getWidth(), canvas.getHeight(), elapsed,
+                            mouse.x(), mouse.y(), mouse.leftDown(), mouse.rightDown(),
+                            0, 0.0f, 0.0f, 0.0f);
+                    pipeline.updateUniforms(state, viewportOffsetX, viewportOffsetY, renderScale);
+                    pipeline.setResolution(target.width(), target.height());
+                    pipeline.updateLockUniforms(passwordBuffer.length, authError,
+                            authenticating ? 1.0f : 0.0f, mouseNormX, mouseNormY);
+                    canvas.drawQuad();
+
+                    canvas.bindFramebuffer(0);
+                    canvas.setViewport(0, 0, canvas.getWidth(), canvas.getHeight());
+                    blitPipeline.bind(target.texture());
+                    canvas.drawQuad();
+
+                    canvas.swapBuffers(surface);
+                }
+            } finally {
+                java.util.Arrays.fill(passwordBuffer, '\0');
+                canvas.destroyLockWindow(surface);
+            }
+        }
+    }
+
+    private static char[] clearBuffer(char[] buffer) {
+        java.util.Arrays.fill(buffer, '\0');
+        return new char[0];
+    }
+}

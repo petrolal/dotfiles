@@ -55,7 +55,34 @@ public class X11Canvas implements AutoCloseable {
     public static final int MOUSE_BUTTON1_MASK = 1 << 8;
     public static final int MOUSE_BUTTON3_MASK = 1 << 10;
 
+    // -------------------------------------------------------------------
+    // Input-grab / event-loop constants, used only by the screen locker
+    // (dev.petrolal.dotfiles.locker.ScreenLocker) -- the desktop-background
+    // wallpaper surfaces created by createSurface() never select input or
+    // grab anything.
+    // -------------------------------------------------------------------
+    public static final long CW_EVENT_MASK = 1L << 11;
+    public static final long CW_OVERRIDE_REDIRECT = 1L << 9;
+    public static final long KEY_PRESS_MASK = 1L;
+    public static final long KEY_RELEASE_MASK = 1L << 1;
+    public static final int GRAB_MODE_ASYNC = 1;
+    public static final int GRAB_SUCCESS = 0;
+    public static final long CURRENT_TIME = 0L;
+    public static final int KEY_PRESS = 2;
+    public static final int KEY_RELEASE = 3;
+
+    // keysymdef.h function-key values this locker cares about.
+    public static final long XK_BACKSPACE = 0xFF08L;
+    public static final long XK_RETURN = 0xFF0DL;
+    public static final long XK_ESCAPE = 0xFF1BL;
+    public static final long XK_KP_ENTER = 0xFF8DL;
+
     public record MouseInfo(float x, float y, boolean leftDown, boolean rightDown) {}
+
+    /** One decoded XKeyEvent: which keysym was pressed/released and (for a
+     * KeyPress) whatever printable text XLookupString resolved it to --
+     * empty for non-printable keys (arrows, function keys, modifiers...). */
+    public record KeyEvent(boolean press, long keysym, String text) {}
 
     /** One monitor's window + GL context. All surfaces share one GL object namespace. */
     public record Surface(long window, MemorySegment glContext) {}
@@ -112,6 +139,21 @@ public class X11Canvas implements AutoCloseable {
     private static final MethodHandle XQueryPointer;
     private static final MethodHandle XGetWindowProperty;
     private static final MethodHandle XFree;
+
+    // Locker-only: input grab / event loop
+    private static final MethodHandle XGrabKeyboard;
+    private static final MethodHandle XUngrabKeyboard;
+    private static final MethodHandle XGrabPointer;
+    private static final MethodHandle XUngrabPointer;
+    private static final MethodHandle XSelectInput;
+    private static final MethodHandle XPending;
+    private static final MethodHandle XNextEvent;
+    private static final MethodHandle XLookupString;
+    private static final MethodHandle XSetInputFocus;
+    private static final MethodHandle XRaiseWindow;
+    private static final MethodHandle XUnmapWindow;
+    private static final MethodHandle XDestroyWindow;
+    private static final MethodHandle XFlush;
 
     // GLX function handles
     private static final MethodHandle glXChooseVisual;
@@ -245,6 +287,47 @@ public class X11Canvas implements AutoCloseable {
         XFree = linker.downcallHandle(findOrThrow(x11, "XFree"),
                 FunctionDescriptor.of(ValueLayout.JAVA_INT, ValueLayout.ADDRESS));
 
+        // int XGrabKeyboard(Display*, Window, Bool, int, int, Time);
+        XGrabKeyboard = linker.downcallHandle(findOrThrow(x11, "XGrabKeyboard"),
+                FunctionDescriptor.of(ValueLayout.JAVA_INT, ValueLayout.ADDRESS, ValueLayout.JAVA_LONG,
+                        ValueLayout.JAVA_INT, ValueLayout.JAVA_INT, ValueLayout.JAVA_INT, ValueLayout.JAVA_LONG));
+        // int XUngrabKeyboard(Display*, Time);
+        XUngrabKeyboard = linker.downcallHandle(findOrThrow(x11, "XUngrabKeyboard"),
+                FunctionDescriptor.of(ValueLayout.JAVA_INT, ValueLayout.ADDRESS, ValueLayout.JAVA_LONG));
+        // int XGrabPointer(Display*, Window, Bool, unsigned int, int, int, Window, Cursor, Time);
+        XGrabPointer = linker.downcallHandle(findOrThrow(x11, "XGrabPointer"),
+                FunctionDescriptor.of(ValueLayout.JAVA_INT, ValueLayout.ADDRESS, ValueLayout.JAVA_LONG,
+                        ValueLayout.JAVA_INT, ValueLayout.JAVA_INT, ValueLayout.JAVA_INT, ValueLayout.JAVA_INT,
+                        ValueLayout.JAVA_LONG, ValueLayout.JAVA_LONG, ValueLayout.JAVA_LONG));
+        // int XUngrabPointer(Display*, Time);
+        XUngrabPointer = linker.downcallHandle(findOrThrow(x11, "XUngrabPointer"),
+                FunctionDescriptor.of(ValueLayout.JAVA_INT, ValueLayout.ADDRESS, ValueLayout.JAVA_LONG));
+        // int XSelectInput(Display*, Window, long);
+        XSelectInput = linker.downcallHandle(findOrThrow(x11, "XSelectInput"),
+                FunctionDescriptor.of(ValueLayout.JAVA_INT, ValueLayout.ADDRESS, ValueLayout.JAVA_LONG, ValueLayout.JAVA_LONG));
+        // int XPending(Display*); -- never blocks, just drains the local queue + a non-blocking socket check
+        XPending = linker.downcallHandle(findOrThrow(x11, "XPending"),
+                FunctionDescriptor.of(ValueLayout.JAVA_INT, ValueLayout.ADDRESS));
+        // int XNextEvent(Display*, XEvent*); -- only called when XPending() > 0, so never actually blocks here
+        XNextEvent = linker.downcallHandle(findOrThrow(x11, "XNextEvent"),
+                FunctionDescriptor.of(ValueLayout.JAVA_INT, ValueLayout.ADDRESS, ValueLayout.ADDRESS));
+        // int XLookupString(XKeyEvent*, char*, int, KeySym*, XComposeStatus*);
+        XLookupString = linker.downcallHandle(findOrThrow(x11, "XLookupString"),
+                FunctionDescriptor.of(ValueLayout.JAVA_INT, ValueLayout.ADDRESS, ValueLayout.ADDRESS,
+                        ValueLayout.JAVA_INT, ValueLayout.ADDRESS, ValueLayout.ADDRESS));
+        // int XSetInputFocus(Display*, Window, int revert_to, Time);
+        XSetInputFocus = linker.downcallHandle(findOrThrow(x11, "XSetInputFocus"),
+                FunctionDescriptor.of(ValueLayout.JAVA_INT, ValueLayout.ADDRESS, ValueLayout.JAVA_LONG,
+                        ValueLayout.JAVA_INT, ValueLayout.JAVA_LONG));
+        XRaiseWindow = linker.downcallHandle(findOrThrow(x11, "XRaiseWindow"),
+                FunctionDescriptor.of(ValueLayout.JAVA_INT, ValueLayout.ADDRESS, ValueLayout.JAVA_LONG));
+        XUnmapWindow = linker.downcallHandle(findOrThrow(x11, "XUnmapWindow"),
+                FunctionDescriptor.of(ValueLayout.JAVA_INT, ValueLayout.ADDRESS, ValueLayout.JAVA_LONG));
+        XDestroyWindow = linker.downcallHandle(findOrThrow(x11, "XDestroyWindow"),
+                FunctionDescriptor.of(ValueLayout.JAVA_INT, ValueLayout.ADDRESS, ValueLayout.JAVA_LONG));
+        XFlush = linker.downcallHandle(findOrThrow(x11, "XFlush"),
+                FunctionDescriptor.of(ValueLayout.JAVA_INT, ValueLayout.ADDRESS));
+
         // Bind GLX
         glXChooseVisual = linker.downcallHandle(findOrThrow(gl, "glXChooseVisual"), FunctionDescriptor
                 .of(ValueLayout.ADDRESS, ValueLayout.ADDRESS, ValueLayout.JAVA_INT, ValueLayout.ADDRESS));
@@ -290,6 +373,22 @@ public class X11Canvas implements AutoCloseable {
      */
     public Surface initGL(int x, int y, int w, int h) throws Throwable {
         Surface first = createSurface(x, y, w, h);
+        resolveGlProcsIfNeeded();
+        createSharedQuadBuffer();
+        bindQuadAttribs();
+        return first;
+    }
+
+    private boolean glProcsResolved = false;
+
+    /** Resolves every direct-GL function pointer via glXGetProcAddress.
+     * Idempotent and safe to call with any already-current GL context --
+     * {@link #initGL} calls it for the desktop wallpaper's first surface,
+     * {@link #createLockWindow} calls it for the screen locker's window,
+     * whichever of the two runs first in a given process. */
+    private void resolveGlProcsIfNeeded() throws Throwable {
+        if (glProcsResolved) return;
+        glProcsResolved = true;
 
         Linker linker = Linker.nativeLinker();
         glCreateShader = getProc(linker, "glCreateShader", FunctionDescriptor.of(ValueLayout.JAVA_INT, ValueLayout.JAVA_INT));
@@ -328,10 +427,6 @@ public class X11Canvas implements AutoCloseable {
         glUniform1i = getProc(linker, "glUniform1i", FunctionDescriptor.ofVoid(ValueLayout.JAVA_INT, ValueLayout.JAVA_INT));
         glGetError = getProc(linker, "glGetError", FunctionDescriptor.of(ValueLayout.JAVA_INT));
         glPixelStorei = getProc(linker, "glPixelStorei", FunctionDescriptor.ofVoid(ValueLayout.JAVA_INT, ValueLayout.JAVA_INT));
-
-        createSharedQuadBuffer();
-        bindQuadAttribs();
-        return first;
     }
 
     /**
@@ -755,6 +850,126 @@ public class X11Canvas implements AutoCloseable {
 
     public void swapBuffers(Surface surface) throws Throwable {
         glXSwapBuffers.invokeExact(display, surface.window());
+    }
+
+    // -------------------------------------------------------------------
+    // Locker-only: an always-on-top, input-grabbing window spanning the
+    // whole X screen. Deliberately a separate code path from createSurface()
+    // (desktop-background, WM-managed, lowered) -- this window needs the
+    // opposite properties (override-redirect so it bypasses the WM/panel
+    // stacking entirely and always wins focus+raise, selects key events,
+    // and is the target of the keyboard/pointer grabs below).
+    // -------------------------------------------------------------------
+
+    private final MemorySegment eventBuf = persistentArena.allocate(192); // sizeof(XEvent) == pad[24] of long
+    private final MemorySegment lookupTextBuf = persistentArena.allocate(32);
+    private final MemorySegment lookupKeysymBuf = persistentArena.allocate(ValueLayout.JAVA_LONG);
+
+    /** Creates (but does not yet map/grab) the full-screen override-redirect
+     * lock window, sized to the whole X display (every monitor at once --
+     * one continuous lock surface, matching how the wallpaper already treats
+     * the display as one panorama). */
+    public Surface createLockWindow() throws Throwable {
+        long window;
+        try (Arena arena = Arena.ofConfined()) {
+            MemorySegment attrs = arena.allocate(112);
+            attrs.set(ValueLayout.JAVA_INT, 88, 1); // override_redirect = True
+            attrs.set(ValueLayout.JAVA_LONG, 72, KEY_PRESS_MASK | KEY_RELEASE_MASK); // event_mask
+
+            window = (long) XCreateWindow.invokeExact(display, root, 0, 0, width, height, 0,
+                    COPY_FROM_PARENT, COPY_FROM_PARENT, MemorySegment.NULL,
+                    CW_OVERRIDE_REDIRECT | CW_EVENT_MASK, attrs);
+        }
+
+        MemorySegment glContext;
+        try (Arena arena = Arena.ofConfined()) {
+            MemorySegment glAttrs = arena.allocateFrom(ValueLayout.JAVA_INT, GLX_RGBA, GLX_DOUBLEBUFFER, 0);
+            MemorySegment visInfo = (MemorySegment) glXChooseVisual.invokeExact(display, screen, glAttrs);
+            if (visInfo.equals(MemorySegment.NULL)) {
+                throw new IllegalStateException("glXChooseVisual found no matching GLX visual for the lock window.");
+            }
+            MemorySegment shareWith = sharedGlContext == null ? MemorySegment.NULL : sharedGlContext;
+            glContext = (MemorySegment) glXCreateContext.invokeExact(display, visInfo, shareWith, 1);
+            int ignoredCurrent = (int) glXMakeCurrent.invokeExact(display, window, glContext);
+            int ignoredFree = (int) XFree.invokeExact(visInfo);
+        }
+        resolveGlProcsIfNeeded();
+        if (sharedGlContext == null) {
+            sharedGlContext = glContext;
+            createSharedQuadBuffer();
+            bindQuadAttribs();
+        } else {
+            bindQuadAttribs();
+        }
+
+        int ignoredMap = (int) XMapWindow.invokeExact(display, window);
+        int ignoredRaise = (int) XRaiseWindow.invokeExact(display, window);
+        int ignoredFocus = (int) XSetInputFocus.invokeExact(display, window, 0 /* RevertToNone */, CURRENT_TIME);
+        int ignoredFlush = (int) XFlush.invokeExact(display);
+
+        setSwapInterval(window, 1);
+        return new Surface(window, glContext);
+    }
+
+    /**
+     * Grabs the keyboard and pointer exclusively for {@code window}, retrying
+     * for up to ~1s: right at startup the window manager or a just-released
+     * grab from the previous session can hold a transient grab that makes
+     * the very first XGrabKeyboard/XGrabPointer call return AlreadyGrabbed
+     * even though nothing is actually wrong. Returns false (never throws) if
+     * the grab still can't be obtained after retrying, so the caller can
+     * refuse to treat the screen as locked rather than show a lock UI that
+     * input can bypass.
+     */
+    public boolean grabInputWithRetry(Surface surface) throws Throwable {
+        for (int attempt = 0; attempt < 20; attempt++) {
+            int kbGrab = (int) XGrabKeyboard.invokeExact(display, surface.window(), 1,
+                    GRAB_MODE_ASYNC, GRAB_MODE_ASYNC, CURRENT_TIME);
+            if (kbGrab == GRAB_SUCCESS) {
+                int ptrGrab = (int) XGrabPointer.invokeExact(display, surface.window(), 1,
+                        0, GRAB_MODE_ASYNC, GRAB_MODE_ASYNC, 0L, 0L, CURRENT_TIME);
+                if (ptrGrab == GRAB_SUCCESS) {
+                    return true;
+                }
+                int ignored = (int) XUngrabKeyboard.invokeExact(display, CURRENT_TIME);
+            }
+            Thread.sleep(50);
+        }
+        return false;
+    }
+
+    public void ungrabInput() throws Throwable {
+        int ignored1 = (int) XUngrabKeyboard.invokeExact(display, CURRENT_TIME);
+        int ignored2 = (int) XUngrabPointer.invokeExact(display, CURRENT_TIME);
+    }
+
+    /** Non-blocking: returns null immediately if no key event is queued.
+     * Only ever called from the single render thread that owns {@code display}. */
+    public KeyEvent pollKeyEvent() throws Throwable {
+        int pending = (int) XPending.invokeExact(display);
+        if (pending <= 0) return null;
+
+        int ignored = (int) XNextEvent.invokeExact(display, eventBuf);
+        int type = eventBuf.get(ValueLayout.JAVA_INT, 0);
+        if (type != KEY_PRESS && type != KEY_RELEASE) {
+            return pollKeyEvent(); // drain non-key events (e.g. stray Expose) without surfacing them
+        }
+
+        int len = (int) XLookupString.invokeExact(eventBuf, lookupTextBuf, (int) lookupTextBuf.byteSize(),
+                lookupKeysymBuf, MemorySegment.NULL);
+        long keysym = lookupKeysymBuf.get(ValueLayout.JAVA_LONG, 0);
+        String text = len > 0 ? new String(lookupTextBuf.toArray(ValueLayout.JAVA_BYTE), 0, len,
+                java.nio.charset.StandardCharsets.ISO_8859_1) : "";
+        return new KeyEvent(type == KEY_PRESS, keysym, text);
+    }
+
+    public void destroyLockWindow(Surface surface) {
+        try {
+            ungrabInput();
+            int ignored1 = (int) XUnmapWindow.invokeExact(display, surface.window());
+            int ignored2 = (int) XDestroyWindow.invokeExact(display, surface.window());
+            int ignored3 = (int) XFlush.invokeExact(display);
+        } catch (Throwable ignored) {}
     }
 
     public int getWidth() { return width; }

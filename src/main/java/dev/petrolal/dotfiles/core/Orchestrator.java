@@ -8,6 +8,7 @@ import java.util.Optional;
 import dev.petrolal.dotfiles.desktop.DesktopServices;
 import dev.petrolal.dotfiles.desktop.Xfconf;
 import dev.petrolal.dotfiles.linker.Linker;
+import dev.petrolal.dotfiles.locker.ScreenLocker;
 import dev.petrolal.dotfiles.wallpaper.GpuOffloadLauncher;
 import dev.petrolal.dotfiles.wallpaper.Wallpaper;
 import dev.petrolal.dotfiles.wallpaper.WallpaperDaemonManager;
@@ -153,6 +154,24 @@ public final class Orchestrator {
 		} catch (Throwable ex) {
 			System.err.println("Error on wallpaper application: " + ex.getMessage());
 			return new WallpaperResult(false, 1);
+		}
+	}
+
+	/** Starts the interactive PAM-authenticated screen locker in-process
+	 * (blocks the calling thread until the user unlocks or the process is
+	 * signaled -- see {@link ScreenLocker}). {@code testTimeoutSeconds > 0}
+	 * is a dev/test-only escape hatch; never pass it for a real lock. */
+	public static boolean lockScreen(boolean dryRun, float testTimeoutSeconds) {
+		if (dryRun) {
+			System.out.println("[DRY-RUN] Would start the interactive screen locker.");
+			return true;
+		}
+		try {
+			new ScreenLocker().start(testTimeoutSeconds);
+			return true;
+		} catch (Throwable ex) {
+			System.err.println("Error on screen locker: " + ex.getMessage());
+			return false;
 		}
 	}
 
