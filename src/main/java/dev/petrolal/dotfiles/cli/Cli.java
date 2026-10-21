@@ -35,6 +35,13 @@ public final class Cli {
 		System.out.println("      --test-timeout=N  (lock, DEV/TEST ONLY) auto-unlock after N");
 		System.out.println("                    seconds with no password check -- never use this");
 		System.out.println("                    for a real lock, only for safely testing the grab");
+		System.out.println("      --dump-frame=PATH  (lock, DEV/TEST ONLY) render one frame, save it");
+		System.out.println("                    as a PNG at PATH, then exit -- lets the 3D lock UI");
+		System.out.println("                    be inspected without a human watching the real screen");
+		System.out.println("      --inject-password=STR  (lock, DEV/TEST ONLY) synthesize keypresses");
+		System.out.println("                    for STR + Return right after the grab succeeds, driving");
+		System.out.println("                    the real typing/PAM-check path with no keyboard needed --");
+		System.out.println("                    STR is visible via argv/ps, only use a throwaway string");
 		System.out.println("  -h, --help        display this help text and exit");
 		System.out.println("  -v, --version     display version information and exit");
 	}
@@ -62,6 +69,8 @@ public final class Cli {
 		boolean applyWallpaper = true;
 		int maxFps = 0;
 		float testTimeoutSeconds = 0f;
+		String dumpFramePath = null;
+		String injectPassword = null;
 		Action action = Action.DEPLOY;
 
 		for (String arg : argv) {
@@ -87,6 +96,22 @@ public final class Cli {
 				}
 				if (testTimeoutSeconds <= 0f) {
 					System.err.println(PROGRAM_NAME + ": --test-timeout requires a positive number, got '" + value + "'");
+					return 1;
+				}
+				continue;
+			}
+			if (arg.startsWith("--dump-frame=")) {
+				dumpFramePath = arg.substring("--dump-frame=".length());
+				if (dumpFramePath.isBlank()) {
+					System.err.println(PROGRAM_NAME + ": --dump-frame requires a file path");
+					return 1;
+				}
+				continue;
+			}
+			if (arg.startsWith("--inject-password=")) {
+				injectPassword = arg.substring("--inject-password=".length());
+				if (injectPassword.isEmpty()) {
+					System.err.println(PROGRAM_NAME + ": --inject-password requires a non-empty string");
 					return 1;
 				}
 				continue;
@@ -127,7 +152,7 @@ public final class Cli {
 		case UNINSTALL -> Orchestrator.uninstall(dryRun, verbose).ok();
 		case DEPLOY -> Orchestrator.deploy(dryRun, verbose, reload, applySettings, applyWallpaper).ok();
 		case WALLPAPER -> Orchestrator.set3DWallpaper(dryRun, verbose, maxFps).ok();
-		case LOCK -> Orchestrator.lockScreen(dryRun, testTimeoutSeconds);
+		case LOCK -> Orchestrator.lockScreen(dryRun, testTimeoutSeconds, dumpFramePath, injectPassword);
 		case TOGGLE_HUD -> Orchestrator.toggleWallpaperHud(verbose);
 		};
 		return ok ? 0 : 1;

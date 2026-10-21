@@ -159,15 +159,16 @@ public final class Orchestrator {
 
 	/** Starts the interactive PAM-authenticated screen locker in-process
 	 * (blocks the calling thread until the user unlocks or the process is
-	 * signaled -- see {@link ScreenLocker}). {@code testTimeoutSeconds > 0}
-	 * is a dev/test-only escape hatch; never pass it for a real lock. */
-	public static boolean lockScreen(boolean dryRun, float testTimeoutSeconds) {
+	 * signaled -- see {@link ScreenLocker}). {@code testTimeoutSeconds > 0},
+	 * {@code dumpFramePath != null}, and {@code injectPassword != null} are
+	 * dev/test-only escape hatches; never pass any of them for a real lock. */
+	public static boolean lockScreen(boolean dryRun, float testTimeoutSeconds, String dumpFramePath, String injectPassword) {
 		if (dryRun) {
 			System.out.println("[DRY-RUN] Would start the interactive screen locker.");
 			return true;
 		}
 		try {
-			new ScreenLocker().start(testTimeoutSeconds);
+			new ScreenLocker().start(testTimeoutSeconds, dumpFramePath, injectPassword);
 			return true;
 		} catch (Throwable ex) {
 			System.err.println("Error on screen locker: " + ex.getMessage());

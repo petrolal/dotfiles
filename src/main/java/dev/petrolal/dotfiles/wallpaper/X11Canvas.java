@@ -31,6 +31,7 @@ public class X11Canvas implements AutoCloseable {
 
     // Offscreen render-target constants (low-res raymarch pass -> nearest-upscale blit)
     public static final int GL_FRAMEBUFFER = 0x8D40;
+    public static final int GL_PACK_ALIGNMENT = 0x0D05;
     public static final int GL_COLOR_ATTACHMENT0 = 0x8CE0;
     public static final int GL_FRAMEBUFFER_COMPLETE = 0x8CD5;
     public static final int GL_TEXTURE_2D = 0x0DE1;
@@ -154,6 +155,8 @@ public class X11Canvas implements AutoCloseable {
     private static final MethodHandle XUnmapWindow;
     private static final MethodHandle XDestroyWindow;
     private static final MethodHandle XFlush;
+    private static final MethodHandle XKeysymToKeycode;
+    private static final MethodHandle XPutBackEvent;
 
     // GLX function handles
     private static final MethodHandle glXChooseVisual;
@@ -204,6 +207,7 @@ public class X11Canvas implements AutoCloseable {
     private MethodHandle glUniform1i;
     private MethodHandle glGetError;
     private MethodHandle glPixelStorei;
+    private MethodHandle glReadPixels;
 
     private static SymbolLookup loadLibrary(String libName, Arena arena) {
         try {
@@ -327,6 +331,20 @@ public class X11Canvas implements AutoCloseable {
                 FunctionDescriptor.of(ValueLayout.JAVA_INT, ValueLayout.ADDRESS, ValueLayout.JAVA_LONG));
         XFlush = linker.downcallHandle(findOrThrow(x11, "XFlush"),
                 FunctionDescriptor.of(ValueLayout.JAVA_INT, ValueLayout.ADDRESS));
+        // KeyCode XKeysymToKeycode(Display*, KeySym) -- KeyCode is really an
+        // unsigned char, but is declared JAVA_INT here and masked to a byte
+        // at the call site, matching how this project's other narrow-return
+        // Xlib calls are bound (see e.g. getError()'s GLenum handling).
+        XKeysymToKeycode = linker.downcallHandle(findOrThrow(x11, "XKeysymToKeycode"),
+                FunctionDescriptor.of(ValueLayout.JAVA_INT, ValueLayout.ADDRESS, ValueLayout.JAVA_LONG));
+        // int XPutBackEvent(Display*, XEvent*) -- pushes a synthetic event
+        // straight into Xlib's local queue without any server round-trip;
+        // used only by injectTestKeyPress() below to drive the locker's
+        // typing/PAM path from an automated test, without a real keyboard
+        // or an XTest-capable tool like xdotool (neither is assumed present
+        // on a minimal NixOS install).
+        XPutBackEvent = linker.downcallHandle(findOrThrow(x11, "XPutBackEvent"),
+                FunctionDescriptor.of(ValueLayout.JAVA_INT, ValueLayout.ADDRESS, ValueLayout.ADDRESS));
 
         // Bind GLX
         glXChooseVisual = linker.downcallHandle(findOrThrow(gl, "glXChooseVisual"), FunctionDescriptor
@@ -427,6 +445,8 @@ public class X11Canvas implements AutoCloseable {
         glUniform1i = getProc(linker, "glUniform1i", FunctionDescriptor.ofVoid(ValueLayout.JAVA_INT, ValueLayout.JAVA_INT));
         glGetError = getProc(linker, "glGetError", FunctionDescriptor.of(ValueLayout.JAVA_INT));
         glPixelStorei = getProc(linker, "glPixelStorei", FunctionDescriptor.ofVoid(ValueLayout.JAVA_INT, ValueLayout.JAVA_INT));
+        glReadPixels = getProc(linker, "glReadPixels", FunctionDescriptor.ofVoid(ValueLayout.JAVA_INT, ValueLayout.JAVA_INT,
+                ValueLayout.JAVA_INT, ValueLayout.JAVA_INT, ValueLayout.JAVA_INT, ValueLayout.JAVA_INT, ValueLayout.ADDRESS));
     }
 
     /**
@@ -829,6 +849,27 @@ public class X11Canvas implements AutoCloseable {
         glBindFramebuffer.invokeExact(GL_FRAMEBUFFER, framebuffer);
     }
 
+    /** Reads back the currently-bound framebuffer's pixels as tightly-packed
+     * top-to-bottom RGBA (i.e. already row-flipped from GL's bottom-left
+     * origin) -- dev-only utility for {@code lock --dump-frame}, letting a
+     * single rendered frame of the locker be inspected as a PNG without a
+     * human having to look at the real X11 output. */
+    public byte[] readPixelsRGBA(int width, int height) throws Throwable {
+        try (Arena arena = Arena.ofConfined()) {
+            MemorySegment buffer = arena.allocate((long) width * height * 4);
+            glPixelStorei.invokeExact(GL_PACK_ALIGNMENT, 1);
+            glReadPixels.invokeExact(0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, buffer);
+            byte[] raw = new byte[width * height * 4];
+            MemorySegment.copy(buffer, ValueLayout.JAVA_BYTE, 0, raw, 0, raw.length);
+            byte[] flipped = new byte[raw.length];
+            int rowBytes = width * 4;
+            for (int y = 0; y < height; y++) {
+                System.arraycopy(raw, y * rowBytes, flipped, (height - 1 - y) * rowBytes, rowBytes);
+            }
+            return flipped;
+        }
+    }
+
     /** Binds TEXTURE to texture unit 0 (the only unit the blit shader uses). */
     public void bindTexture(int texture) throws Throwable {
         glActiveTexture.invokeExact(GL_TEXTURE0);
@@ -970,6 +1011,29 @@ public class X11Canvas implements AutoCloseable {
         String text = len > 0 ? new String(lookupTextBuf.toArray(ValueLayout.JAVA_BYTE), 0, len,
                 java.nio.charset.StandardCharsets.ISO_8859_1) : "";
         return new KeyEvent(type == KEY_PRESS, keysym, text);
+    }
+
+    /** DEV/TEST ONLY: synthesizes a KeyPress event for KEYSYM (must be a
+     * directly-mapped printable keysym, e.g. Latin-1 'a'-'z'/'0'-'9', or one
+     * of the XK_* control keysyms already in use elsewhere in this class)
+     * and pushes it straight into Xlib's local event queue via
+     * XPutBackEvent -- the next pollKeyEvent() call will return it exactly
+     * as if a real key had been pressed. No X server round-trip, no window
+     * focus requirement, and no XTest extension dependency -- used by
+     * ScreenLocker's --inject-password test flag to drive the typing/PAM
+     * path from an automated test on a machine with no xdotool/XTest tool
+     * installed. Never reachable from a real lock session. */
+    public void injectTestKeyPress(long keysym) throws Throwable {
+        try (Arena arena = Arena.ofConfined()) {
+            MemorySegment ev = arena.allocate(192);
+            int keycode = ((int) XKeysymToKeycode.invokeExact(display, keysym)) & 0xFF;
+            ev.set(ValueLayout.JAVA_INT, 0, KEY_PRESS);           // type
+            ev.set(ValueLayout.JAVA_INT, 16, 0);                  // send_event = False
+            ev.set(ValueLayout.JAVA_LONG, 24, display.address());  // display
+            ev.set(ValueLayout.JAVA_INT, 80, 0);                  // state
+            ev.set(ValueLayout.JAVA_INT, 84, keycode);            // keycode
+            int ignored = (int) XPutBackEvent.invokeExact(display, ev);
+        }
     }
 
     public void destroyLockWindow(Surface surface) {

@@ -53,8 +53,30 @@ public final class ScreenLocker {
      *                           bug can never require a hard reboot to
      *                           recover from while this is being developed
      *                           -- never pass this for a real lock.
+     * @param dumpFramePath DEV/TEST-ONLY escape hatch: if non-null, grabs
+     *                      input and renders as normal, but once the scene
+     *                      has had a moment to settle (0.3s in) saves one
+     *                      frame as a PNG at this path and exits -- lets the
+     *                      3D lock UI be inspected (by a human or by Claude's
+     *                      own Read tool) without anyone having to watch the
+     *                      real X11 output live. Combine with
+     *                      testTimeoutSeconds as a safety net if desired;
+     *                      never pass this for a real lock.
+     * @param injectPassword DEV/TEST-ONLY escape hatch: if non-null,
+     *                       synthesizes keypresses for every character (via
+     *                       X11Canvas.injectTestKeyPress, no real keyboard or
+     *                       xdotool/XTest tool required) followed by Return,
+     *                       right after the grab succeeds -- drives the real
+     *                       typing -> PAM-check -> error/unlock path exactly
+     *                       as a physical test would, so it can be exercised
+     *                       by an automated test or CI. Only Latin-1
+     *                       printable characters are supported. This string
+     *                       is visible via argv/`ps`/shell history on most
+     *                       systems -- only ever pass an intentionally wrong,
+     *                       throwaway test string here, never a real
+     *                       password, and never use this for a real lock.
      */
-    public void start(float testTimeoutSeconds) throws Throwable {
+    public void start(float testTimeoutSeconds, String dumpFramePath, String injectPassword) throws Throwable {
         Path vertPath = resolveShader("wallpaper.vert");
         Path fragPath = resolveShader("wallpaper.frag");
         Path blitFrag = resolveShader("blit.frag");
@@ -63,6 +85,14 @@ public final class ScreenLocker {
         if (testTimeoutSeconds > 0) {
             System.err.println("[locker] TEST MODE: auto-unlocking after " + testTimeoutSeconds
                     + "s with NO password check. Do not use this flag for a real lock.");
+        }
+        if (dumpFramePath != null) {
+            System.err.println("[locker] TEST MODE: will dump one frame to " + dumpFramePath
+                    + " and exit. Do not use this flag for a real lock.");
+        }
+        if (injectPassword != null) {
+            System.err.println("[locker] TEST MODE: will synthesize " + injectPassword.length()
+                    + " keypress(es) + Return -- never pass a real password here, it is visible via argv/ps.");
         }
 
         try (X11Canvas canvas = new X11Canvas();
@@ -74,6 +104,18 @@ public final class ScreenLocker {
                 canvas.destroyLockWindow(surface);
                 throw new IllegalStateException(
                         "Could not grab keyboard/pointer -- refusing to show a lock screen that input could bypass.");
+            }
+
+            if (injectPassword != null) {
+                // XPutBackEvent pushes to the FRONT of Xlib's local event
+                // queue, not the back -- so events must be injected in
+                // reverse order (Return first, then the password's
+                // characters back-to-front) for pollKeyEvent() to drain
+                // them in the order a human would have typed them.
+                canvas.injectTestKeyPress(X11Canvas.XK_RETURN);
+                for (int i = injectPassword.length() - 1; i >= 0; i--) {
+                    canvas.injectTestKeyPress(injectPassword.charAt(i));
+                }
             }
 
             // Everything from here on must guarantee the grab is released
@@ -143,6 +185,7 @@ public final class ScreenLocker {
             char[] passwordBuffer = new char[0];
             float authError = 0.0f;
             boolean authenticating = false;
+            boolean frameDumped = false;
             Future<PamAuthService.Status> pendingAuth = null;
 
             long startNanos = System.nanoTime();
@@ -250,6 +293,19 @@ public final class ScreenLocker {
                     blitPipeline.bind(target.texture());
                     canvas.drawQuad();
 
+                    boolean readyToDump = injectPassword != null ? authError > 0.0f : elapsed >= 0.3f;
+                    if (dumpFramePath != null && !frameDumped && readyToDump) {
+                        frameDumped = true;
+                        dumpFrame(canvas, dumpFramePath);
+                        System.err.println("[locker] Dumped one frame to " + dumpFramePath
+                                + (injectPassword != null
+                                        ? " -- letting the injected PAM check finish before exiting."
+                                        : " -- unlocking."));
+                        if (injectPassword == null) {
+                            unlocked.set(true);
+                        }
+                    }
+
                     canvas.swapBuffers(surface);
                 }
             } finally {
@@ -264,5 +320,27 @@ public final class ScreenLocker {
     private static char[] clearBuffer(char[] buffer) {
         java.util.Arrays.fill(buffer, '\0');
         return new char[0];
+    }
+
+    /** Reads the just-drawn default framebuffer back and saves it as a PNG
+     * -- see {@code --dump-frame} on the {@code lock} CLI command. Only
+     * ImageIO/BufferedImage are used here, never java.awt.Font/drawString
+     * (see LoginPromptTexture's header comment for why that combination
+     * crashes on this JDK build). */
+    private static void dumpFrame(X11Canvas canvas, String path) throws Throwable {
+        int w = canvas.getWidth();
+        int h = canvas.getHeight();
+        byte[] rgba = canvas.readPixelsRGBA(w, h);
+        java.awt.image.BufferedImage img = new java.awt.image.BufferedImage(
+                w, h, java.awt.image.BufferedImage.TYPE_INT_ARGB);
+        int[] argb = new int[w * h];
+        for (int i = 0; i < argb.length; i++) {
+            int o = i * 4;
+            int r = rgba[o] & 0xFF, g = rgba[o + 1] & 0xFF, b = rgba[o + 2] & 0xFF;
+            argb[i] = 0xFF000000 | (r << 16) | (g << 8) | b;
+        }
+        img.setRGB(0, 0, w, h, argb, 0, w);
+        java.io.File file = new java.io.File(path);
+        javax.imageio.ImageIO.write(img, "png", file);
     }
 }
