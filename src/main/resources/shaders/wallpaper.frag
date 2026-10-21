@@ -74,33 +74,43 @@ void main() {
     float isNight = 1.0 - isDay;
 
     // --- Dynamic Glitch Intensity Curve by Hour of Day ---
+    // Smooth at day, ramping up at dusk and midnight, reaching maximum intensity in demon hours (00:00 - 04:00)
     float midnightFactor = smoothstep(20.0, 23.0, hour) + (1.0 - smoothstep(3.5, 6.0, hour));
+    float demonHours = smoothstep(23.0, 24.0, hour) + (1.0 - smoothstep(0.0, 4.0, hour));
     float duskFactor = smoothstep(16.5, 19.5, hour) * (1.0 - smoothstep(20.5, 22.5, hour));
-    float hourGlitchScale = 0.20 + 0.35 * duskFactor + 0.70 * midnightFactor; // range [0.20, 1.25]
+    float hourGlitchScale = 0.25 + 0.35 * duskFactor + 0.65 * midnightFactor + 0.45 * demonHours;
 
     // --- Unpredictable Asymmetric Glitch Timing ("Randomized Sleeps") ---
     float epochDuration = mix(0.18, 0.35, isDay);
     float epoch = floor(u_time * epochDuration);
     float epochRand = hash1(epoch);
-    float sleepThreshold = mix(0.40, 0.65, isDay);
+    float sleepThreshold = mix(0.35, 0.65, isDay);
     float activityGate = step(sleepThreshold, epochRand);
 
     float erraticRate = mix(8.0, 3.5, isDay);
     float erraticTime = u_time * (3.0 + erraticRate * hash1(floor(u_time * 1.5)));
-    float microPulse = step(0.93 - (0.05 * hourGlitchScale), sin(erraticTime) * cos(erraticTime * 2.37));
-    float suddenSpike = step(0.985 - (0.02 * hourGlitchScale), hash1(floor(u_time * 12.0)));
+    float microPulse = step(0.92 - (0.05 * hourGlitchScale), sin(erraticTime) * cos(erraticTime * 2.37));
+    float suddenSpike = step(0.982 - (0.02 * hourGlitchScale), hash1(floor(u_time * 14.0)));
     float glitchPulse = max(microPulse * activityGate, suddenSpike) * hourGlitchScale;
 
-    // Horizontal slice shift with scale proportional to hour of day
-    float sliceBlock = floor(gl_FragCoord.y * (0.04 + 0.12 * hash1(floor(u_time * 8.0))));
-    float sliceRand = hash(vec2(sliceBlock, floor(u_time * 18.0))) - 0.5;
-    float sliceMagnitude = (0.015 + 0.08 * hash1(floor(u_time * 10.0))) * hourGlitchScale;
-    float slice = sliceRand * sliceMagnitude * min(glitchPulse, 1.0);
-    uv.x += slice;
+    // --- Cyberpunk / Matrix Digital Slice Glitches (Sharp, discrete, zero waves) ---
+    float sliceY1 = floor(gl_FragCoord.y / 14.0);
+    float sliceTime = floor(u_time * 24.0);
+    float sliceRand1 = hash(vec2(sliceY1 * 0.31, sliceTime * 0.77));
+    float sliceTrigger1 = step(0.93 - (0.06 * hourGlitchScale), sliceRand1);
+    float sliceOffset1 = (hash(vec2(sliceY1 * 0.83, sliceTime + 3.1)) - 0.5) * 0.065 * sliceTrigger1 * min(glitchPulse, 1.4);
+
+    float sliceY2 = floor(gl_FragCoord.y / 4.0);
+    float sliceRand2 = hash(vec2(sliceY2 * 0.19, sliceTime * 1.31));
+    float sliceTrigger2 = step(0.96 - (0.03 * hourGlitchScale), sliceRand2);
+    float sliceOffset2 = (hash(vec2(sliceY2 * 0.67, sliceTime + 7.9)) - 0.5) * 0.030 * sliceTrigger2 * min(glitchPulse, 1.2);
+
+    float totalTear = sliceOffset1 + sliceOffset2;
+    uv.x += totalTear;
 
     // Jittered Camera Parallax & Subtle Tremor on Glitch
     vec2 mNorm = clamp(u_mouse.xy / res - 0.5, vec2(-0.5), vec2(0.5));
-    float quake = (hash(vec2(u_time * 30.0, gl_FragCoord.y)) - 0.5) * 0.035 * min(glitchPulse, 1.0);
+    float quake = (hash(vec2(u_time * 30.0, gl_FragCoord.y)) - 0.5) * 0.025 * min(glitchPulse, 1.0);
     vec3 ro = vec3(mNorm.x * 0.8 + quake, 1.8 - mNorm.y * 0.4, 4.0);
     vec3 ta = vec3(mNorm.x * 0.4 - quake * 0.5, 0.5 - mNorm.y * 0.2, -4.0);
     vec3 ww = normalize(ta - ro);
@@ -176,8 +186,44 @@ void main() {
     }
 
     // --- CRT Scanlines ---
-    float scanline = sin(gl_FragCoord.y * 1.4) * (0.03 + 0.04 * isNight * hourGlitchScale);
+    float scanline = sin(gl_FragCoord.y * 1.4) * (0.02 + 0.03 * isNight * hourGlitchScale);
     col -= scanline;
+
+    // --- Cyberpunk / Matrix Post-Processing Glitches ---
+    // 1. Cyberpunk Chromatic Digital Tear Skew (Splitting channels along displaced slices)
+    float activeSlice = sliceTrigger1 + sliceTrigger2;
+    if (activeSlice > 0.5 && glitchPulse > 0.15) {
+        vec3 cyberTear = col;
+        float tearColorType = hash1(sliceY1 + sliceTime);
+        if (tearColorType < 0.55) {
+            // Blood-red chromatic edge
+            cyberTear.r = clamp(col.r * 1.6 + 0.20, 0.0, 1.0);
+            cyberTear.g = col.g * 0.35;
+            cyberTear.b = col.b * 0.30;
+        } else {
+            // Cyber-acid neon edge
+            cyberTear.g = clamp(col.g * 1.7 + 0.15, 0.0, 1.0);
+            cyberTear.r = col.r * 0.40;
+            cyberTear.b = clamp(col.b * 1.3, 0.0, 1.0);
+        }
+        col = mix(col, cyberTear, 0.70 * min(glitchPulse, 1.3));
+    }
+
+    // 2. Matrix Digital Laser Scanline Drops (Thin 1-2px data lines flashing across screen)
+    float laserTrigger = step(0.992 - (0.018 * hourGlitchScale), hash(vec2(floor(gl_FragCoord.y * 0.5), floor(u_time * 28.0))));
+    if (laserTrigger > 0.5 && glitchPulse > 0.20) {
+        float laserHue = hash1(gl_FragCoord.y * 3.7 + u_time);
+        vec3 laserCol = (laserHue < 0.5) ? C_CYBER_ACID * 1.4 : C_BLOOD_RED * 1.5;
+        col = mix(col, laserCol, 0.75 * min(glitchPulse, 1.2));
+    }
+
+    // 3. Matrix Binary Packet Loss Static (Crisp, pixelated digital static snow bursts during peaks)
+    if (glitchPulse > 0.35) {
+        float digitalStatic = hash(vec2(floor(gl_FragCoord.x / 3.0), floor(gl_FragCoord.y / 2.0) + floor(u_time * 24.0) * 19.3));
+        float staticMask = step(0.72 - (0.12 * demonHours), digitalStatic) * min(glitchPulse, 1.2) * 0.35;
+        vec3 staticCol = mix(vec3(0.9), C_CYBER_ACID, hash1(digitalStatic * 13.0));
+        col = mix(col, staticCol, staticMask);
+    }
 
 
 
