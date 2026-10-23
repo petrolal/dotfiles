@@ -7,7 +7,7 @@
 
         # Models to `ollama pull` on boot (see https://ollama.com/library).
         loadModels = [
-            "llama3.1"
+            "llama3.2"
         ];
     };
 }
