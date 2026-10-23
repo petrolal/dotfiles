@@ -31,6 +31,7 @@ public final class KeyboardShortcuts {
                 new Shortcut("/commands/custom/<Super>e", "thunar"),
                 new Shortcut("/commands/custom/<Super>r", "xfce4-appfinder"),
                 new Shortcut("/commands/custom/<Shift><Super>s", "xfce4-screenshooter -r"),
+                new Shortcut("/commands/custom/<Shift><Super>r", "gpu-screen-recorder-gtk"),
                 new Shortcut("/commands/custom/<Shift><Super>p", HUD_TOGGLE_COMMAND),
                 new Shortcut("/xfwm4/custom/<Super>q", "close_window_key"),
                 new Shortcut("/xfwm4/custom/<Super>f", "fullscreen_key"),

@@ -69,6 +69,7 @@ let
     celluloid   # GTK frontend for mpv, used as the default video viewer
     spotify
     playerctl
+    gpu-screen-recorder-gtk
   ];
 
   # General-purpose apps reached for daily, outside any dev/media workflow.
