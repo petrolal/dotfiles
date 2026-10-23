@@ -45,15 +45,7 @@ result-*
 .factorypath
 
 # IntelliJ IDEA
-# Ignoring the directory itself (.idea/) rather than its contents (.idea/*)
-# would make the negation below a no-op -- git never re-includes a file
-# whose parent directory is excluded.
-.idea/*
-# ...except the Gradle JVM pin: this project's own Gradle sync fails against
-# a stale/incompatible cached JDK selection (see .idea/gradle.xml) without
-# it, so it's tracked rather than left as per-machine, re-discovered-by-hand
-# IDE state like the rest of .idea/.
-!.idea/gradle.xml
+.idea/
 *.iml
 *.ipr
 *.iws
