@@ -1,29 +1,26 @@
-# dotfiles-invoker --- hermetic GraalVM native-image build of the Java CLI.
+# dotfiles-invoker --- hermetic GraalVM native-image build of the Scala CLI.
 #
-# Deliberately bypasses Gradle: src/main has zero external dependencies (only
-# the test sourceSet pulls from Maven Central, see build.gradle), so there is
-# nothing here that needs network access to resolve. javac + native-image
-# straight from the Nix-provided GraalVM toolchain is enough, which keeps
-# this a genuinely hermetic, cacheable/substitutable derivation instead of
-# needing a vendored Gradle dependency lockfile (gradle2nix) for no reason.
-#
-# -march=native is intentionally dropped here (unlike the Gradle
-# `nativeCompile` task, which targets only the machine running the build):
-# a substitutable store path has to run on whatever CPU the consumer has,
-# not just the one that built it.
+# Deliberately bypasses sbt: src/main has zero external dependencies beyond
+# scala3-library (bundled in pkgs.scala_3) and GraalVM 25 JDK.
 {
   lib,
   stdenv,
+  scala_3,
   graalvmPackages,
 }:
-
+let
+  scala = scala_3.override { jre = graalvmPackages.graalvm-ce; };
+in
 stdenv.mkDerivation {
   pname = "dotfiles-invoker";
-  version = "1.2.0";
+  version = "1.3.0";
 
   src = ../src/main;
 
-  nativeBuildInputs = [ graalvmPackages.graalvm-ce ];
+  nativeBuildInputs = [
+    scala
+    graalvmPackages.graalvm-ce
+  ];
 
   dontConfigure = true;
 
@@ -31,15 +28,19 @@ stdenv.mkDerivation {
     runHook preBuild
 
     mkdir -p classes
-    find java -name '*.java' > sources.txt
-    javac -d classes --release 25 @sources.txt
+    find scala -name '*.scala' > sources.txt
+    scalac -d classes @sources.txt
 
     # META-INF/native-image/.../reachability-metadata.json has to be on the
     # classpath for native-image's auto-registration to see it.
     cp -r resources/. classes/
 
+    SCALA_BIN=$(type -p scalac)
+    SCALA_DIR=$(dirname $(dirname $(readlink -f "$SCALA_BIN")))
+    SCALA_LIBS=$(find "$SCALA_DIR" -name "scala3-library_3*.jar" -o -name "scala-library*.jar" | tr '\n' ':')
+
     native-image \
-      -cp classes \
+      -cp "classes:$SCALA_LIBS" \
       -o invoker \
       --gc=serial \
       --enable-native-access=ALL-UNNAMED \
@@ -61,12 +62,12 @@ stdenv.mkDerivation {
     # `uninstall`/`generate` still require DOTFILES_DIR pointed at an actual
     # dotfiles checkout, since those operate on a live, editable repo rather
     # than anything this package can sensibly bundle.
-    install -Dm644 resources/static/wallpaper.vert \
-      $out/src/main/resources/static/wallpaper.vert
-    install -Dm644 resources/static/wallpaper.frag \
-      $out/src/main/resources/static/wallpaper.frag
-    install -Dm644 resources/static/blit.frag \
-      $out/src/main/resources/static/blit.frag
+    install -Dm644 resources/shaders/wallpaper.vert \
+      $out/src/main/resources/shaders/wallpaper.vert
+    install -Dm644 resources/shaders/wallpaper.frag \
+      $out/src/main/resources/shaders/wallpaper.frag
+    install -Dm644 resources/shaders/blit.frag \
+      $out/src/main/resources/shaders/blit.frag
 
     runHook postInstall
   '';
