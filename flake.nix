@@ -1,5 +1,5 @@
-# This flake packages dotfiles-deployer, the Java CLI in src/ (see
-# nix/dotfiles-invoker.nix), separately from nixos/flake.nix, which owns
+# This flake packages dotfiles-imp, the Scala 3 CLI in src/ (see
+# nix/dotfiles-imp.nix), separately from nixos/flake.nix, which owns
 # this machine's nixosConfigurations. The two are independent concerns: one
 # is "what runs this repo's deploy/wallpaper tooling", the other is "what
 # NixOS system this machine boots".
@@ -16,8 +16,8 @@
     in
     {
       packages.${system} = {
-        dotfiles-invoker = pkgs.callPackage ./nix/dotfiles-invoker.nix { };
-        default = self.packages.${system}.dotfiles-invoker;
+        dotfiles-imp = pkgs.callPackage ./nix/dotfiles-imp.nix { };
+        default = self.packages.${system}.dotfiles-imp;
       };
 
       # Full dev loop (sbt + tests + native-image) reachable via `nix develop`

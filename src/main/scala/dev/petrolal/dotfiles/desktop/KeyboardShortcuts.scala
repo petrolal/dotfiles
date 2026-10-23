@@ -16,7 +16,7 @@ object KeyboardShortcuts:
   // The performance-HUD toggle runs our own compiled binary (see Cli's
   // "toggle-hud" command / Orchestrator.toggleWallpaperHud) -- never a
   // standalone shell script.
-  private val HudToggleCommand = "~/dotfiles/bin/invoker toggle-hud"
+  private val HudToggleCommand = "~/dotfiles/bin/imp toggle-hud"
 
   val ALL: List[Shortcut] = buildShortcuts()
 

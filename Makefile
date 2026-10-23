@@ -1,9 +1,9 @@
 # Desktop/NixOS orchestration, extracted out of build.gradle per
 # docs/scala-migration-checklist.md / docs/scala-migration-rules.md rule 10.
-# The binary is built by `sbt nativeImage` -> bin/invoker.
+# The binary is built by `sbt nativeImage` -> bin/imp.
 
 SHELL := /bin/sh
-INVOKER := bin/invoker
+IMP := bin/imp
 NIXOS_DIR := nixos
 THEME_NAME := $(shell sed -n 's/.*val NAME *= *"\([^"]*\)".*/\1/p' src/main/scala/dev/petrolal/dotfiles/core/Theme.scala | head -1)
 FLAGS ?=
@@ -23,25 +23,25 @@ build:
 	sbt nativeImage
 
 install-check: build
-	$(INVOKER) --version
+	$(IMP) --version
 
 check: build
 	sbt test
 	@echo "==> Running dry-run deploy check..."
-	$(INVOKER) --dry-run --no-reload
+	$(IMP) --dry-run --no-reload
 
 ## ---------------------------------------------------------------------
 ## Deploy
 ## ---------------------------------------------------------------------
 
 deploy: build
-	$(INVOKER) $(FLAGS)
+	$(IMP) $(FLAGS)
 
 dry-run: build
-	$(INVOKER) --dry-run $(FLAGS)
+	$(IMP) --dry-run $(FLAGS)
 
 uninstall: build
-	$(INVOKER) uninstall $(FLAGS)
+	$(IMP) uninstall $(FLAGS)
 
 quick-deploy:
 	DOTFILES_DIR=$(CURDIR) sbt "run $(FLAGS)"
@@ -116,7 +116,7 @@ upgrade: nix-update system-install
 
 clean:
 	sbt clean
-	rm -f $(INVOKER) bin/invoker-scala
+	rm -f $(IMP) bin/invoker bin/invoker-scala
 
 mostly-clean: clean
 	find . -type f \( -name '*~' -o -name '#*#' \) -delete

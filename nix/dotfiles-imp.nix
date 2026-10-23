@@ -1,4 +1,4 @@
-# dotfiles-invoker --- hermetic GraalVM native-image build of the Scala CLI.
+# dotfiles-imp --- hermetic GraalVM native-image build of the Scala CLI.
 #
 # Deliberately bypasses sbt: src/main has zero external dependencies beyond
 # scala3-library (bundled in pkgs.scala_3) and GraalVM 25 JDK.
@@ -12,7 +12,7 @@ let
   scala = scala_3.override { jre = graalvmPackages.graalvm-ce; };
 in
 stdenv.mkDerivation {
-  pname = "dotfiles-invoker";
+  pname = "dotfiles-imp";
   version = "1.3.0";
 
   src = ../src/main;
@@ -41,7 +41,7 @@ stdenv.mkDerivation {
 
     native-image \
       -cp "classes:$SCALA_LIBS" \
-      -o invoker \
+      -o imp \
       --gc=serial \
       --enable-native-access=ALL-UNNAMED \
       -O3 \
@@ -53,11 +53,11 @@ stdenv.mkDerivation {
   installPhase = ''
     runHook preInstall
 
-    install -Dm755 invoker $out/bin/invoker
+    install -Dm755 imp $out/bin/imp
 
     # Mirrors the exact relative layout DotfilePaths.findDotfilesRoot() /
     # Wallpaper.resolveShader() already expect (exe-parent "bin" stripped,
-    # then src/main/resources/static/<name>) -- so `invoker wallpaper` finds
+    # then src/main/resources/shaders/<name>) -- so `imp wallpaper` finds
     # its shaders with no env var or code change needed, while `deploy`/
     # `uninstall`/`generate` still require DOTFILES_DIR pointed at an actual
     # dotfiles checkout, since those operate on a live, editable repo rather
@@ -74,7 +74,7 @@ stdenv.mkDerivation {
 
   meta = {
     description = "Dotfiles symlinker, XFCE settings applier, and OpenGL wallpaper daemon";
-    mainProgram = "invoker";
+    mainProgram = "imp";
     platforms = [ "x86_64-linux" ];
     license = lib.licenses.gpl3Plus;
   };

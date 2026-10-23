@@ -8,7 +8,7 @@ import dev.petrolal.dotfiles.core.{Orchestrator, Theme}
 object Cli:
 
   val VERSION: String = "1.3.0"
-  val PROGRAM_NAME: String = "invoker"
+  val PROGRAM_NAME: String = "imp"
 
   private def printHelp(): Unit =
     System.out.printf("Usage: %s [COMMAND|OPTION]...%n%n", PROGRAM_NAME)

@@ -74,9 +74,9 @@ info "Rebuilding NixOS (this may take a while on first run)..."
 sudo nixos-rebuild switch --flake "${NIXOS_DIR}#default"
 
 # ---------------------------------------------------------------------------
-# Step 4: Build the native invoker and deploy dotfiles
+# Step 4: Build the native imp binary and deploy dotfiles
 # ---------------------------------------------------------------------------
-info "Compiling the invoker..."
+info "Compiling imp..."
 make -C "${DOTFILES_DIR}" all
 
 info "Deploying dotfiles and desktop theme..."

@@ -99,7 +99,7 @@ object WallpaperDaemonManager:
 
   private def isWallpaperDaemon(ph: ProcessHandle): Boolean =
     val commandLine = ph.info().commandLine().toScala.getOrElse("")
-    commandLine.contains("invoker") && commandLine.contains("wallpaper")
+    (commandLine.contains("imp") || commandLine.contains("invoker")) && commandLine.contains("wallpaper")
 
   /** Reads MANGOHUD=1 out of a running process's own environment (Linux
     * only, via /proc -- ProcessHandle itself has no API for another

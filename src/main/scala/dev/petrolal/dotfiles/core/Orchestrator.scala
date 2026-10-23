@@ -52,7 +52,7 @@ object Orchestrator:
       if reload then
         DesktopServices.reload(dryRun, verbose)
 
-    // The config/autostart/invoker-wallpaper.desktop entry (symlinked by
+    // The config/autostart/imp-wallpaper.desktop entry (symlinked by
     // the loop above like any other config/ file) covers future logins;
     // this covers the current session, so `deploy` leaves the freshest
     // build actually running immediately instead of only promising it for
@@ -144,6 +144,6 @@ object Orchestrator:
 
   /** Toggles the running wallpaper daemon's MangoHud performance overlay
    * on or off. See [[dev.petrolal.dotfiles.desktop.KeyboardShortcuts]]
-   * for the keybinding that invokes this (via `invoker toggle-hud`). */
+   * for the keybinding that invokes this (via `imp toggle-hud`). */
   def toggleWallpaperHud(verbose: Boolean): Boolean =
     WallpaperDaemonManager.toggleHud(verbose)

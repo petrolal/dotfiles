@@ -70,7 +70,7 @@ lazy val root = (project in file("."))
     // picks a junit-jupiter-api/engine/platform version set known to work
     // together for the plugin version pinned above.
     libraryDependencies += "com.github.sbt.junit" % "jupiter-interface" % JupiterKeys.jupiterVersion.value % Test,
-    nativeImageOutput := baseDirectory.value / "bin" / "invoker",
+    nativeImageOutput := baseDirectory.value / "bin" / "imp",
     nativeImageOptions ++= Seq(
       "-O3",
       "--gc=serial",
