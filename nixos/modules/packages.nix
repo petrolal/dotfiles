@@ -47,14 +47,6 @@ let
     pandoc          # extended Org exports
   ];
 
-  # The Scala compiler, runner, CLI, build tool and language server. Installed
-  # here (reproducibly, pinned to nixpkgs) rather than left to external installers.
-  scalaTools = with pkgs; [
-    scala
-    scala-cli
-    sbt
-    metals
-  ];
 
   systemTools = with pkgs; [
     pciutils
@@ -94,7 +86,6 @@ in {
     ++ devTools
     ++ searchTools
     ++ languageTools
-    ++ scalaTools
     ++ systemTools
     ++ mediaUtils
     ++ dailyTools;

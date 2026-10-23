@@ -22,8 +22,6 @@ pkgs.mkShell {
 
     # Uncomment what the project needs:
     # (pkgs.kotlin.override { jre = jdk; })
-    # (pkgs.scala.override { jre = jdk; })
-    # (pkgs.sbt.override { jre = jdk; })
   ];
 
   # Exported from the hook (not as an attribute) so it survives when this shell

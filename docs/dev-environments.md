@@ -53,7 +53,7 @@ cd .. && cd -   # re-enter so direnv loads it
 at the selected JDK, so IDEs and build tools pick it up.
 
 - **Change the JDK:** edit `java ? "21"` in `shell.nix`. direnv reloads it on the next prompt.
-- **Kotlin, Scala or sbt:** uncomment the matching line in `shell.nix`. Each one is built against the same JDK.
+- **Kotlin:** uncomment the matching line in `shell.nix`. It is built against the same JDK.
 - **One-off version without editing:** `nix-shell --argstr java 17`.
 
 ## Node.js
