@@ -5,9 +5,10 @@
       url = "github:jacopone/antigravity-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    nix-flatpak.url = "github:gmodena/nix-flatpak/?ref=latest";
   };
 
-  outputs = { self, nixpkgs, antigravity-nix, ... }:
+  outputs = { self, nixpkgs, antigravity-nix, nix-flatpak, ... }:
     let
       system = "x86_64-linux";
 
@@ -32,6 +33,7 @@
         nixpkgs.lib.nixosSystem {
           modules = [
             { nixpkgs.hostPlatform = system; }
+            nix-flatpak.nixosModules.nix-flatpak
             ./configuration.nix
 
             ({ pkgs, ... }: {

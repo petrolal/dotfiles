@@ -39,6 +39,7 @@ in
     # Allow wheel group to run sudo without password prompts
     security.sudo.wheelNeedsPassword = false;
 
+    # Remove firefox installation
     programs.firefox.enable = false;
   };
 }

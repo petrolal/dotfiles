@@ -12,6 +12,8 @@
     ./modules/development.nix
     ./modules/jetbrains.nix
     ./modules/containers.nix
+    ./modules/flatpak.nix
+    ./modules/llm.nix
   ];
 
   system.stateVersion = "26.05";
