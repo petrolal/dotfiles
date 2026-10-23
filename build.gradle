@@ -1,0 +1,461 @@
+import org.graalvm.buildtools.gradle.tasks.BuildNativeImageTask
+import java.nio.file.Files
+import java.nio.file.Paths
+
+plugins {
+    id 'java'
+    id 'application'
+    id 'org.graalvm.buildtools.native' version '0.11.5'
+}
+
+group = 'dev.petrolal'
+version = '1.0.0'
+
+defaultTasks 'all'
+
+java {
+    sourceCompatibility = JavaVersion.toVersion('25')
+    targetCompatibility = JavaVersion.toVersion('25')
+}
+
+tasks.withType(JavaCompile).configureEach {
+    def graalHome = resolveGraalVmHome()
+    if (graalHome != null) {
+        options.fork = true
+        options.forkOptions.javaHome = new File(graalHome)
+    }
+}
+
+tasks.withType(Test).configureEach {
+    def graalHome = resolveGraalVmHome()
+    if (graalHome != null) {
+        executable = new File(graalHome, 'bin/java').absolutePath
+    }
+}
+
+tasks.withType(JavaExec).configureEach {
+    def graalHome = resolveGraalVmHome()
+    if (graalHome != null) {
+        executable = new File(graalHome, 'bin/java').absolutePath
+    }
+}
+
+application {
+    mainClass.set('dev.petrolal.dotfiles.cli.Cli')
+}
+
+tasks.jar {
+    archiveBaseName.set('dotfiles-deployer')
+    manifest {
+        attributes 'Main-Class': 'dev.petrolal.dotfiles.cli.Cli',
+                   'Implementation-Title': 'dotfiles-deployer',
+                   'Implementation-Version': project.version
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    testImplementation(platform(libs.junit.bom))
+    testImplementation(libs.junit.jupiter)
+    testRuntimeOnly(libs.junit.platform.launcher)
+}
+
+tasks.test {
+    useJUnitPlatform()
+}
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+static String resolveGraalVmHome() {
+    def env = System.getenv('GRAALVM_HOME')
+    if (env) {
+        return env
+    }
+    try {
+        def proc = new ProcessBuilder(
+            'sh', '-c',
+            'dirname $(dirname $(readlink -f $(command -v native-image 2>/dev/null) 2>/dev/null))'
+        ).redirectErrorStream(true).start()
+        def out = proc.inputStream.text.trim()
+        return (proc.waitFor() == 0 && out && new File(out).isDirectory()) ? out : null
+    } catch (Exception ignored) {
+        return null
+    }
+}
+
+List<String> getDeployFlags() {
+    def raw = (
+        project.findProperty('deployFlags')
+            ?: project.findProperty('flags')
+            ?: project.findProperty('args')
+            ?: System.getenv('DEPLOY_FLAGS')
+            ?: ''
+        ).toString().trim()
+    return raw.split(/\s+/).findAll { it }
+}
+
+def impFile = layout.projectDirectory.file('bin/imp').asFile
+def themeName = resolveThemeName()
+
+/** Reads Theme.NAME straight out of the Java source instead of keeping a
+ * second hardcoded copy here that can silently drift from it. */
+String resolveThemeName() {
+    def themeSource = layout.projectDirectory
+            .file('src/main/java/dev/petrolal/dotfiles/core/Theme.java').asFile
+    def matcher = themeSource.text =~ /NAME\s*=\s*"([^"]+)"/
+    if (!matcher.find()) {
+        throw new GradleException("Could not find Theme.NAME in ${themeSource}")
+    }
+    return matcher.group(1)
+}
+
+// ---------------------------------------------------------------------------
+// Native Image Configuration
+// ---------------------------------------------------------------------------
+
+graalvmNative {
+    toolchainDetection.set(false)
+    binaries {
+        named('main') {
+            imageName.set('imp')
+            mainClass.set('dev.petrolal.dotfiles.cli.Cli')
+            fallback.set(true)
+            // Epsilon GC never reclaims memory -- fine for a short benchmark,
+            // fatal for this long-running desktop daemon: it allocates a small
+            // state record every frame forever, so epsilon leaked unbounded
+            // native/heap memory (confirmed: >1GB RSS after ~3.5 minutes,
+            // growing linearly with no plateau). Serial GC actually collects,
+            // while still being the lowest-footprint real collector for a
+            // small, mostly single-threaded background process like this.
+            buildArgs.addAll('-O3', '--gc=serial', '-march=native', '--enable-native-access=ALL-UNNAMED')
+            environmentVariables.putAll([
+                NIX_BINTOOLS: '',
+                NIX_BINTOOLS_WRAPPER_TARGET_HOST_x86_64_unknown_linux_gnu: '',
+                NIX_BUILD_CORES: '',
+                NIX_BUILD_TOP: '',
+                NIX_CC: '',
+                NIX_CC_WRAPPER_TARGET_HOST_x86_64_unknown_linux_gnu: '',
+                NIX_CFLAGS_COMPILE: '',
+                NIX_HARDENING_ENABLE: '',
+                NIX_LDFLAGS: ''
+            ])
+        }
+    }
+}
+
+tasks.named('nativeCompile', BuildNativeImageTask).configure { task ->
+    task.outputDirectory.set(layout.projectDirectory.dir('bin'))
+    task.doFirst {
+        layout.projectDirectory.dir('bin').asFile.mkdirs()
+        layout.buildDirectory.dir('native/nativeCompile').get().asFile.mkdirs()
+    }
+    def graalHome = resolveGraalVmHome()
+    if (graalHome != null) {
+        try {
+            def field = BuildNativeImageTask.class.getDeclaredField('graalvmHomeProvider')
+            field.accessible = true
+            field.set(task, providers.provider { graalHome })
+        } catch (Exception e) {
+            logger.warn("Could not set graalvmHomeProvider via reflection: " + e.message)
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Build Tasks
+// ---------------------------------------------------------------------------
+
+tasks.register('all') {
+    group = 'Build'
+    description = 'Compile the native GraalVM imp (default goal).'
+    dependsOn('nativeCompile')
+}
+
+// ---------------------------------------------------------------------------
+// Verification & Check Tasks
+// ---------------------------------------------------------------------------
+
+tasks.named('check') {
+    dependsOn('test', 'nativeCompile')
+    doLast {
+        println('==> Running dry-run deploy check...')
+        exec {
+            commandLine(impFile.absolutePath, '--dry-run', '--no-reload')
+        }
+    }
+}
+
+tasks.register('install-check', Exec) {
+    group = 'Verification'
+    description = 'Verify the installed imp runs.'
+    dependsOn('nativeCompile')
+    commandLine(impFile.absolutePath, '--version')
+}
+
+// ---------------------------------------------------------------------------
+// Deploy Tasks
+// ---------------------------------------------------------------------------
+
+tasks.register('deploy') {
+    group = 'Deploy'
+    description = 'Link dotfiles and apply XFCE theme via the native imp.'
+    dependsOn('nativeCompile')
+    doLast {
+        def cmd = [impFile.absolutePath] + getDeployFlags()
+        exec {
+            commandLine(cmd)
+        }
+    }
+}
+
+tasks.register('dry-run') {
+    group = 'Deploy'
+    description = 'Show what deploy would do without changing anything.'
+    dependsOn('nativeCompile')
+    doLast {
+        def cmd = [impFile.absolutePath, '--dry-run'] + getDeployFlags()
+        exec {
+            commandLine(cmd)
+        }
+    }
+}
+tasks.register('quick-deploy', JavaExec) {
+    group = 'Deploy'
+    description = 'Deploy via the JVM directly, without a native-image build.'
+    dependsOn('classes')
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass.set('dev.petrolal.dotfiles.cli.Cli')
+    environment('DOTFILES_DIR', projectDir.absolutePath)
+    args = getDeployFlags()
+}
+tasks.register('uninstall') {
+    group = 'Deploy'
+    description = 'Remove all dotfiles symlinks managed by deploy.'
+    dependsOn('nativeCompile')
+    doLast {
+        def cmd = [impFile.absolutePath, 'uninstall'] + getDeployFlags()
+        exec {
+            commandLine(cmd)
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Desktop Reload Tasks
+// ---------------------------------------------------------------------------
+
+tasks.register('reload') {
+    group = 'Desktop'
+    description = 'Reload all restartable desktop components (panel, xfwm4, xsettingsd, GTK, thunar, notifyd).'
+    doLast {
+        println('==> Reloading all restartable desktop components...')
+        exec {
+            ignoreExitValue = true
+            commandLine(
+                'sh', '-c',
+                """
+                xfce4-panel -r 2>/dev/null || true
+                xfwm4 --replace &
+                xfsettingsd --replace &
+                pkill -f xfce4-notifyd 2>/dev/null || true
+                thunar -q 2>/dev/null || true
+                xfconf-query -c xsettings -p /Net/ThemeName -s "Default" 2>/dev/null || true
+                xfconf-query -c xsettings -p /Net/ThemeName -s "${themeName}" 2>/dev/null || true
+                """
+            )
+        }
+    }
+}
+
+tasks.register('reload-panel') {
+    group = 'Desktop'
+    description = 'Restart only xfce4-panel.'
+    doLast {
+        println('==> Restarting XFCE panel...')
+        exec {
+            ignoreExitValue = true
+            commandLine('xfce4-panel', '-r')
+        }
+    }
+}
+tasks.register('reload-wm') {
+    group = 'Desktop'
+    description = 'Restart only xfwm4 window manager.'
+    doLast {
+        println('==> Restarting XFWM4 window manager...')
+        exec {
+            ignoreExitValue = true
+            commandLine('sh', '-c', 'xfwm4 --replace &')
+        }
+    }
+}
+tasks.register('reload-theme') {
+    group = 'Desktop'
+    description = 'Trigger instant GTK CSS reload across all windows.'
+    doLast {
+        println('==> Forcing GTK theme stylesheet reload...')
+        exec {
+            ignoreExitValue = true
+            commandLine('sh', '-c', "xfconf-query -c xsettings -p /Net/ThemeName -s Default && xfconf-query -c xsettings -p /Net/ThemeName -s ${themeName}")
+        }
+    }
+}
+// ---------------------------------------------------------------------------
+// NixOS Tasks
+// ---------------------------------------------------------------------------
+
+tasks.register('bootstrap', Exec) {
+    group = 'NixOS'
+    description = 'First-time setup from a fresh NixOS (runs bootstrap.sh).'
+    workingDir = projectDir
+    commandLine('./bootstrap.sh')
+}
+
+tasks.register('nix-link') {
+    group = 'NixOS'
+    description = 'Symlink configuration.nix and flake.nix into /etc/nixos.'
+    doLast {
+        def nixosDir = layout.projectDirectory.dir('nixos').asFile.absolutePath
+        exec {
+            ignoreExitValue = true
+            commandLine('git', 'add', '-N', '.')
+        }
+        def confTarget = "$nixosDir/configuration.nix"
+        def flakeTarget = "$nixosDir/flake.nix"
+        def confLink = Paths.get('/etc/nixos/configuration.nix')
+        def flakeLink = Paths.get('/etc/nixos/flake.nix')
+
+        def needsConf = !Files.isSymbolicLink(confLink) || Files.readSymbolicLink(confLink).toString() != confTarget
+        def needsFlake = !Files.isSymbolicLink(flakeLink) || Files.readSymbolicLink(flakeLink).toString() != flakeTarget
+
+        // sudo (no -S) prompts on /dev/tty directly rather than reading the
+        // password from stdin -- robust under the Gradle daemon, which can
+        // detach from the invoking terminal's stdin and leave `-S` blocked
+        // or failing with no password ever delivered.
+        if (needsConf) {
+            exec {
+                commandLine('sudo', 'ln', '-sfn', confTarget, '/etc/nixos/configuration.nix')
+            }
+        }
+        if (needsFlake) {
+            exec {
+                commandLine('sudo', 'ln', '-sfn', flakeTarget, '/etc/nixos/flake.nix')
+            }
+        }
+    }
+}
+tasks.register('nix-switch') {
+    group = 'NixOS'
+    description = 'Rebuild NixOS from the flake and switch to it.'
+    dependsOn('nix-link')
+    doLast {
+        def nixosDir = layout.projectDirectory.dir('nixos').asFile.absolutePath
+        exec {
+            commandLine('sudo', 'nixos-rebuild', 'switch', '--flake', nixosDir)
+        }
+    }
+}
+tasks.register('nix-check') {
+    group = 'NixOS'
+    description = 'Verify Nix flake syntax and evaluate configuration without building.'
+    doLast {
+        def nixosDir = layout.projectDirectory.dir('nixos').asFile.absolutePath
+        exec {
+            commandLine('nix', 'flake', 'check', nixosDir)
+        }
+    }
+}
+tasks.register('nix-update') {
+    group = 'NixOS'
+    description = 'Update Nix flake inputs (flake.lock) to latest upstream revisions.'
+    doLast {
+        def nixosDir = layout.projectDirectory.dir('nixos').asFile.absolutePath
+        exec {
+            commandLine('nix', 'flake', 'update', '--flake', nixosDir)
+        }
+    }
+}
+tasks.register('nix-gc') {
+    group = 'NixOS'
+    description = 'Collect garbage and remove old Nix store generations.'
+    doLast {
+        exec {
+            commandLine('nix-collect-garbage', '-d')
+        }
+        exec {
+            commandLine('sudo', 'nix-collect-garbage', '-d')
+        }
+    }
+}
+tasks.register('system-install') {
+    group = 'NixOS'
+    description = 'nix-switch, then deploy.'
+    dependsOn('nix-switch', 'deploy')
+}
+tasks.register('upgrade') {
+    group = 'NixOS'
+    description = 'Full system upgrade: update flake inputs, rebuild NixOS, and redeploy dotfiles.'
+    dependsOn('nix-update', 'system-install')
+}
+
+// Ensure proper task execution sequence
+tasks.named('deploy') {
+    mustRunAfter('nix-switch')
+}
+
+tasks.named('system-install') {
+    mustRunAfter('nix-update')
+}
+
+// ---------------------------------------------------------------------------
+// Cleaning Tasks
+// ---------------------------------------------------------------------------
+
+tasks.register('mostly-clean') {
+    group = 'Clean'
+    description = 'Remove the build directory and editor backup files.'
+    dependsOn('clean')
+    doLast {
+        projectDir.eachFileRecurse { f ->
+            if (f.isFile() && (f.name.endsWith('~') || (f.name.startsWith('#') && f.name.endsWith('#')))) {
+                f.delete()
+            }
+        }
+    }
+}
+
+tasks.named('clean') {
+    doLast {
+        if (impFile.exists()) {
+            impFile.delete()
+            println("==> Removed ${impFile.absolutePath}")
+        }
+        def legacyInvoker = layout.projectDirectory.file('bin/invoker').asFile
+        if (legacyInvoker.exists()) {
+            legacyInvoker.delete()
+            println("==> Removed ${legacyInvoker.absolutePath}")
+        }
+    }
+}
+
+tasks.register('dist-clean') {
+    group = 'Clean'
+    description = 'clean + remove Nix result links.'
+    dependsOn('clean', 'mostly-clean')
+    doLast {
+        projectDir.listFiles()
+            ?.findAll { it.name == 'result' || it.name.startsWith('result-') }
+            ?.each { it.delete() }
+    }
+}
+
+tasks.register('maintainer-clean') {
+    group = 'Clean'
+    description = 'dist-clean + remove additional maintainer files.'
+    dependsOn('dist-clean')
+}

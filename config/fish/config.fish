@@ -45,15 +45,15 @@ if status is-interactive
     set -gx PAGER less
     
     # --- dotfiles workflow shortcuts (see README.md "Day-to-Day Usage";
-    # -C lets these run from anywhere, no `cd ~/dotfiles` needed) ---
+    # -p lets these run from anywhere, no `cd ~/dotfiles` needed) ---
     abbr -a dotfiles    'cd ~/dotfiles'
-    abbr -a dfdeploy    'make -C ~/dotfiles deploy'
-    abbr -a dfdry       'make -C ~/dotfiles dry-run'
-    abbr -a dfuninstall 'make -C ~/dotfiles uninstall'
-    abbr -a dfswitch    'make -C ~/dotfiles nix-switch'
-    abbr -a dfupdate    'make -C ~/dotfiles system-install'
-    abbr -a dfupgrade   'make -C ~/dotfiles upgrade'
-    abbr -a dfreload    'make -C ~/dotfiles reload'
+    abbr -a dfdeploy    '~/dotfiles/gradlew -p ~/dotfiles deploy'
+    abbr -a dfdry       '~/dotfiles/gradlew -p ~/dotfiles dry-run'
+    abbr -a dfuninstall '~/dotfiles/gradlew -p ~/dotfiles uninstall'
+    abbr -a dfswitch    '~/dotfiles/gradlew -p ~/dotfiles nix-switch'
+    abbr -a dfupdate    '~/dotfiles/gradlew -p ~/dotfiles system-install'
+    abbr -a dfupgrade   '~/dotfiles/gradlew -p ~/dotfiles upgrade'
+    abbr -a dfreload    '~/dotfiles/gradlew -p ~/dotfiles reload'
 
     abbr -a ll 'ls -lah'
     abbr -a g  git

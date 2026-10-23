@@ -1,26 +1,29 @@
-# dotfiles-imp --- hermetic GraalVM native-image build of the Scala CLI.
+# dotfiles-imp --- hermetic GraalVM native-image build of the Java CLI.
 #
-# Deliberately bypasses sbt: src/main has zero external dependencies beyond
-# scala3-library (bundled in pkgs.scala_3) and GraalVM 25 JDK.
+# Deliberately bypasses Gradle: src/main has zero external dependencies (only
+# the test sourceSet pulls from Maven Central, see build.gradle), so there is
+# nothing here that needs network access to resolve. javac + native-image
+# straight from the Nix-provided GraalVM toolchain is enough, which keeps
+# this a genuinely hermetic, cacheable/substitutable derivation instead of
+# needing a vendored Gradle dependency lockfile (gradle2nix) for no reason.
+#
+# -march=native is intentionally dropped here (unlike the Gradle
+# `nativeCompile` task, which targets only the machine running the build):
+# a substitutable store path has to run on whatever CPU the consumer has,
+# not just the one that built it.
 {
   lib,
   stdenv,
-  scala_3,
   graalvmPackages,
 }:
-let
-  scala = scala_3.override { jre = graalvmPackages.graalvm-ce; };
-in
+
 stdenv.mkDerivation {
   pname = "dotfiles-imp";
   version = "1.3.0";
 
   src = ../src/main;
 
-  nativeBuildInputs = [
-    scala
-    graalvmPackages.graalvm-ce
-  ];
+  nativeBuildInputs = [ graalvmPackages.graalvm-ce ];
 
   dontConfigure = true;
 
@@ -28,19 +31,15 @@ stdenv.mkDerivation {
     runHook preBuild
 
     mkdir -p classes
-    find scala -name '*.scala' > sources.txt
-    scalac -d classes @sources.txt
+    find java -name '*.java' > sources.txt
+    javac -d classes --release 25 @sources.txt
 
     # META-INF/native-image/.../reachability-metadata.json has to be on the
     # classpath for native-image's auto-registration to see it.
     cp -r resources/. classes/
 
-    SCALA_BIN=$(type -p scalac)
-    SCALA_DIR=$(dirname $(dirname $(readlink -f "$SCALA_BIN")))
-    SCALA_LIBS=$(find "$SCALA_DIR" -name "scala3-library_3*.jar" -o -name "scala-library*.jar" | tr '\n' ':')
-
     native-image \
-      -cp "classes:$SCALA_LIBS" \
+      -cp classes \
       -o imp \
       --gc=serial \
       --enable-native-access=ALL-UNNAMED \
