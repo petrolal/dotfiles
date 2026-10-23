@@ -77,10 +77,10 @@ sudo nixos-rebuild switch --flake "${NIXOS_DIR}#default"
 # Step 4: Build the native invoker and deploy dotfiles
 # ---------------------------------------------------------------------------
 info "Compiling the invoker..."
-"${DOTFILES_DIR}/gradlew" -p "${DOTFILES_DIR}" all
+make -C "${DOTFILES_DIR}" all
 
 info "Deploying dotfiles and desktop theme..."
-"${DOTFILES_DIR}/gradlew" -p "${DOTFILES_DIR}" deploy
+make -C "${DOTFILES_DIR}" deploy
 
 # ---------------------------------------------------------------------------
 # Done
@@ -90,8 +90,8 @@ info "Bootstrap complete!"
 echo ""
 echo "  Your system is fully configured. For future changes:"
 echo ""
-echo "    ./gradlew deploy          Redeploy dotfiles and theme"
-echo "    ./gradlew nix-switch      Rebuild NixOS after editing nix modules"
-echo "    ./gradlew system-install  Rebuild NixOS + redeploy (= full update)"
+echo "    make deploy          Redeploy dotfiles and theme"
+echo "    make nix-switch      Rebuild NixOS after editing nix modules"
+echo "    make system-install  Rebuild NixOS + redeploy (= full update)"
 echo ""
 echo "  Log out and back in for all desktop changes to take effect."

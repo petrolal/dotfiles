@@ -60,7 +60,7 @@ lazy val root = (project in file("."))
     // sbt only sees what's already been moved to Scala.
     Compile / unmanagedSourceDirectories := Seq(baseDirectory.value / "src" / "main" / "scala"),
     Test / unmanagedSourceDirectories := Seq(baseDirectory.value / "src" / "test" / "scala"),
-    Compile / mainClass := Some("dev.petrolal.dotfiles.ScalaBootstrap"),
+    Compile / mainClass := Some("dev.petrolal.dotfiles.cli.Cli"),
     // sbt-jupiter-interface (project/plugins.sbt) replaces sbt's own
     // (annotation-fingerprint-based) test discovery with one that uses the
     // JUnit Platform's own discovery mechanism -- without the plugin,
@@ -70,7 +70,7 @@ lazy val root = (project in file("."))
     // picks a junit-jupiter-api/engine/platform version set known to work
     // together for the plugin version pinned above.
     libraryDependencies += "com.github.sbt.junit" % "jupiter-interface" % JupiterKeys.jupiterVersion.value % Test,
-    nativeImageOutput := baseDirectory.value / "bin" / "invoker-scala",
+    nativeImageOutput := baseDirectory.value / "bin" / "invoker",
     nativeImageOptions ++= Seq(
       "-O3",
       "--gc=serial",

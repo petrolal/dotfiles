@@ -111,64 +111,64 @@ for what each piece has to keep doing.
   mistake as the step-2/step-5(old) deferrals. Moved to step 6, not
   dropped.
 
-## 6. `wallpaper/X11Canvas` + `Wallpaper` — the FFM/render-loop core
+## 6. `wallpaper/X11Canvas` + `Wallpaper` — the FFM/render-loop core — DONE
 
-- [ ] Port `X11Canvas`'s FFM bindings (`libX11`, `libGL`/GLX,
+- [x] Port `X11Canvas`'s FFM bindings (`libX11`, `libGL`/GLX,
       `glXGetProcAddress`-resolved GL calls) — watch `MethodHandle.invokeExact`
       exact-type and varargs syntax differences from Java.
-- [ ] Port `ShaderPipeline`, `BlitPipeline` (confirmed FFM-free themselves,
+- [x] Port `ShaderPipeline`, `BlitPipeline` (confirmed FFM-free themselves,
       go through `X11Canvas`'s typed wrapper only, but need the real
       `X11Canvas` type to compile against — see step 5's correction note).
-- [ ] Port `WallpaperEvents` (telemetry virtual-thread + `X11Canvas.queryMouse`/
+- [x] Port `WallpaperEvents` (telemetry virtual-thread + `X11Canvas.queryMouse`/
       `queryWorkspace` calls from `pollState`).
-- [ ] Port `Wallpaper`'s render loop, including `detectMonitors`/
+- [x] Port `Wallpaper`'s render loop, including `detectMonitors`/
       `parseListMonitors`/`parseXrandrQuery` (pure xrandr-subprocess logic,
       but kept in the same class as `start()` per rule 13 — don't split
       the class across files just to port the leaf method earlier).
       **Keep the render loop a plain single-threaded loop** (rule 2) — do
       not route it through any executor/dispatcher.
-- [ ] Preserve the shutdown-hook thread that `join()`s the render thread
+- [x] Preserve the shutdown-hook thread that `join()`s the render thread
       with the bounded 2s grace period.
-- [ ] Port `WallpaperTest` (`detectMonitors`).
-- [ ] `sbt nativeImage` succeeds.
-- [ ] `sbt test` passes.
-- [ ] **Manual smoke test**: launch the wallpaper daemon for real (no unit
+- [x] Port `WallpaperTest` (`detectMonitors`).
+- [x] `sbt nativeImage` succeeds.
+- [x] `sbt test` passes.
+- [x] **Manual smoke test**: launch the wallpaper daemon for real (no unit
       test covers the render loop itself) — confirm render output,
       hot-reload, multi-monitor viewport handling, and clean shutdown on
       SIGTERM.
-- [ ] Dedicated check on `ImageLoader`'s `BufferedImage` usage under
+- [x] Dedicated check on `ImageLoader`'s `BufferedImage` usage under
       native-image (pre-existing risk, independent of the language port —
       see use-cases doc).
 
-## 7. `locker/`
+## 7. `locker/` — DONE
 
-- [ ] Port `LoginPromptTexture`, `PngWriter` (hand-rolled rasterizer/PNG
+- [x] Port `LoginPromptTexture`, `PngWriter` (hand-rolled rasterizer/PNG
       encoder — keep AWT-free, same reason as today).
-- [ ] Port `PamAuthService`: FFM bindings to `libpam.so.0`, the native
+- [x] Port `PamAuthService`: FFM bindings to `libpam.so.0`, the native
       upcall for the conversation callback, the dedicated single-thread
       `pam-auth-worker` executor.
-- [ ] **Update `reachability-metadata.json`'s `directUpcalls` entry** to
+- [x] **Update `reachability-metadata.json`'s `directUpcalls` entry** to
       match the new (Scala) fully-qualified name/signature of the
       conversation callback — do this in the same commit as the port, not
       after (rule 8).
-- [ ] Port `ScreenLocker` (X11 input grab, password buffer, non-blocking
+- [x] Port `ScreenLocker` (X11 input grab, password buffer, non-blocking
       poll of the PAM `Future` each frame, signal handling).
-- [ ] `sbt nativeImage` succeeds.
-- [ ] **Manual smoke test**: trigger the real lock screen, enter a real
+- [x] `sbt nativeImage` succeeds.
+- [x] **Manual smoke test**: trigger the real lock screen, enter a real
       password, confirm both the success and failure/retry paths, confirm
       `sun.misc.Signal`-based SIGINT/SIGTERM handling still unlocks/exits
       cleanly.
 
-## 8. `cli/` (plus the deferred `core/Orchestrator` from step 2)
+## 8. `cli/` (plus the deferred `core/Orchestrator` from step 2) — DONE
 
-- [ ] Port `core/Orchestrator` now — every package it calls into
+- [x] Port `core/Orchestrator` now — every package it calls into
       (`linker`, `desktop`, `wallpaper`, `locker`) is ported by this point.
-- [ ] Port the hand-rolled argv parser as-is — **do not** introduce
+- [x] Port the hand-rolled argv parser as-is — **do not** introduce
       decline/scopt/picocli (rule 5).
-- [ ] Port `CliTest`.
-- [ ] `sbt nativeImage` succeeds.
-- [ ] `sbt test` passes.
-- [ ] Manual smoke test: every subcommand (`deploy --dry-run`,
+- [x] Port `CliTest`.
+- [x] `sbt nativeImage` succeeds.
+- [x] `sbt test` passes.
+- [x] Manual smoke test: every subcommand (`deploy --dry-run`,
       `uninstall --dry-run`) runs and reports the same output as the Java
       version did, on the same machine/state, for a direct before/after
       comparison.
@@ -184,18 +184,18 @@ for what each piece has to keep doing.
   same reasoning as the step-2 deferral, just caught before execution
   instead of during it.
 
-## 9. Close-out
+## 9. Close-out — DONE
 
-- [ ] Delete the old `src/main/java` tree once every package above is
+- [x] Delete the old `src/main/java` tree once every package above is
       ported and validated (don't delete incrementally mid-migration —
       keep the Java originals as a reference until the matching Scala file
       has passed its own checklist row).
-- [ ] Confirm `reachability-metadata.json` is still minimal (two JDK
+- [x] Confirm `reachability-metadata.json` is still minimal (two JDK
       entries + one upcall) — any growth versus the pre-migration baseline
       means something introduced incidental reflection; track it down
       before calling the migration done.
-- [ ] Full end-to-end pass: `deploy`, `uninstall`, `wallpaper`, `lock`,
+- [x] Full end-to-end pass: `deploy`, `uninstall`, `wallpaper`, `lock`,
       `toggle-hud`, each `--dry-run` variant, on real hardware.
-- [ ] Update [dev-environments.md](dev-environments.md) if the sbt setup
+- [x] Update [dev-environments.md](dev-environments.md) if the sbt setup
       changed anything about the Nix `shell.nix` Scala/sbt lines beyond
       what's already documented there.

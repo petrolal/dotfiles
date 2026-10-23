@@ -26,16 +26,16 @@ Log out and back in for all changes to take effect.
 
 ## Day-to-Day Usage
 
-After the initial bootstrap, use Gradle (`./gradlew`):
+After the initial bootstrap, use `make`:
 
 | Command | What it does |
 |---|---|
-| `./gradlew deploy` | Redeploy dotfiles + theme (no NixOS rebuild) |
-| `./gradlew nix-switch` | Rebuild NixOS after editing `.nix` modules |
-| `./gradlew system-install` | Rebuild NixOS + redeploy (full update) |
-| `./gradlew dry-run` | Preview what deploy would change |
-| `./gradlew uninstall` | Safely remove all deployed dotfiles symlinks |
-| `./gradlew tasks` | Show all available Gradle tasks |
+| `make deploy` | Redeploy dotfiles + theme (no NixOS rebuild) |
+| `make nix-switch` | Rebuild NixOS after editing `.nix` modules |
+| `make system-install` | Rebuild NixOS + redeploy (full update) |
+| `make dry-run` | Preview what deploy would change |
+| `make uninstall` | Safely remove all deployed dotfiles symlinks |
+| `make check` | Run test suite and preview dry-run deploy |
 
 Default login shell is [fish](https://fishshell.com/) (`nixos/modules/users.nix`),
 configured in `config/fish/` (prompt, theme, abbreviations). Each command
@@ -48,9 +48,8 @@ above also has a fish abbreviation that runs from anywhere, no `cd` needed:
 ```
 dotfiles/
 ├── bootstrap.sh                    # First-time setup script
-├── build.gradle                    # Gradle build & orchestration tasks
-├── settings.gradle                 # Gradle settings
-├── gradlew                         # Gradle wrapper script
+├── build.sbt                       # Scala 3 + sbt build definition
+├── Makefile                        # Desktop & NixOS orchestration tasks
 │
 ├── nixos/                          # NixOS system configuration
 │   ├── flake.nix                   # Flake entry point

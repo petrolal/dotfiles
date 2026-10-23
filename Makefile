@@ -1,20 +1,11 @@
 # Desktop/NixOS orchestration, extracted out of build.gradle per
-# docs/scala-migration-checklist.md step 0 / docs/scala-migration-rules.md
-# rule 10: these were always shell orchestration around a built binary, not
-# Scala/Gradle build concerns, so they don't belong in build.sbt either.
-#
-# TRANSITIONAL: until docs/scala-migration-checklist.md step 5 (cli/) and
-# step 9 (close-out) land, the actual app binary is still produced by
-# Gradle (`./gradlew nativeCompile` -> bin/invoker), not by `sbt
-# nativeImage` (which today only builds the step-0 placeholder,
-# bin/invoker-scala). INVOKER below points at the real, currently-Java
-# binary; repoint it at bin/invoker-scala once the CLI/Orchestrator port is
-# done and validated.
+# docs/scala-migration-checklist.md / docs/scala-migration-rules.md rule 10.
+# The binary is built by `sbt nativeImage` -> bin/invoker.
 
 SHELL := /bin/sh
 INVOKER := bin/invoker
 NIXOS_DIR := nixos
-THEME_NAME := $(shell sed -n 's/.*NAME *= *"\([^"]*\)".*/\1/p' src/main/java/dev/petrolal/dotfiles/core/Theme.java | head -1)
+THEME_NAME := $(shell sed -n 's/.*val NAME *= *"\([^"]*\)".*/\1/p' src/main/scala/dev/petrolal/dotfiles/core/Theme.scala | head -1)
 FLAGS ?=
 
 .PHONY: all build deploy dry-run uninstall quick-deploy install-check check \
@@ -25,17 +16,17 @@ FLAGS ?=
 all: build
 
 ## ---------------------------------------------------------------------
-## Build (still Gradle-owned until the app is ported -- see header note)
+## Build
 ## ---------------------------------------------------------------------
 
 build:
-	./gradlew nativeCompile
+	sbt nativeImage
 
 install-check: build
 	$(INVOKER) --version
 
 check: build
-	./gradlew test
+	sbt test
 	@echo "==> Running dry-run deploy check..."
 	$(INVOKER) --dry-run --no-reload
 
@@ -53,7 +44,7 @@ uninstall: build
 	$(INVOKER) uninstall $(FLAGS)
 
 quick-deploy:
-	DOTFILES_DIR=$(CURDIR) ./gradlew quick-deploy -Pflags="$(FLAGS)"
+	DOTFILES_DIR=$(CURDIR) sbt "run $(FLAGS)"
 
 ## ---------------------------------------------------------------------
 ## Desktop reload
@@ -103,13 +94,13 @@ nix-link:
 	fi
 
 nix-switch: nix-link
-	sudo nixos-rebuild switch --flake $(NIXOS_DIR)
+	sudo nixos-rebuild switch --flake ./$(NIXOS_DIR)
 
 nix-check:
-	nix flake check $(NIXOS_DIR)
+	nix flake check ./$(NIXOS_DIR)
 
 nix-update:
-	nix flake update --flake $(NIXOS_DIR)
+	nix flake update --flake ./$(NIXOS_DIR)
 
 nix-gc:
 	nix-collect-garbage -d
@@ -124,8 +115,8 @@ upgrade: nix-update system-install
 ## ---------------------------------------------------------------------
 
 clean:
-	./gradlew clean
-	rm -f $(INVOKER)
+	sbt clean
+	rm -f $(INVOKER) bin/invoker-scala
 
 mostly-clean: clean
 	find . -type f \( -name '*~' -o -name '#*#' \) -delete

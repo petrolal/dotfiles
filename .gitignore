@@ -14,6 +14,7 @@ build/
 target/
 project/target/
 project/project/
+.sbtopts
 
 # GraalVM Native Image & Eclipse output directory
 bin/
