@@ -4,6 +4,15 @@ Tracks progress toward replacing the XFCE app-finder/panel with the
 Hyprland 3D overlay. See `docs/migration_plan.md` for the architecture
 behind each item.
 
+## NixOS session migration
+
+- [x] `nixos/modules/hyprland.nix` — Hyprland + portals + polkit + NVIDIA/wlroots env vars, added additively alongside `desktop.nix`
+- [x] `nix flake check .` passes for all three `nixosConfigurations` entries
+- [ ] Run `sudo nixos-rebuild switch --flake nixos` on `primary` and confirm Hyprland appears as a LightDM session choice
+- [ ] Log into Hyprland, confirm NVIDIA PRIME offload works (no cursor corruption, GL apps render)
+- [ ] Use Hyprland day-to-day long enough to trust it as the daily driver
+- [ ] **Phase 0A (deferred):** remove `services.xserver.enable`/XFCE/LightDM from `desktop.nix`, port Imp98/Chicago95 theming to GTK4/Wayland, drop XFCE-only packages
+
 ## Foundation (done)
 
 - [x] Decide stack: Java + raw LWJGL3/GLFW + JOML, no libGDX (native-image fit)

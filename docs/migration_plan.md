@@ -2,7 +2,52 @@
 
 Architecture and rationale for replacing the XFCE app-finder/panel workflow
 with a native-image LWJGL overlay launched from `imp`. This captures the
-decisions made building `src/main/java/dev/petrolal/dotfiles/overlay/`.
+decisions made building `src/main/java/dev/petrolal/dotfiles/overlay/`,
+plus the underlying OS-level session migration (NixOS config), which is a
+separate concern from the overlay app itself.
+
+## 0. OS-level session migration (NixOS)
+
+`nixos/modules/desktop.nix` is pure X11/XFCE today: `services.xserver.enable`,
+LightDM, `desktopManager.xfce.enable`, plus real investment in X11-specific
+theming (Imp98/Chicago95 LightDM greeter, icon/cursor themes, `QT_STYLE_OVERRIDE`).
+Host `primary` also has NVIDIA PRIME hybrid graphics enabled
+(`modules/nvidia.nix`) — a known rough edge for wlroots compositors, so this
+migration is deliberately staged rather than a one-shot swap, to avoid
+losing GUI access if Hyprland/NVIDIA misbehave on first boot.
+
+### Phase 0A (deferred) — decommission XFCE/X11
+
+Not done yet, on purpose. Once Hyprland + the overlay have been used
+day-to-day and confirmed stable on this NVIDIA PRIME host, do a second pass:
+remove `services.xserver.enable`, `desktopManager.xfce.enable`, and the
+LightDM block from `desktop.nix`; migrate the Imp98/Chicago95 theming to its
+GTK4/Wayland equivalent; drop XFCE-only packages (`xfce4-whiskermenu-plugin`).
+
+### Phase 0B (done) — install Hyprland additively
+
+`nixos/modules/hyprland.nix`, imported from `configuration.nix` alongside
+(not instead of) `desktop.nix`:
+- `programs.hyprland.enable = true` with `xwayland.enable = true` — adds a
+  `wayland-sessions` entry automatically, so LightDM's greeter lists both
+  XFCE (X11) and Hyprland (Wayland) as session choices.
+- `xdg.portal` with `xdg-desktop-portal-hyprland` — screen share, file
+  pickers, etc. for Wayland apps.
+- `security.polkit.enable` plus a `hyprpolkitagent` systemd user service —
+  XFCE ships its own polkit agent, Hyprland doesn't.
+- `hardware.graphics.enable`/`enable32Bit` — required for any Wayland
+  compositor; the existing X11/XFCE stack never turned this on.
+- NVIDIA/wlroots env vars and kernel params (`nvidia_drm.modeset=1`,
+  `nvidia_drm.fbdev=1`, `WLR_NO_HARDWARE_CURSORS=1`,
+  `LIBVA_DRIVER_NAME`/`GBM_BACKEND`/`__GLX_VENDOR_LIBRARY_NAME=nvidia`),
+  gated behind `config.dotfiles.nvidia.enable` so hosts without the PRIME
+  setup are unaffected.
+- `waybar`, `hyprpaper`, `hyprlock`, `hypridle` as baseline session tooling.
+
+Verified with `nix flake check .` across all three `nixosConfigurations`
+entries. **Not yet applied** — applying it means `sudo nixos-rebuild switch`
+on the real machine, which is handed to the user to run rather than executed
+automatically.
 
 ## 1. Stack selection
 

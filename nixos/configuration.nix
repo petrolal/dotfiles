@@ -5,6 +5,7 @@
     ./modules/hardware.nix
     ./modules/networking.nix
     ./modules/desktop.nix
+    ./modules/hyprland.nix
     ./modules/nvidia.nix
     ./modules/fonts.nix
     ./modules/users.nix
