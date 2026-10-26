@@ -245,6 +245,13 @@ tasks.register('quick-deploy', JavaExec) {
     environment('DOTFILES_DIR', projectDir.absolutePath)
     args = getDeployFlags()
 }
+tasks.register('quick-overlay', JavaExec) {
+    group = 'Desktop'
+    description = 'Run the overlay launcher directly on the JVM, without a native-image build.'
+    dependsOn('classes')
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass.set('dev.petrolal.dotfiles.overlay.OverlayWindow')
+}
 tasks.register('uninstall') {
     group = 'Deploy'
     description = 'Remove all dotfiles symlinks managed by deploy.'
