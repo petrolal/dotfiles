@@ -61,6 +61,18 @@ dependencies {
     testImplementation(platform(libs.junit.bom))
     testImplementation(libs.junit.jupiter)
     testRuntimeOnly(libs.junit.platform.launcher)
+
+    implementation(platform(libs.lwjgl.bom))
+    implementation(libs.lwjgl.core)
+    implementation(libs.lwjgl.glfw)
+    implementation(libs.lwjgl.opengl)
+    implementation(libs.joml)
+
+    // No NixOS/Mesa system equivalent for stb_truetype, so this is the one
+    // LWJGL module that still needs its bundled native .so (see overlay
+    // module README for why glfw/opengl load from /run/opengl-driver instead).
+    implementation(libs.lwjgl.stb)
+    runtimeOnly("org.lwjgl:lwjgl-stb::natives-linux")
 }
 
 tasks.test {
