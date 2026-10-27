@@ -58,7 +58,7 @@
   };
 
   environment.systemPackages = with pkgs; [
-    waybar
+    ags
     hyprpaper
     hyprlock
     hypridle

@@ -1,4 +1,22 @@
 {
+  "resources": [
+    {
+      "glob": "linux/x64/org/lwjgl/liblwjgl.so",
+      "reason": "LWJGL's own JNI bridge library, extracted from the lwjgl natives-linux jar by SharedLibraryLoader at runtime. Neither this nor the three entries below are covered by the GraalVM reachability-metadata-repository (checked: no org.lwjgl group there), so without this, native-image's closed-world resource analysis drops them and the overlay binary fails at startup with 'Failed to locate library: liblwjgl.so'."
+    },
+    {
+      "glob": "linux/x64/org/lwjgl/glfw/libglfw.so",
+      "reason": "lwjgl-glfw's JNI bridge library -- see the liblwjgl.so entry above for why this is needed."
+    },
+    {
+      "glob": "linux/x64/org/lwjgl/opengl/liblwjgl_opengl.so",
+      "reason": "lwjgl-opengl's JNI bridge library -- see the liblwjgl.so entry above for why this is needed."
+    },
+    {
+      "glob": "linux/x64/org/lwjgl/stb/liblwjgl_stb.so",
+      "reason": "lwjgl-stb's JNI bridge library -- see the liblwjgl.so entry above for why this is needed."
+    }
+  ],
   "reflection": [
     {
       "type": "java.lang.Boolean",

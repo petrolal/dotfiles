@@ -27,4 +27,9 @@ class CliTest {
     void wallpaperDryRunReturnsZeroWithoutStartingLoop() {
         assertEquals(0, Cli.run(new String[]{"wallpaper", "--dry-run", "-q"}));
     }
+
+    @Test
+    void overlayDryRunReturnsZeroWithoutOpeningWindow() {
+        assertEquals(0, Cli.run(new String[]{"overlay", "--dry-run", "-q"}));
+    }
 }

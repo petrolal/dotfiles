@@ -1,0 +1,103 @@
+// ProcessRunner.java --- Process execution and subprocess management
+// License: GPL-3.0-or-later
+package dev.petrolal.dotfiles.system
+
+import dev.petrolal.dotfiles.core.Theme
+import dev.petrolal.dotfiles.domain.DotfileError.CommandFailed
+import dev.petrolal.dotfiles.domain.DotfileError.IoError
+import dev.petrolal.dotfiles.domain.Result
+import java.io.File
+import java.io.IOException
+import java.nio.charset.StandardCharsets
+import java.util.concurrent.Callable
+import java.util.concurrent.ExecutionException
+import java.util.concurrent.Executors
+import java.util.concurrent.Future
+
+object ProcessRunner {
+    /**
+     * Executes CMD, utilizing Virtual Threads to concurrently drain standard output
+     * and standard error without blocking or pipe deadlocks, returning the captured
+     * stdout on exit code 0.
+     */
+    @JvmStatic
+    fun captureOutput(cmd: List<String>): Result<String> {
+        try {
+            Executors.newVirtualThreadPerTaskExecutor().use { executor ->
+                val p = ProcessBuilder(cmd).start()
+                val stdoutFuture: Future<String> = executor.submit(Callable {
+                    String(p.inputStream.readAllBytes(), StandardCharsets.UTF_8)
+                })
+                val stderrFuture: Future<String> = executor.submit(Callable {
+                    String(p.errorStream.readAllBytes(), StandardCharsets.UTF_8)
+                })
+
+                val exitCode = p.waitFor()
+                val stdout = stdoutFuture.get()
+                val stderr = stderrFuture.get()
+
+                if (exitCode != 0) {
+                    val binary = if (cmd.isEmpty()) "" else cmd.first()
+                    val detail = if (stderr.isBlank()) binary else "$binary: ${stderr.trim()}"
+                    return Result.err(CommandFailed(detail, exitCode))
+                }
+                return Result.ok(stdout)
+            }
+        } catch (e: IOException) {
+            return Result.err(IoError(e.message ?: ""))
+        } catch (_: InterruptedException) {
+            Thread.currentThread().interrupt()
+            return Result.err(IoError("interrupted"))
+        } catch (e: ExecutionException) {
+            val msg = e.cause?.message ?: e.message ?: ""
+            return Result.err(IoError(msg))
+        }
+    }
+
+    /**
+     * Runs CMD to completion, discarding output. Returns Result.Ok(0) on success,
+     * or Result.Err with CommandFailed if the exit code is non-zero.
+     */
+    @JvmStatic
+    fun run(cmd: List<String>): Result<Int> {
+        try {
+            val p = ProcessBuilder(cmd)
+                .redirectOutput(ProcessBuilder.Redirect.DISCARD)
+                .redirectError(ProcessBuilder.Redirect.DISCARD)
+                .start()
+            val exitCode = p.waitFor()
+            if (exitCode != 0) {
+                val binary = if (cmd.isEmpty()) "" else cmd.first()
+                return Result.err(CommandFailed(binary, exitCode))
+            }
+            return Result.ok(exitCode)
+        } catch (e: IOException) {
+            return Result.err(IoError(e.message ?: ""))
+        } catch (_: InterruptedException) {
+            Thread.currentThread().interrupt()
+            return Result.err(IoError("interrupted"))
+        }
+    }
+
+    /** Same as [.spawnDetached], with additional environment
+     * variables merged in on top of Theme.ENV (e.g. MANGOHUD=1).  */
+    /**
+     * Fire-and-forget launch: start() without waitFor() genuinely detaches the child
+     * process instead of blocking for its lifetime.
+     */
+    @JvmStatic
+    @JvmOverloads
+    fun spawnDetached(cmd: List<String>, extraEnv: Map<String, String> = emptyMap()) {
+        try {
+            val pb = ProcessBuilder(cmd)
+                .redirectOutput(ProcessBuilder.Redirect.DISCARD)
+                .redirectError(ProcessBuilder.Redirect.DISCARD)
+                .redirectInput(ProcessBuilder.Redirect.from(File("/dev/null")))
+            pb.environment().putAll(Theme.ENV)
+            pb.environment().putAll(extraEnv)
+            pb.start()
+        } catch (_: IOException) {
+            // best-effort: service reload is not fatal to deployment
+        }
+    }
+}

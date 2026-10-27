@@ -6,6 +6,7 @@ plugins {
     id 'java'
     id 'application'
     id 'org.graalvm.buildtools.native' version '0.11.5'
+    id 'org.jetbrains.kotlin.jvm'
 }
 
 group = 'dev.petrolal'
@@ -13,9 +14,8 @@ version = '1.0.0'
 
 defaultTasks 'all'
 
-java {
-    sourceCompatibility = JavaVersion.toVersion('25')
-    targetCompatibility = JavaVersion.toVersion('25')
+kotlin {
+    jvmToolchain(25)
 }
 
 tasks.withType(JavaCompile).configureEach {
@@ -78,6 +78,9 @@ dependencies {
     runtimeOnly("org.lwjgl:lwjgl-opengl::natives-linux")
     implementation(libs.lwjgl.stb)
     runtimeOnly("org.lwjgl:lwjgl-stb::natives-linux")
+    testImplementation 'org.jetbrains.kotlin:kotlin-test'
+
+    implementation 'org.springframework.shell:spring-shell-starter:3.4.3'
 }
 
 tasks.test {
@@ -123,8 +126,8 @@ def themeName = resolveThemeName()
  * second hardcoded copy here that can silently drift from it. */
 String resolveThemeName() {
     def themeSource = layout.projectDirectory
-            .file('src/main/java/dev/petrolal/dotfiles/core/Theme.java').asFile
-    def matcher = themeSource.text =~ /NAME\s*=\s*"([^"]+)"/
+            .file('src/main/kotlin/dev/petrolal/dotfiles/core/Theme.kt').asFile
+    def matcher = themeSource.text =~ /NAME(?:\s*:\s*\w+)?\s*=\s*"([^"]+)"/
     if (!matcher.find()) {
         throw new GradleException("Could not find Theme.NAME in ${themeSource}")
     }
@@ -255,6 +258,7 @@ tasks.register('quick-deploy', JavaExec) {
     // unchanged classpath/args, same bug fixed below for quick-overlay.
     outputs.upToDateWhen { false }
 }
+
 tasks.register('quick-overlay', JavaExec) {
     group = 'Desktop'
     description = 'Run the overlay launcher directly on the JVM, without a native-image build.'
@@ -272,6 +276,7 @@ tasks.register('quick-overlay', JavaExec) {
     // classpath and skip actually running it, with no error and no output.
     outputs.upToDateWhen { false }
 }
+
 tasks.register('uninstall') {
     group = 'Deploy'
     description = 'Remove all dotfiles symlinks managed by deploy.'
@@ -322,6 +327,7 @@ tasks.register('reload-panel') {
         }
     }
 }
+
 tasks.register('reload-wm') {
     group = 'Desktop'
     description = 'Restart only xfwm4 window manager.'
@@ -333,6 +339,7 @@ tasks.register('reload-wm') {
         }
     }
 }
+
 tasks.register('reload-theme') {
     group = 'Desktop'
     description = 'Trigger instant GTK CSS reload across all windows.'
@@ -388,6 +395,7 @@ tasks.register('nix-link') {
         }
     }
 }
+
 tasks.register('nix-switch') {
     group = 'NixOS'
     description = 'Rebuild NixOS from the flake and switch to it.'
@@ -399,6 +407,7 @@ tasks.register('nix-switch') {
         }
     }
 }
+
 tasks.register('nix-check') {
     group = 'NixOS'
     description = 'Verify Nix flake syntax and evaluate configuration without building.'
@@ -409,6 +418,7 @@ tasks.register('nix-check') {
         }
     }
 }
+
 tasks.register('nix-update') {
     group = 'NixOS'
     description = 'Update Nix flake inputs (flake.lock) to latest upstream revisions.'
@@ -419,6 +429,7 @@ tasks.register('nix-update') {
         }
     }
 }
+
 tasks.register('nix-gc') {
     group = 'NixOS'
     description = 'Collect garbage and remove old Nix store generations.'
@@ -431,11 +442,13 @@ tasks.register('nix-gc') {
         }
     }
 }
+
 tasks.register('system-install') {
     group = 'NixOS'
     description = 'nix-switch, then deploy.'
     dependsOn('nix-switch', 'deploy')
 }
+
 tasks.register('upgrade') {
     group = 'NixOS'
     description = 'Full system upgrade: update flake inputs, rebuild NixOS, and redeploy dotfiles.'
