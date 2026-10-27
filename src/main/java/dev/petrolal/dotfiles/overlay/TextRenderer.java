@@ -17,10 +17,9 @@ import static org.lwjgl.stb.STBTruetype.stbtt_GetBakedQuad;
 
 /**
  * Draws text against a {@link FontAtlas} in screen-space (orthographic
- * projection over framebuffer pixels), not world-space -- proves font
- * rendering as its own milestone, same as {@link QuadRenderer} proved node
- * placement before this. Billboarding labels onto 3D app nodes is Integration
- * work (see docs/checklist.md), not this class's job.
+ * projection over framebuffer pixels), not world-space. Used to label the
+ * syringe rack's slots (see {@link SyringeRack}), projected from each
+ * slot's live world position via {@link OverlayCamera#worldToScreen}.
  */
 final class TextRenderer {
 

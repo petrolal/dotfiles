@@ -9,6 +9,7 @@ import dev.petrolal.dotfiles.desktop.DesktopServices;
 import dev.petrolal.dotfiles.desktop.Xfconf;
 import dev.petrolal.dotfiles.linker.Linker;
 import dev.petrolal.dotfiles.locker.ScreenLocker;
+import dev.petrolal.dotfiles.overlay.OverlayWindow;
 import dev.petrolal.dotfiles.wallpaper.GpuOffloadLauncher;
 import dev.petrolal.dotfiles.wallpaper.Wallpaper;
 import dev.petrolal.dotfiles.wallpaper.WallpaperDaemonManager;
@@ -172,6 +173,22 @@ public final class Orchestrator {
 			return true;
 		} catch (Throwable ex) {
 			System.err.println("Error on screen locker: " + ex.getMessage());
+			return false;
+		}
+	}
+
+	/** Starts the 3D app-launcher overlay in-process (blocks the calling
+	 * thread until the window closes -- see {@link OverlayWindow}). */
+	public static boolean runOverlay(boolean dryRun) {
+		if (dryRun) {
+			System.out.println("[DRY-RUN] Would start the 3D app-launcher overlay.");
+			return true;
+		}
+		try {
+			new OverlayWindow().start();
+			return true;
+		} catch (Throwable ex) {
+			System.err.println("Error on overlay: " + ex.getMessage());
 			return false;
 		}
 	}

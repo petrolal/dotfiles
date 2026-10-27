@@ -64,8 +64,20 @@ final class Shader {
         glUniform4f(location(name), x, y, z, w);
     }
 
+    void setVec3(String name, float x, float y, float z) {
+        glUniform3f(location(name), x, y, z);
+    }
+
+    void setVec2(String name, float x, float y) {
+        glUniform2f(location(name), x, y);
+    }
+
     void setInt(String name, int value) {
         glUniform1i(location(name), value);
+    }
+
+    void setFloat(String name, float value) {
+        glUniform1f(location(name), value);
     }
 
     private int location(String name) {

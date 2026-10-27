@@ -6,6 +6,8 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
+import dev.petrolal.dotfiles.telemetry.SystemVitals;
+
 /**
  * WallpaperEvents manages and aggregates all user input and system telemetry:
  * - Mouse cursor position & left/right click states (global desktop query)
@@ -47,9 +49,10 @@ public class WallpaperEvents implements AutoCloseable {
     // Audio envelope state (confined to the virtual background thread)
     private float smoothedAudio = 0.0f;
 
-    // CPU telemetry state (confined to the virtual background thread)
-    private long prevIdle = 0;
-    private long prevTotal = 0;
+    // CPU/RAM telemetry (confined to the virtual background thread) -- see
+    // dev.petrolal.dotfiles.telemetry.SystemVitals for the display-agnostic
+    // procfs reading logic itself, shared with the Hyprland overlay.
+    private final SystemVitals vitals = new SystemVitals();
 
     // Workspace query throttle (confined to the render thread via pollState).
     // The virtual-desktop index changes maybe a handful of times per session,
@@ -84,8 +87,8 @@ public class WallpaperEvents implements AutoCloseable {
             long now = System.currentTimeMillis();
             if (now - lastSysTelemetryCheck > 500) {
                 lastSysTelemetryCheck = now;
-                cachedCpu = readCpuUsage();
-                cachedRam = readRamUsage();
+                cachedCpu = vitals.readCpuUsage();
+                cachedRam = vitals.readRamUsage();
             }
 
             try {
@@ -176,49 +179,6 @@ public class WallpaperEvents implements AutoCloseable {
             }
         } catch (Exception _) {}
         return false;
-    }
-
-    /**
-     * Reads /proc/stat to compute overall CPU utilization between 0.0 and 1.0.
-     */
-    private float readCpuUsage() {
-        try {
-            String line = Files.lines(Path.of("/proc/stat")).findFirst().orElse("");
-            String[] parts = line.trim().split("\\s+");
-            long u = Long.parseLong(parts[1]);
-            long n = Long.parseLong(parts[2]);
-            long s = Long.parseLong(parts[3]);
-            long idle = Long.parseLong(parts[4]) + Long.parseLong(parts[5]);
-            long total = u + n + s + idle + Long.parseLong(parts[6]) + Long.parseLong(parts[7]);
-
-            long diffIdle = idle - prevIdle;
-            long diffTotal = total - prevTotal;
-            prevIdle = idle;
-            prevTotal = total;
-
-            if (diffTotal == 0) return 0.0f;
-            return Math.clamp((float) (diffTotal - diffIdle) / diffTotal, 0.0f, 1.0f);
-        } catch (Exception _) {
-            return 0.0f;
-        }
-    }
-
-    /**
-     * Reads /proc/meminfo to compute overall RAM utilization between 0.0 and 1.0.
-     */
-    private float readRamUsage() {
-        try {
-            long total = 0, avail = 0;
-            for (String l : Files.readAllLines(Path.of("/proc/meminfo"))) {
-                if (l.startsWith("MemTotal:")) total = Long.parseLong(l.replaceAll("\\D+", ""));
-                if (l.startsWith("MemAvailable:")) avail = Long.parseLong(l.replaceAll("\\D+", ""));
-                if (total > 0 && avail > 0) break;
-            }
-            if (total == 0) return 0.0f;
-            return (float) (total - avail) / total;
-        } catch (Exception _) {
-            return 0.0f;
-        }
     }
 
     @Override

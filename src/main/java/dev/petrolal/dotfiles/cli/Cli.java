@@ -19,6 +19,7 @@ public final class Cli {
 		System.out.println("  deploy            perform full deployment (link, configure, reload) [default]");
 		System.out.println("  uninstall         remove all deployed dotfile symlinks safely");
 		System.out.println("  wallpaper         start OpenGL 3D wallpaper");
+		System.out.println("  overlay           start the 3D app-launcher overlay");
 		System.out.println("  lock              start the interactive PAM-authenticated screen locker");
 		System.out.println("  toggle-hud        toggle the running wallpaper's MangoHud performance overlay\n");
 		System.out.println("Options:");
@@ -54,7 +55,7 @@ public final class Cli {
 	}
 
 	private enum Action {
-		DEPLOY, UNINSTALL, WALLPAPER, TOGGLE_HUD, LOCK
+		DEPLOY, UNINSTALL, WALLPAPER, OVERLAY, TOGGLE_HUD, LOCK
 	}
 
 	static void main(String[] argv) {
@@ -138,6 +139,7 @@ public final class Cli {
 			case "-u", "--uninstall", "uninstall" -> action = Action.UNINSTALL;
 			case "deploy" -> action = Action.DEPLOY;
 			case "wallpaper" -> action = Action.WALLPAPER;
+			case "overlay" -> action = Action.OVERLAY;
 			case "lock" -> action = Action.LOCK;
 			case "toggle-hud" -> action = Action.TOGGLE_HUD;
 			default -> {
@@ -152,6 +154,7 @@ public final class Cli {
 		case UNINSTALL -> Orchestrator.uninstall(dryRun, verbose).ok();
 		case DEPLOY -> Orchestrator.deploy(dryRun, verbose, reload, applySettings, applyWallpaper).ok();
 		case WALLPAPER -> Orchestrator.set3DWallpaper(dryRun, verbose, maxFps).ok();
+		case OVERLAY -> Orchestrator.runOverlay(dryRun);
 		case LOCK -> Orchestrator.lockScreen(dryRun, testTimeoutSeconds, dumpFramePath, injectPassword);
 		case TOGGLE_HUD -> Orchestrator.toggleWallpaperHud(verbose);
 		};

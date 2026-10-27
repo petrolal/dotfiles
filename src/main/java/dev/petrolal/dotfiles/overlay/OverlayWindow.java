@@ -4,56 +4,86 @@ import org.lwjgl.glfw.Callbacks;
 import org.lwjgl.glfw.GLFWErrorCallback;
 import org.lwjgl.opengl.GL;
 
-import java.util.List;
+import dev.petrolal.dotfiles.telemetry.SystemVitals;
 
 import static org.lwjgl.glfw.GLFW.*;
 import static org.lwjgl.opengl.GL11.*;
 import static org.lwjgl.system.MemoryUtil.NULL;
 
 /**
- * Milestone 6 of the render pipeline: GLFW window + GL context + render loop
- * (milestone 1) driving a perspective camera + quad renderer (milestone 2),
- * text labels (milestone 3), icon textures (milestone 4), and real
- * {@link DesktopEntryScanner} data via {@link NodeLayout} (milestone 5), now
- * with mouse/keyboard node selection wired to {@link ProcessLauncher}. A
- * `Cli` subcommand to launch this is still a separate Integration item (see
- * docs/checklist.md).
+ * Astroland: a zero-asset procedural 3D launcher. Five app-planets
+ * ({@link PlanetNode}, fixed positions, see its javadoc for why) orbit a
+ * telemetry-reactive central star ({@link StarRenderer}) inside a
+ * procedural starfield ({@link StarfieldRenderer}), rendered into an
+ * offscreen FBO and composited with chromatic aberration / vignette /
+ * scanlines ({@link PostProcessPipeline}). Free-orbit camera via mouse drag
+ * (see {@link OverlayCamera#applyOrbitDelta}) and scroll-wheel zoom.
+ * Replaces an earlier biopunk desk scene outright (see docs/biopunk_plan.md
+ * for that lineage) -- not kept alongside it.
  *
- * <p>Mouse: click a node to launch it immediately. Keyboard: arrow keys move
- * a highlighted selection (rendered as a yellow border quad behind the node),
- * Enter launches whatever's selected.
- *
- * Run via the {@code quick-overlay} Gradle task (plain JVM, no native-image
- * build) during development; press Escape to close.
+ * <p>Run via {@code imp overlay} (or the {@code quick-overlay} Gradle task
+ * for plain-JVM development, no native-image build); press Escape to
+ * close. Escape only closes this window -- {@link ProcessLauncher} launches
+ * are detached {@code ProcessBuilder} processes with no reference kept
+ * here, so they are never touched by {@link #destroy()} and outlive the
+ * overlay.
  */
 public final class OverlayWindow {
 
     private static final String LABEL_FONT_FAMILY = "JetBrainsMono Nerd Font Mono";
-    private static final float LABEL_PIXEL_HEIGHT = 24f;
-    private static final int ICON_SIZE_HINT = 48;
-    private static final float LABEL_OFFSET_Y = 0.6f; // world units below each node's icon
-    private static final float SELECTION_HIGHLIGHT_SIZE = NodeLayout.NODE_SIZE * 1.15f;
+    private static final float LABEL_PIXEL_HEIGHT = 18f;
+    /** How often the background vitals poller re-samples /proc -- cheap,
+     * but still disk/kernel I/O the render thread must never block on. */
+    private static final long VITALS_POLL_INTERVAL_MILLIS = 500L;
+    /** Radians of camera orbit per pixel of mouse drag. */
+    private static final float ORBIT_SENSITIVITY = 0.006f;
+    /** Orbit-distance units per scroll-wheel notch. */
+    private static final float ZOOM_SENSITIVITY = 0.25f;
+    /** Pixels of cumulative mouse movement before a press-then-move is
+     * treated as a camera drag instead of a click -- without this, a
+     * sub-pixel jitter during an intended click would silently swallow it. */
+    private static final float DRAG_THRESHOLD_PIXELS = 4f;
 
     private long windowHandle;
     private OverlayCamera camera;
-    private QuadRenderer quadRenderer;
+    private StarfieldRenderer starfieldRenderer;
+    private CelestialSystem celestialSystem;
+    private PostProcessPipeline postProcessPipeline;
     private FontAtlas fontAtlas;
     private TextRenderer textRenderer;
-    private IconLoader iconLoader;
-    private IconRenderer iconRenderer;
+    private HudLabelRenderer hudLabelRenderer;
     private ProcessLauncher processLauncher;
-    private List<NodeLayout.PositionedEntry> nodes;
-    private int nodeColumns;
-    private int selectedIndex = -1;
+    private final SystemVitals vitals = new SystemVitals();
+    /** Sampled off the render thread -- see {@link #VITALS_POLL_INTERVAL_MILLIS}
+     * and {@link #startVitalsPoller()} -- same reasoning as
+     * {@code wallpaper.WallpaperEvents}'s own background telemetry thread:
+     * the render loop must never block on /proc file I/O. */
+    private volatile float cachedCpuLoad = 0f;
+    private Thread vitalsPollerThread;
     private int framebufferWidth;
     private int framebufferHeight;
 
+    // Drag-vs-click and cursor-position state, all confined to the GLFW
+    // callback thread (GLFW callbacks and the render loop run on the same
+    // thread in this app, so no synchronization is needed here).
+    private double cursorX;
+    private double cursorY;
+    private boolean leftButtonDown = false;
+    private boolean dragged = false;
+    private float dragDistanceAccumPixels = 0f;
+
     public static void main(String[] args) {
-        NativeLibraryPaths.install();
-        new OverlayWindow().run();
+        new OverlayWindow().start();
     }
 
-    private void run() {
+    /** Blocks the calling thread until the window closes (Escape or the
+     * compositor requests it) -- mirrors {@code Wallpaper.start}/
+     * {@code ScreenLocker.start} so {@code Orchestrator} can call it the
+     * same way for the {@code imp overlay} subcommand. Routes native
+     * loading via {@link NativeLibraryPaths} first; must happen before any
+     * other {@code org.lwjgl.*} class in this call chain is touched. */
+    public void start() {
+        NativeLibraryPaths.install();
         init();
         loop();
         destroy();
@@ -73,8 +103,9 @@ public final class OverlayWindow {
         glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
         glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GLFW_TRUE);
 
-        // Must match the `class:^(imp-overlay)$` windowrulev2 rules in
-        // docs/migration_plan.md for Hyprland to apply them.
+        // Must match the `class:^(imp-overlay)$` window rule in
+        // config/hypr/hyprland.lua (see docs/migration_plan.md) for
+        // Hyprland to apply it.
         glfwWindowHintString(GLFW_X11_CLASS_NAME, "imp-overlay");
         glfwWindowHintString(GLFW_X11_INSTANCE_NAME, "imp-overlay");
 
@@ -92,59 +123,70 @@ public final class OverlayWindow {
         framebufferWidth = width[0];
         framebufferHeight = height[0];
         camera = new OverlayCamera(framebufferWidth, framebufferHeight);
-        quadRenderer = new QuadRenderer();
+        starfieldRenderer = new StarfieldRenderer();
+        processLauncher = new ProcessLauncher();
+        celestialSystem = new CelestialSystem(processLauncher);
+        postProcessPipeline = new PostProcessPipeline(framebufferWidth, framebufferHeight);
         fontAtlas = new FontAtlas(LABEL_FONT_FAMILY, LABEL_PIXEL_HEIGHT);
         textRenderer = new TextRenderer(fontAtlas);
         textRenderer.resize(framebufferWidth, framebufferHeight);
-        iconLoader = new IconLoader();
-        iconRenderer = new IconRenderer();
-        processLauncher = new ProcessLauncher();
+        hudLabelRenderer = new HudLabelRenderer();
+        hudLabelRenderer.resize(framebufferWidth, framebufferHeight);
 
-        NodeLayout.Grid grid = NodeLayout.grid(new DesktopEntryScanner().scan());
-        nodes = grid.nodes();
-        nodeColumns = grid.columns();
-        selectedIndex = nodes.isEmpty() ? -1 : 0;
+        double[] initialCursorX = new double[1];
+        double[] initialCursorY = new double[1];
+        glfwGetCursorPos(windowHandle, initialCursorX, initialCursorY);
+        cursorX = initialCursorX[0];
+        cursorY = initialCursorY[0];
 
         glfwSetKeyCallback(windowHandle, (window, key, scancode, action, mods) -> {
             if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
                 glfwSetWindowShouldClose(window, true);
-            } else if (key == GLFW_KEY_ENTER || key == GLFW_KEY_KP_ENTER) {
-                // Deliberately GLFW_PRESS only, not GLFW_REPEAT: holding
-                // Enter down must not re-launch the same app repeatedly.
-                if (action == GLFW_PRESS) {
-                    launchSelected();
-                }
-            } else if (action == GLFW_PRESS || action == GLFW_REPEAT) {
-                // Arrow-key navigation is fine to repeat while held.
-                if (key == GLFW_KEY_LEFT) {
-                    moveSelection(-1);
-                } else if (key == GLFW_KEY_RIGHT) {
-                    moveSelection(1);
-                } else if (key == GLFW_KEY_UP) {
-                    moveSelection(-nodeColumns);
-                } else if (key == GLFW_KEY_DOWN) {
-                    moveSelection(nodeColumns);
+            }
+        });
+
+        glfwSetCursorPosCallback(windowHandle, (window, xpos, ypos) -> {
+            float dx = (float) (xpos - cursorX);
+            float dy = (float) (ypos - cursorY);
+            cursorX = xpos;
+            cursorY = ypos;
+
+            if (leftButtonDown) {
+                camera.applyOrbitDelta(dx * ORBIT_SENSITIVITY, -dy * ORBIT_SENSITIVITY);
+                dragDistanceAccumPixels += (float) Math.sqrt(dx * dx + dy * dy);
+                if (dragDistanceAccumPixels > DRAG_THRESHOLD_PIXELS) {
+                    dragged = true;
                 }
             }
         });
 
         glfwSetMouseButtonCallback(windowHandle, (window, button, action, mods) -> {
-            if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS) {
-                double[] cursorX = new double[1];
-                double[] cursorY = new double[1];
-                glfwGetCursorPos(window, cursorX, cursorY);
-                int hit = nodeAt((float) cursorX[0], (float) cursorY[0]);
-                if (hit >= 0) {
-                    selectedIndex = hit;
-                    launchSelected();
+            if (button != GLFW_MOUSE_BUTTON_LEFT) {
+                return;
+            }
+            if (action == GLFW_PRESS) {
+                leftButtonDown = true;
+                dragged = false;
+                dragDistanceAccumPixels = 0f;
+            } else if (action == GLFW_RELEASE) {
+                leftButtonDown = false;
+                if (!dragged) {
+                    celestialSystem.clickHovered(glfwGetTime());
                 }
             }
         });
 
+        glfwSetScrollCallback(windowHandle, (window, xoffset, yoffset) ->
+                camera.zoomBy((float) -yoffset * ZOOM_SENSITIVITY));
+
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); // text alpha is the glyph coverage
+        glEnable(GL_DEPTH_TEST);
+        glDepthFunc(GL_LEQUAL);
+        glEnable(GL_CULL_FACE);
+        glCullFace(GL_BACK);
 
-        // Registered only after GL.createCapabilities()/camera/quadRenderer
+        // Registered only after GL.createCapabilities()/the renderers
         // exist: on Wayland, glfwShowWindow below fires this callback
         // synchronously (an immediate compositor configure event), so
         // anything it touches must already be ready.
@@ -155,70 +197,87 @@ public final class OverlayWindow {
                 glViewport(0, 0, w, h);
                 camera.resize(w, h);
                 textRenderer.resize(w, h);
+                hudLabelRenderer.resize(w, h);
+                postProcessPipeline.resize(w, h);
             }
         });
 
         glfwSwapInterval(1);
         glfwShowWindow(windowHandle);
+
+        startVitalsPoller();
     }
 
-    private void moveSelection(int delta) {
-        if (nodes.isEmpty()) {
-            return;
-        }
-        int next = selectedIndex + delta;
-        if (next >= 0 && next < nodes.size()) {
-            selectedIndex = next;
-        }
-    }
-
-    private void launchSelected() {
-        if (selectedIndex >= 0 && selectedIndex < nodes.size()) {
-            processLauncher.launch(nodes.get(selectedIndex).entry());
-        }
-    }
-
-    /** Screen-space hit test: returns the clicked node's index, or -1 if the click missed every node. */
-    private int nodeAt(float screenX, float screenY) {
-        for (int i = 0; i < nodes.size(); i++) {
-            NodeLayout.PositionedEntry node = nodes.get(i);
-            var center = camera.worldToScreen(node.x(), node.y(), 0f, framebufferWidth, framebufferHeight);
-            var edge = camera.worldToScreen(node.x() + NodeLayout.NODE_SIZE / 2f, node.y(), 0f,
-                    framebufferWidth, framebufferHeight);
-            float halfSize = Math.abs(edge.x - center.x);
-            if (Math.abs(screenX - center.x) <= halfSize && Math.abs(screenY - center.y) <= halfSize) {
-                return i;
+    /** Virtual thread sampling CPU every {@link #VITALS_POLL_INTERVAL_MILLIS}
+     * so {@link StarRenderer} always has a recent-enough reading without
+     * the render thread ever touching /proc directly. Interrupted (not
+     * joined) from {@link #destroy()} -- a slightly stale last reading on
+     * the way out is harmless since nothing reads the cached field after
+     * that point. */
+    private void startVitalsPoller() {
+        vitalsPollerThread = Thread.ofVirtual().start(() -> {
+            while (!Thread.currentThread().isInterrupted()) {
+                cachedCpuLoad = vitals.readCpuUsage();
+                try {
+                    Thread.sleep(VITALS_POLL_INTERVAL_MILLIS);
+                } catch (InterruptedException e) {
+                    break;
+                }
             }
-        }
-        return -1;
+        });
     }
 
     private void loop() {
-        glClearColor(0.07f, 0.07f, 0.09f, 1.0f);
+        glClearColor(0.01f, 0f, 0.02f, 1.0f);
 
         while (!glfwWindowShouldClose(windowHandle)) {
-            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+            double elapsedSeconds = glfwGetTime();
 
-            if (selectedIndex >= 0) {
-                NodeLayout.PositionedEntry selected = nodes.get(selectedIndex);
-                quadRenderer.draw(camera, selected.x(), selected.y(), -0.01f,
-                        SELECTION_HIGHLIGHT_SIZE, SELECTION_HIGHLIGHT_SIZE, 0.9f, 0.85f, 0.1f, 1f);
+            OverlayCamera.Ray hoverRay = camera.unproject((float) cursorX, (float) cursorY,
+                    framebufferWidth, framebufferHeight);
+            celestialSystem.updateHover(hoverRay);
+
+            postProcessPipeline.beginSceneRender();
+
+            // Background pass: depth writes off so the starfield never
+            // occludes (or is occluded by) the actual 3D scene drawn right
+            // after it into the same, already-cleared depth buffer.
+            glDepthMask(false);
+            starfieldRenderer.draw(elapsedSeconds, framebufferWidth, framebufferHeight);
+            glDepthMask(true);
+
+            celestialSystem.draw(camera, elapsedSeconds, cachedCpuLoad);
+
+            postProcessPipeline.endSceneRenderAndComposite(elapsedSeconds, cachedCpuLoad, framebufferWidth, framebufferHeight);
+
+            // HUD labels drawn directly to the default framebuffer, after
+            // compositing -- stays crisp (no chromatic-aberration
+            // fringing) and doesn't fight the 3D scene's own depth buffer
+            // (which belongs to the offscreen FBO, not this one). Per
+            // CelestialSystem.HudEntry's contract: skip any entry whose
+            // planet projected behind the camera plane rather than drawing
+            // it at a garbage position.
+            glDisable(GL_DEPTH_TEST);
+            for (CelestialSystem.HudEntry hud : celestialSystem.hudEntries(camera, framebufferWidth, framebufferHeight)) {
+                if (!hud.visible()) {
+                    continue;
+                }
+                var glow = hud.glowColor();
+                float lineAlpha = hud.hovered() ? 0.9f : 0.5f;
+                hudLabelRenderer.drawConnectingLine(hud.planetScreenX(), hud.planetScreenY(),
+                        hud.anchorScreenX(), hud.anchorScreenY(), glow.x, glow.y, glow.z, lineAlpha);
+                hudLabelRenderer.drawPillBorder(hud.anchorScreenX(), hud.anchorScreenY(), hud.label(),
+                        glow.x, glow.y, glow.z, hud.hovered());
+
+                float pillWidth = HudLabelRenderer.pillWidth(hud.label(), hud.hovered());
+                float textX = hud.anchorScreenX() - pillWidth / 2f + 12f;
+                textRenderer.draw(hud.label(), textX, hud.anchorScreenY() + 5f, 1f, 1f, 1f, 1f);
+                if (hud.hovered()) {
+                    textRenderer.draw(hud.exec(), textX, hud.anchorScreenY() + 24f,
+                            glow.x, glow.y, glow.z, 0.9f);
+                }
             }
-
-            for (NodeLayout.PositionedEntry node : nodes) {
-                quadRenderer.draw(camera, node.x(), node.y(), 0f, 1f, 1f, 0.3f, 0.6f, 0.9f, 1f);
-
-                IconLoader.IconTexture icon = iconLoader.load(node.entry().icon(), ICON_SIZE_HINT);
-                iconRenderer.draw(camera, icon, node.x(), node.y(), 0.01f, 0.7f, 0.7f);
-            }
-
-            // Label projected from each node's world position, not a
-            // separate decorative row -- see OverlayCamera.worldToScreen.
-            for (NodeLayout.PositionedEntry node : nodes) {
-                var screen = camera.worldToScreen(node.x(), node.y() - LABEL_OFFSET_Y, 0f,
-                        framebufferWidth, framebufferHeight);
-                textRenderer.draw(node.entry().name(), screen.x, screen.y, 1f, 1f, 1f, 1f);
-            }
+            glEnable(GL_DEPTH_TEST);
 
             glfwSwapBuffers(windowHandle);
             glfwPollEvents();
@@ -226,11 +285,15 @@ public final class OverlayWindow {
     }
 
     private void destroy() {
-        iconRenderer.destroy();
-        iconLoader.destroy();
+        if (vitalsPollerThread != null) {
+            vitalsPollerThread.interrupt();
+        }
+        hudLabelRenderer.destroy();
         textRenderer.destroy();
         fontAtlas.destroy();
-        quadRenderer.destroy();
+        postProcessPipeline.destroy();
+        celestialSystem.destroy();
+        starfieldRenderer.destroy();
         Callbacks.glfwFreeCallbacks(windowHandle);
         glfwDestroyWindow(windowHandle);
         glfwTerminate();
