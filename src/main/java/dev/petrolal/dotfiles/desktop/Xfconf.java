@@ -179,6 +179,15 @@ public final class Xfconf {
                 ProcessRunner.run(List.of("xfconf-query", "-c", channel, "-p", property, "-s", valStr, "--create", "-t", type)));
     }
 
+    static boolean resetXfconf(String channel, String property, boolean dryRun) {
+        if (dryRun) {
+            System.out.printf("[DRY-RUN] xfconf-query -c %s -p %s -r%n", channel, property);
+            return true;
+        }
+        ProcessRunner.run(List.of("xfconf-query", "-c", channel, "-p", property, "-r"));
+        return true;
+    }
+
     static boolean setXfconfArray(String channel, String property, String type, List<String> values,
                                    boolean dryRun, boolean verbose) {
         List<String> cmd = new ArrayList<>(List.of("xfconf-query", "-c", channel, "-p", property, "--create", "-a"));
@@ -278,6 +287,9 @@ public final class Xfconf {
         List<Callable<Boolean>> tasks = new ArrayList<>();
         for (XfceSetting s : XFCE_SETTINGS) {
             tasks.add(() -> setXfconf(s.channel(), s.property(), s.type(), s.value(), dryRun));
+        }
+        for (String prop : KeyboardShortcuts.DISABLED) {
+            tasks.add(() -> resetXfconf("xfce4-keyboard-shortcuts", prop, dryRun));
         }
 
         List<String> pluginIds = new ArrayList<>(List.of(String.valueOf(START)));

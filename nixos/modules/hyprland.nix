@@ -62,5 +62,13 @@
     hyprpaper
     hyprlock
     hypridle
+
+    # LWJGL's bundled GLFW native dlopen()s these by soname at runtime (see
+    # overlay/NativeLibraryPaths.java and docs/migration_plan.md section 5)
+    # -- they're pulled in transitively by Hyprland/Wayland already, but
+    # nothing exposes them under a stable, non-hashed path until listed
+    # here, which puts them in /run/current-system/sw/lib.
+    wayland
+    libxkbcommon
   ];
 }

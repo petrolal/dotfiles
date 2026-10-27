@@ -68,9 +68,14 @@ dependencies {
     implementation(libs.lwjgl.opengl)
     implementation(libs.joml)
 
-    // No NixOS/Mesa system equivalent for stb_truetype, so this is the one
-    // LWJGL module that still needs its bundled native .so (see overlay
-    // module README for why glfw/opengl load from /run/opengl-driver instead).
+    // Every LWJGL module's own JNI glue (liblwjgl*.so) is LWJGL's compiled
+    // code, not something Mesa/NixOS provides -- NativeLibraryPaths only
+    // routes the *driver* libs (libGL, libglfw) LWJGL's glfw/opengl natives
+    // dlopen at runtime to /run/opengl-driver/lib. All four modules still
+    // need their own bundled natives-linux jar for the JNI bridge itself.
+    runtimeOnly("org.lwjgl:lwjgl::natives-linux")
+    runtimeOnly("org.lwjgl:lwjgl-glfw::natives-linux")
+    runtimeOnly("org.lwjgl:lwjgl-opengl::natives-linux")
     implementation(libs.lwjgl.stb)
     runtimeOnly("org.lwjgl:lwjgl-stb::natives-linux")
 }
@@ -244,6 +249,11 @@ tasks.register('quick-deploy', JavaExec) {
     mainClass.set('dev.petrolal.dotfiles.cli.Cli')
     environment('DOTFILES_DIR', projectDir.absolutePath)
     args = getDeployFlags()
+    // This runs for its side effects (symlinks, xfconf, the wallpaper
+    // daemon), not for any declared output Gradle can track -- without this,
+    // Gradle can mark it UP-TO-DATE and skip it entirely on a re-run with
+    // unchanged classpath/args, same bug fixed below for quick-overlay.
+    outputs.upToDateWhen { false }
 }
 tasks.register('quick-overlay', JavaExec) {
     group = 'Desktop'
@@ -251,6 +261,16 @@ tasks.register('quick-overlay', JavaExec) {
     dependsOn('classes')
     classpath = sourceSets.main.runtimeClasspath
     mainClass.set('dev.petrolal.dotfiles.overlay.OverlayWindow')
+    // GLFW's bundled native dlopen()s libwayland-client/libxkbcommon (and
+    // libX11 under X11) by soname at runtime; org.lwjgl.librarypath (see
+    // NativeLibraryPaths) only covers LWJGL's own System.load() calls, not
+    // this, so it has to be LD_LIBRARY_PATH. /run/current-system/sw/lib is
+    // where nixos/modules/hyprland.nix's systemPackages put them.
+    environment('LD_LIBRARY_PATH', '/run/current-system/sw/lib:/run/opengl-driver/lib')
+    // Launching a GUI app is a side effect, not a declared output -- without
+    // this, Gradle can (and did) mark this UP-TO-DATE on an unchanged
+    // classpath and skip actually running it, with no error and no output.
+    outputs.upToDateWhen { false }
 }
 tasks.register('uninstall') {
     group = 'Deploy'

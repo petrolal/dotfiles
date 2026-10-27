@@ -60,6 +60,7 @@ let
     which
     less
     rlwrap
+    kitty
   ];
 
   mediaUtils = with pkgs; [

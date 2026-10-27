@@ -1,6 +1,6 @@
 package dev.petrolal.dotfiles.overlay;
 
-import java.io.IOException;
+import java.io.File;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -18,12 +18,15 @@ public final class ProcessLauncher {
     public void launch(AppEntry entry) {
         launchExecutor.submit(() -> {
             try {
+                // Redirect.DISCARD is a write-only /dev/null handle; it's only
+                // valid for stdout/stderr. Stdin needs a *readable* /dev/null,
+                // or ProcessBuilder throws IllegalArgumentException.
                 new ProcessBuilder(toCommand(entry.exec()))
                     .redirectOutput(ProcessBuilder.Redirect.DISCARD)
                     .redirectError(ProcessBuilder.Redirect.DISCARD)
-                    .redirectInput(ProcessBuilder.Redirect.DISCARD)
+                    .redirectInput(ProcessBuilder.Redirect.from(new File("/dev/null")))
                     .start();
-            } catch (IOException e) {
+            } catch (Exception e) {
                 System.err.println("Failed to launch " + entry.name() + ": " + e.getMessage());
             }
         });
