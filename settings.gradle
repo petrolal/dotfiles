@@ -1,9 +1,15 @@
 pluginManagement {
     plugins {
         id 'org.jetbrains.kotlin.jvm' version '2.4.21'
+        id 'org.jetbrains.kotlin.multiplatform' version '2.4.21'
     }
 }
 plugins {
     id 'org.gradle.toolchains.foojay-resolver-convention' version '0.10.0'
 }
 rootProject.name = 'dotfiles-deployer'
+
+// Kotlin/Native "brain" for the real Hyprland astroland plugin -- see
+// plugin-native/build.gradle.kts and native-plugin/ (the C++ shim that
+// links against it).
+include 'plugin-native'

@@ -38,9 +38,44 @@ hl.monitor({
 ---- AUTOSTART ----
 -------------------
 hl.on("hyprland.start", function ()
-  hl.exec_cmd("ags")
+  -- Bare `ags` (no subcommand) just prints its own help and exits --
+  -- confirmed empirically, Cobra has no default subcommand here -- so the
+  -- AGS shell (bar/notifications/OSD, config/ags/) needs `run` explicitly.
+  hl.exec_cmd("ags run")
   hl.exec_cmd("hyprpaper")
 end)
+
+----------------------------------
+---- ASTROLAND (Kotlin plugin) ----
+----------------------------------
+-- Kotlin-ported astroland_dots (see native-plugin/ and plugin-native/):
+-- windows become physics bodies you fly a ship into/shoot, with moons
+-- spawning around you. Loaded only at Hyprland's own startup (not
+-- hot-reloadable like most Lua config here) since plugins are dlopen()'d
+-- once; after editing native-plugin/ or plugin-native/ and rebuilding,
+-- fully restart Hyprland (not just `hyprctl reload`) to pick up the new
+-- .so. Build it first: `cmake -S native-plugin -B native-plugin/build &&
+-- cmake --build native-plugin/build` (plugin-native/'s CMakeLists.txt
+-- note has the full dependency list), after
+-- `./gradlew :plugin-native:linkAstro_nativeDebugSharedNative`.
+--
+-- This is still an unverified-at-runtime compositor plugin -- if a
+-- session goes wrong after enabling this, comment out the
+-- `hl.plugin.load(...)` line below and restart Hyprland (switch to a TTY
+-- with ctrl+alt+F2 etc. if the session is unresponsive) to get back to
+-- the normal layout.
+hl.plugin.load(os.getenv("HOME") .. "/dotfiles/native-plugin/build/libastroland.so")
+
+if hl.plugin.astroland ~= nil then
+    hl.config({
+        general = { layout = "astrolayout" },
+        plugin = {
+            astroland = {
+                spawn_moons = true,
+            },
+        },
+    })
+end
 
 -------------------------------
 ---- ENVIRONMENT VARIABLES ----
@@ -104,7 +139,7 @@ hl.bind(mainMod .. " + PRINT", hl.dsp.exec_cmd("sh -c 'mkdir -p ~/Pictures && gr
 hl.bind(mainMod .. " + ALT + F", hl.dsp.exec_cmd("sh -c 'mkdir -p ~/Pictures && grim ~/Pictures/screenshot-$(date +%s).png'"), { description = "Take an instant full-screen screenshot" })
 hl.bind(mainMod .. " + ALT + S", hl.dsp.exec_cmd("sh -c 'mkdir -p ~/Pictures && grim -g \"$(slurp)\" ~/Pictures/screenshot-$(date +%s).png'"), { description = "Take an instant area screenshot" })
 hl.bind(mainMod .. " + SHIFT + R", hl.dsp.exec_cmd("hyprctl reload"), { description = "Reload Hyprland config" })
-hl.bind(mainMod .. " + SHIFT + B", hl.dsp.exec_cmd("killall ags; ags &"), { description = "Reload Status Bar" })
+hl.bind(mainMod .. " + SHIFT + B", hl.dsp.exec_cmd("killall ags; ags run &"), { description = "Reload Status Bar" })
 hl.bind(mainMod .. " + CTRL + L", hl.dsp.exec_cmd("hyprlock"), { description = "Lock Screen" })
 hl.bind(mainMod .. " + CTRL + R", hl.dsp.exec_cmd("gpu-screen-recorder-gtk"), { description = "Open screen recorder" })
 -- `imp overlay`'s native binary still hits a native-image/LWJGL/GLFW
