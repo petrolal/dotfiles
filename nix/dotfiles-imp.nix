@@ -54,25 +54,11 @@ stdenv.mkDerivation {
 
     install -Dm755 imp $out/bin/imp
 
-    # Mirrors the exact relative layout DotfilePaths.findDotfilesRoot() /
-    # Wallpaper.resolveShader() already expect (exe-parent "bin" stripped,
-    # then src/main/resources/shaders/<name>) -- so `imp wallpaper` finds
-    # its shaders with no env var or code change needed, while `deploy`/
-    # `uninstall`/`generate` still require DOTFILES_DIR pointed at an actual
-    # dotfiles checkout, since those operate on a live, editable repo rather
-    # than anything this package can sensibly bundle.
-    install -Dm644 resources/shaders/wallpaper.vert \
-      $out/src/main/resources/shaders/wallpaper.vert
-    install -Dm644 resources/shaders/wallpaper.frag \
-      $out/src/main/resources/shaders/wallpaper.frag
-    install -Dm644 resources/shaders/blit.frag \
-      $out/src/main/resources/shaders/blit.frag
-
     runHook postInstall
   '';
 
   meta = {
-    description = "Dotfiles symlinker, XFCE settings applier, and OpenGL wallpaper daemon";
+    description = "Dotfiles symlinker and 3D app-launcher overlay";
     mainProgram = "imp";
     platforms = [ "x86_64-linux" ];
     license = lib.licenses.gpl3Plus;

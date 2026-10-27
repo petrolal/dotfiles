@@ -39,9 +39,8 @@ class OverlayWindow {
     private val vitals = SystemVitals()
 
     /** Sampled off the render thread -- see [.VITALS_POLL_INTERVAL_MILLIS]
-     * and [.startVitalsPoller] -- same reasoning as
-     * `wallpaper.WallpaperEvents`'s own background telemetry thread:
-     * the render loop must never block on /proc file I/O.  */
+     * and [.startVitalsPoller] -- the render loop must never block on
+     * /proc file I/O.  */
     @Volatile
     private var cachedCpuLoad = 0f
     private var vitalsPollerThread: Thread? = null

@@ -29,12 +29,12 @@ object SphereMesh {
         var v = 0
 
         for (lat in 0..latitudeBands) {
-            val theta = (Math.PI * lat / latitudeBands).toFloat() // 0 (north pole) -> PI (south pole)
+            val theta = (kotlin.math.PI * lat / latitudeBands).toFloat() // 0 (north pole) -> PI (south pole)
             val sinTheta = sin(theta)
             val cosTheta = cos(theta)
 
             for (lon in 0..longitudeBands) {
-                val phi = (2 * Math.PI * lon / longitudeBands).toFloat()
+                val phi = (2 * kotlin.math.PI * lon / longitudeBands).toFloat()
                 val sinPhi = sin(phi)
                 val cosPhi = cos(phi)
 

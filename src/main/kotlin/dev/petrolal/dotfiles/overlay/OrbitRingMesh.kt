@@ -24,7 +24,7 @@ object OrbitRingMesh {
         var v = 0
 
         for (i in 0..<segments) {
-            val theta = (2 * Math.PI * i / segments).toFloat()
+            val theta = (2 * kotlin.math.PI * i / segments).toFloat()
             val cosTheta = cos(theta)
             val sinTheta = sin(theta)
             val u = i.toFloat() / segments

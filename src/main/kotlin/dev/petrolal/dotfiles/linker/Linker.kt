@@ -2,7 +2,6 @@
 // License: GPL-3.0-or-later
 package dev.petrolal.dotfiles.linker
 
-import dev.petrolal.dotfiles.core.Theme
 import dev.petrolal.dotfiles.domain.DotfileError.FileNotFound
 import dev.petrolal.dotfiles.domain.DotfileError.IoError
 import dev.petrolal.dotfiles.domain.Result
@@ -33,9 +32,7 @@ object Linker {
      * root-mirrored layout: renames, or a source linked to more than one target.  */
     @JvmField
     val OVERRIDES: List<Mapping> = listOf(
-        Mapping("config/gtk-2.0/gtkrc", ".gtkrc-2.0"),
-        Mapping("themes/" + Theme.NAME, ".themes/" + Theme.NAME),
-        Mapping("themes/" + Theme.NAME, ".local/share/themes/" + Theme.NAME)
+        Mapping("config/gtk-2.0/gtkrc", ".gtkrc-2.0")
     )
 
     @JvmStatic

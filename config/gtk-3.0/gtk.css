@@ -1,7 +1,0 @@
-/* ==========================================================================
- * Imp98 User GTK 3.0 Entrypoint
- * All colors and widget styles are defined in themes/Imp98/gtk-3.0/gtk.css.
- * Add any quick local overrides below this import if needed.
- * ========================================================================== */
-
-@import url("../../.themes/Imp98/gtk-3.0/gtk.css");

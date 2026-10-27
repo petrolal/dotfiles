@@ -1,13 +1,13 @@
 # Biopunk Operating Desk — Audit & Roadmap
 
-> **Status note:** the scope below (Phase 2's "flat-quad biopunk re-skin,
-> keep the orbit grid" decision) was superseded by a later, explicit
-> instruction to build a real first-person 3D desk scene and eliminate the
-> flat icon grid outright. That's now done -- see `docs/checklist.md`'s
-> "Biopunk Operating Desk" section for current, accurate status. The
-> analysis below (what existed before this work started) is still correct
-> and worth reading for context; just don't take its Phase 2/3/5 *plans* as
-> current fact.
+> **Status note:** The exploration documented below served as an intermediate
+> evolutionary stage. The biopunk desk prototype was subsequently superseded by
+> the **Astroland wireframe-orrery 3D launcher** (`CelestialSystem`, `PlanetNode`,
+> `PlanetRenderer`, `PolyhedronMesh`, `OrbitRingRenderer`, `StarRenderer`,
+> `StarfieldRenderer`, `PostProcessPipeline`, `Raycaster`), and the entire deployer
+> and desktop toolkit was rewritten in **Kotlin** with **Spring Shell** integration.
+> See `docs/migration_plan.md` and `docs/checklist.md` for current, accurate
+> architecture and status.
 
 
 

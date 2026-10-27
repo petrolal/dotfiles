@@ -192,6 +192,6 @@ class CelestialSystem(private val processLauncher: ProcessLauncher) {
         )
 
         private fun angle(index: Int): Float =
-            (2 * Math.PI * index / PLANET_COUNT).toFloat()
+            (2 * kotlin.math.PI * index / PLANET_COUNT).toFloat()
     }
 }

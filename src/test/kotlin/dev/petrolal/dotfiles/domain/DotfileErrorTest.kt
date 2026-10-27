@@ -1,21 +1,28 @@
-package dev.petrolal.dotfiles.domain;
+package dev.petrolal.dotfiles.domain
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import dev.petrolal.dotfiles.domain.DotfileError.*
+import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.Test
+import java.nio.file.Path
 
-import java.nio.file.Path;
-import org.junit.jupiter.api.Test;
-
-class DotfileErrorTest {
-
+internal class DotfileErrorTest {
     @Test
-    void describeCoversEveryVariant() {
-        assertEquals("command failed (1): xfconf-query",
-                new DotfileError.CommandFailed("xfconf-query", 1).describe());
-        assertEquals("file not found: /tmp/missing",
-                new DotfileError.FileNotFound(Path.of("/tmp/missing")).describe());
-        assertEquals("I/O error: disk full",
-                new DotfileError.IoError("disk full").describe());
-        assertEquals("parse error: unexpected token",
-                new DotfileError.ParseError("unexpected token").describe());
+    fun describeCoversEveryVariant() {
+        Assertions.assertEquals(
+            "command failed (1): xfconf-query",
+            CommandFailed("xfconf-query", 1).describe()
+        )
+        Assertions.assertEquals(
+            "file not found: /tmp/missing",
+            FileNotFound(Path.of("/tmp/missing")).describe()
+        )
+        Assertions.assertEquals(
+            "I/O error: disk full",
+            IoError("disk full").describe()
+        )
+        Assertions.assertEquals(
+            "parse error: unexpected token",
+            ParseError("unexpected token").describe()
+        )
     }
 }

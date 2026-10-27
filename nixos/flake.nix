@@ -6,9 +6,13 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     nix-flatpak.url = "github:gmodena/nix-flatpak/?ref=latest";
+    claude-desktop = {
+      url = "github:aaddrick/claude-desktop-debian";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
-  outputs = { self, nixpkgs, antigravity-nix, nix-flatpak, ... }:
+  outputs = { self, nixpkgs, antigravity-nix, nix-flatpak, claude-desktop, ... }:
     let
       system = "x86_64-linux";
 
@@ -32,7 +36,10 @@
       mkConfig = { hostname ? detectedHostname, user ? null, extraModules ? [] }:
         nixpkgs.lib.nixosSystem {
           modules = [
-            { nixpkgs.hostPlatform = system; }
+            {
+              nixpkgs.hostPlatform = system;
+              nixpkgs.overlays = [ claude-desktop.overlays.default ];
+            }
             nix-flatpak.nixosModules.nix-flatpak
             ./configuration.nix
 

@@ -128,7 +128,7 @@ object PolyhedronMesh {
     }
 
     private fun icosahedron(): RawSolid {
-        val phi = ((1.0 + Math.sqrt(5.0)) / 2.0).toFloat()
+        val phi = ((1.0 + kotlin.math.sqrt(5.0)) / 2.0).toFloat()
         val vertices = normalized(
             Vector3f(-1f, phi, 0f), Vector3f(1f, phi, 0f),
             Vector3f(-1f, -phi, 0f), Vector3f(1f, -phi, 0f),

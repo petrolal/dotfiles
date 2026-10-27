@@ -22,7 +22,9 @@ let
   devTools = with pkgs; [
     emacs
     claude-code
+    claude-desktop-fhs
     bruno
+    kiro
   ];
 
   # Fast search, used by Hell Emacs' consult-ripgrep/consult-find (C-c s p / C-c s f).
@@ -61,6 +63,9 @@ let
     less
     rlwrap
     kitty
+    thunar  # standalone GTK file manager; no longer pulled in transitively now that desktopManager.xfce is gone
+    grim         # Wayland screenshot capture, bound in config/hypr/hyprland.lua
+    slurp        # region selection for grim
   ];
 
   mediaUtils = with pkgs; [

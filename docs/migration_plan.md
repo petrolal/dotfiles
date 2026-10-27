@@ -16,13 +16,20 @@ Host `primary` also has NVIDIA PRIME hybrid graphics enabled
 migration is deliberately staged rather than a one-shot swap, to avoid
 losing GUI access if Hyprland/NVIDIA misbehave on first boot.
 
-### Phase 0A (deferred) — decommission XFCE/X11
+### Phase 0A (done) — decommission XFCE/X11
 
-Not done yet, on purpose. Once Hyprland + the overlay have been used
-day-to-day and confirmed stable on this NVIDIA PRIME host, do a second pass:
-remove `services.xserver.enable`, `desktopManager.xfce.enable`, and the
-LightDM block from `desktop.nix`; migrate the Imp98/Chicago95 theming to its
-GTK4/Wayland equivalent; drop XFCE-only packages (`xfce4-whiskermenu-plugin`).
+`services.xserver.enable`, `desktopManager.xfce.enable`, and the LightDM
+block are gone from `desktop.nix`; `hyprland.nix` installs `greetd` +
+`tuigreet` as the sole, Wayland-native login manager. The Imp98/Chicago95
+theme was dropped entirely rather than ported (decision: no GTK4/Wayland
+theming work, start Hyprland/AGS styling from scratch later) — this removed
+`Theme.kt`, `Xfconf.kt`, `KeyboardShortcuts.kt`, `DesktopServices.kt`, the
+`themes/Imp98` package, `config/icons/Chicago95`, and every `xfce4-*`
+package/script/desktop-entry. One correctness fix fell out of this: the
+screen locker's PAM service name was `"xfce4-screensaver"`, which only
+existed because XFCE's PAM service file happened to be present — it's now
+`"imp-lock"`, explicitly declared via `security.pam.services.imp-lock` in
+`hyprland.nix`.
 
 ### Phase 0B (done) — install Hyprland additively
 
@@ -56,30 +63,25 @@ automatically.
 
 | Decision | Choice | Why |
 |---|---|---|
-| Language | Java (not Kotlin) | Repo is 100% Java already; mixing JVM languages buys nothing here and complicates the GraalVM native-image reachability analysis for no benefit. |
+| Language | Kotlin (migrated from Java) | Modernized codebase completely to Kotlin with Spring Shell integration. Native-image compilation is fully supported via GraalVM Native Build Tools and Kotlin JVM plugin. |
 | Graphics | Raw LWJGL 3 + GLFW, not libGDX | `imp` builds as a **GraalVM native-image** binary, not a plain JVM app. libGDX relies on runtime reflection/classpath scanning (`AssetManager`, `Json`) that fights AOT compilation. LWJGL publishes to GraalVM's reachability-metadata-repository and has a proven native-image path. See `build.gradle` dependencies. |
 | Math | JOML | Manual `Matrix4f`/perspective projection in place of libGDX's `PerspectiveCamera` — more code, but no framework dependency incompatible with native-image. |
-| Native libs | System Mesa/GLFW via `/run/opengl-driver/lib`, not LWJGL's bundled `natives-linux` jars (except `lwjgl-stb`, which has no NixOS system equivalent) | Avoids glibc/ABI mismatches between LWJGL's precompiled `.so` files and NixOS's non-standard dynamic linker layout — the most common source of `UnsatisfiedLinkError` on NixOS. Implemented in `NativeLibraryPaths.java`. |
+| Native libs | System Mesa/GLFW via `/run/opengl-driver/lib`, not LWJGL's bundled `natives-linux` jars (except `lwjgl-stb`, which has no NixOS system equivalent) | Avoids glibc/ABI mismatches between LWJGL's precompiled `.so` files and NixOS's non-standard dynamic linker layout — the most common source of `UnsatisfiedLinkError` on NixOS. Implemented in `NativeLibraryPaths.kt`. |
 
-## 2. Desktop metadata extraction
+## 2. Desktop app node architecture
 
-`DesktopEntryScanner.java` crawls `/usr/share/applications`,
-`/usr/local/share/applications`, and `~/.local/share/applications`, one
-virtual thread per `.desktop` file (`Executors.newVirtualThreadPerTaskExecutor()`).
-For each file it extracts `Name`, `Exec`, `Icon`, `Categories` from the
-`[Desktop Entry]` section, skips entries marked `NoDisplay=true` or
-`Hidden=true`, and strips desktop-entry-spec field codes (`%f`, `%U`, `%i`,
-`%c`, `%k`, `%v`, `%m`) from `Exec` since the launcher has no file/URL
-context to substitute. Output is `AppEntry` — a flat record (`id`, `name`,
-`exec`, `icon`, `categories`) decoupled from rendering so the scanner has no
-dependency on LWJGL/GL state.
+The initial prototype utilized `DesktopEntryScanner` to crawl desktop directories. In the current Astroland wireframe-orrery architecture, the launcher pivots to a deliberate, high-cohesion set of apps configured directly in `CelestialSystem.kt`. Apps are mapped as planetary nodes (`PlanetNode.kt`) with fixed orbital radii, Keplerian angular velocities, Platonic polyhedron geometries, and launch commands:
+- Terminal: `kitty`
+- Web Browser: `google-chrome-stable`
+- Editor: `idea`
+- Telegram: `telegram-desktop`
+- File Manager: `thunar`
+
+The data model cleanly decouples node celestial coordinates, hover/selection state, and execution definitions from the GL rendering layer.
 
 ## 3. Detached process execution
 
-`ProcessLauncher.java` submits each launch to its own virtual-thread
-executor and spawns via `ProcessBuilder` with `stdout`/`stderr` set to
-`Redirect.DISCARD` and `stdin` redirected from a readable `/dev/null`. This
-guarantees:
+`ProcessLauncher.kt` submits each launch to a virtual-thread executor and spawns via `ProcessBuilder` with `stdout`/`stderr` set to `Redirect.DISCARD` and `stdin` redirected from a readable `/dev/null`. This guarantees:
 - The GL render thread never blocks on fork/exec.
 - A launched app outlives the overlay if the overlay closes.
 - `Exec=` strings are passed through `sh -c` rather than a hand-rolled
@@ -212,32 +214,27 @@ behind it had, twice in a row, simply never started.
 
 | File | Responsibility |
 |---|---|
-| `overlay/NativeLibraryPaths.java` | Routes LWJGL native loading to system Mesa/GLFW before any `org.lwjgl.*` class loads. |
-| `overlay/AppEntry.java` | Immutable data record for one launchable app — the unit passed to the render layer. |
-| `overlay/DesktopEntryScanner.java` | Concurrent `.desktop` file crawler → `List<AppEntry>`. No GL/rendering dependency. |
-| `overlay/ProcessLauncher.java` | Detached app launch, off the render thread; wired to node selection in `OverlayWindow`. |
-| `overlay/OrbitLayout.java` | Assigns `AppEntry` nodes to concentric category rings (first-match-wins against freedesktop.org `Categories=`) and computes each node's live (x, y) from a fixed radius/baseAngle/angularVelocity and elapsed time -- real-time orbital motion, not a static grid (see below). Pure math, no GL/LWJGL dependency; covered by `OrbitLayoutTest`. |
-| `overlay/OverlayWindow.java` | GLFW window + GL context + render loop; owns the camera, renderers, and real node data; mouse click / arrow keys + Enter select and launch a node. |
-| `overlay/OverlayCamera.java` | Hand-rolled JOML perspective/view matrices (no libGDX `PerspectiveCamera` — see section 1); also projects world positions to screen pixels (`worldToScreen`) for labels and mouse hit-testing. Pure math, no GL calls. |
-| `overlay/Shader.java` | Compiles/links one vertex+fragment GLSL program, caches uniform locations. |
-| `overlay/QuadRenderer.java` | Flat-colored quad mesh (VAO/VBO/EBO) + draw call for one app node. No texture sampling yet. |
-| `overlay/FontAtlas.java` | Bakes one TrueType font (resolved via `fc-match`, not a hardcoded Nix store path) into a single-channel `stb_truetype` bitmap atlas. |
-| `overlay/TextRenderer.java` | Dynamic-VBO text quads sampling a `FontAtlas`, in screen-space orthographic projection. No world-space billboarding yet (Integration work). |
-| `overlay/IconLoader.java` | Resolves an icon name/path via a bounded-depth theme-directory search (Chicago95, then hicolor), decodes PNG via `stb_image`, caches by name; returns a checkerboard fallback texture for anything unresolved. |
-| `overlay/IconRenderer.java` | Textured world-space quad (same geometry shape as `QuadRenderer`, different shader: samples a texture instead of a flat color). |
-
-**Bug found and fixed in `DesktopEntryScanner`:** its `SEARCH_DIRS` was a
-hardcoded FHS-style list (`/usr/share/applications`, `/usr/local/share/applications`,
-`~/.local/share/applications`). `/usr/share/applications` doesn't exist on
-NixOS -- there is no `/usr` -- so the scanner only ever found the handful of
-entries under `~/.local/share/applications` and silently missed everything
-under `/run/current-system/sw/share/applications`, which is where the actual
-system app list lives (Thunar, Chrome, the terminal, ...). This went
-unnoticed until the layout code was wired in and the overlay rendered almost
-nothing. Fixed by resolving search dirs from `$XDG_DATA_HOME`/`$XDG_DATA_DIRS`
-per the XDG Base Directory spec (falling back to the spec's own default list
-only if those env vars are unset), with priority-ordered dedup by desktop-file
-id so a higher-priority dir's entry wins over a same-named one further down.
+| `overlay/NativeLibraryPaths.kt` | Routes LWJGL native loading to system Mesa/GLFW before any `org.lwjgl.*` class loads. |
+| `overlay/CelestialSystem.kt` | Coordinates planetary app nodes, orbit radii, speeds, and state. |
+| `overlay/PlanetNode.kt` | Immutable data and dynamic hit-test state for one planetary app node. |
+| `overlay/PlanetRenderer.kt` | Dual-pass rendering for Platonic solids: translucent facet body + glowing wireframe edges. |
+| `overlay/PolyhedronMesh.kt` | Generates Platonic solid meshes (tetrahedron, octahedron, icosahedron) with unit-length vertices. |
+| `overlay/SphereMesh.kt` | Procedural UV sphere mesh with position, normal, and UV attributes. |
+| `overlay/StarRenderer.kt` | Central glowing star with CPU-reactive bioluminescent pulse. |
+| `overlay/StarfieldRenderer.kt` | 3D background starfield backdrop. |
+| `overlay/OrbitRingMesh.kt` / `OrbitRingRenderer.kt` | Generates and renders glowing orbital ribbon meshes with click-ripple animation decay. |
+| `overlay/VectorBeamRenderer.kt` | Dynamic vector rays connecting the central star to planetary nodes. |
+| `overlay/HudLabelRenderer.kt` | Screen-space HUD text labels with world-to-screen connector lines tracking nodes. |
+| `overlay/FontAtlas.kt` / `TextRenderer.kt` | TTF baking via `stb_truetype` and dynamic-VBO text rendering. |
+| `overlay/Raycaster.kt` | Ray-sphere intersection math for mouse hover and click hit-testing. |
+| `overlay/OverlayCamera.kt` | Perspective/view matrix calculations and unproject math (NDC to world ray). |
+| `overlay/PostProcessPipeline.kt` | Offscreen FBO post-processing: chromatic aberration, breathing vignette, CRT scanlines, and load tint. |
+| `overlay/OverlayWindow.kt` | GLFW window loop, event handling, and pipeline orchestration. |
+| `overlay/ProcessLauncher.kt` | Detached application launcher off the GL render thread. |
+| `telemetry/SystemVitals.kt` | Real-time `/proc` metrics (CPU, RAM) sampling. |
+| `locker/ScreenLocker.kt` | Fullscreen OpenGL screen locker. |
+| `locker/PamAuthService.kt` | Asynchronous PAM authentication using Project Panama FFM against `imp-lock`. |
+| `locker/LoginPromptTexture.kt` | Renders graphical login prompt and password dots. |
 
 ## 6. Native-image build
 
@@ -316,73 +313,51 @@ and `imp overlay` getting past library loading on the next run.
    the shipped native binary**, which is a real limitation on top of the
    Hyprland integration checklist below, not just a missing keybind.
 
-## 7. Orbital ("solar system") layout
+## 7. Astroland wireframe-orrery 3D launcher
 
-`OrbitLayout.java` replaced the earlier static centered grid (`NodeLayout`,
-removed). Apps no longer sit at fixed grid positions; they orbit a fixed
-center in real time, grouped into concentric rings by category.
+The launcher architecture transitioned from flat 2D icon grids and static solar-system planes to an interactive, full-3D **Astroland wireframe-orrery launcher** (`imp overlay`):
 
-**Ring assignment.** First-match-wins scan of each `AppEntry`'s
-freedesktop.org `Categories=` list against a small ordered list
-(`Development` -> ring 0, `Network` -> ring 1, `AudioVideo` -> ring 2);
-anything matching none of those lands in a final catch-all ring. This is
-deliberately coarse -- three named rings plus a catch-all, not one ring per
-freedesktop main category -- to keep the rings visually distinct instead of
-producing a dozen near-identical radii for categories with only one or two
-installed apps.
+### Geometric Platonic Solid Nodes
+Apps are represented as geometric Platonic solids (`PolyhedronMesh.kt`) rather than bitmap icons:
+- **Tetrahedron**: 4 triangular faces.
+- **Octahedron**: 8 triangular faces.
+- **Icosahedron**: 20 triangular faces.
+Each mesh generates unit-length vertices with outwards-facing winding and vertex normals.
 
-**Position math.** Each node gets fixed orbital parameters once
-(`ring`, `radius`, `baseAngle`, `angularVelocity`) in `OrbitLayout.assign`;
-its position at any instant is pure trigonometry from those plus elapsed
-time, recomputed every frame in `OverlayWindow.loop()`:
+### Dual-Pass Node Rendering (`PlanetRenderer.kt`)
+Each planetary node is rendered in two passes:
+1. **Facet body**: Translucent obsidian interior with an amber Fresnel rim glow.
+2. **Wireframe edges**: Glowing vector line overlay highlighting the polyhedron's edges.
 
-```
-radius(ring)          = INNER_RADIUS + ring * RING_SPACING
-angularVelocity(ring)  = BASE_ANGULAR_VELOCITY / sqrt(1 + ring)
-angle(t)               = baseAngle + angularVelocity * t
-x(t)                   = radius * cos(angle(t))
-y(t)                   = radius * sin(angle(t))
-```
+### Celestial Orrery & Telemetry
+- **Central Star (`StarRenderer.kt`)**: A central glowing star pulsating dynamically based on system CPU metrics sampled via `SystemVitals.kt`.
+- **Vector Beams (`VectorBeamRenderer.kt`)**: Glowing `GL_LINES` rays connecting the star core to each planetary node, flaring when hovered.
+- **Orbital Ribbons (`OrbitRingMesh.kt`, `OrbitRingRenderer.kt`)**: Circular ring geometry with animated click-ripple decay propagation when a node is triggered.
+- **Starfield (`StarfieldRenderer.kt`)**: Procedural 3D background starfield providing depth.
 
-`baseAngle` for the i-th of `count` name-sorted apps in a ring is
-`2*pi*i/count`, evenly spacing that ring's apps around it. Outer rings orbit
-slower than inner ones (`angularVelocity` falls with ring index) -- loosely
-modeled on Kepler's third law (orbital period grows with radius), not a
-physically-accurate simulation; just enough for outer rings to visibly lag
-inner ones instead of the whole layout spinning as one rigid disc. `t` is
-`glfwGetTime()` (seconds since `glfwInit`), not a hand-rolled clock.
+### Raycasting & HUD Interaction
+- **Ray-Sphere Hit Testing (`Raycaster.kt`)**: The mouse cursor is unprojected through the inverse view-projection matrix of `OverlayCamera.kt` into a 3D world ray (`OverlayCamera.unproject`), testing for intersection against the bounding spheres of orbiting nodes.
+- **HUD Connector Lines & Labels (`HudLabelRenderer.kt`)**: Screen-space text labels with dynamic connector lines tracking the 3D world positions of hovered and selected planetary bodies.
 
-A decorative, non-interactive "sun" quad renders at the origin every frame
--- it isn't a node, has no entry in `OrbitLayout`, and never participates in
-selection or hit-testing.
+### Post-Processing Pipeline (`PostProcessPipeline.kt`)
+The entire 3D scene renders to an offscreen Framebuffer Object (FBO) backed by `GL_RGBA8` color and `GL_DEPTH24_STENCIL8` renderbuffers. The post-processing fragment shader applies:
+- Radial chromatic aberration
+- Breathing vignette
+- Subtle CRT scanlines
+- Telemetry-driven color tinting based on CPU vitals
 
-**Keyboard navigation reworked for rings, not a grid.** Left/right now move
-to the adjacent node *within the same ring* (wrapping around); this stays
-valid at any elapsed time because every node in a ring shares one
-`angularVelocity`, so their relative order along the ring never changes even
-as they all keep moving. Up/down jump to the nearest-`baseAngle` node in the
-next non-empty ring in/out -- compared against each node's fixed
-`baseAngle`, not its live angle, since rings orbit at different speeds and
-comparing live angles would make "straight up" drift away from what it
-looked like a moment ago. This is a documented approximation, not a precise
-hit test; it's good enough for keyboard navigation, which only needs "the
-next thing that way," not an exact spatial match.
+HUD text and 2D overlay labels are drawn directly to the default framebuffer afterwards, ensuring crisp readability.
 
-Live-verified under Hyprland via `quick-overlay`: ran to completion with no
-exceptions across repeated manual runs. Not independently screenshot-verified
-in this environment (no Wayland screenshot tool -- `grim`/`slurp` -- was
-available to capture and inspect a frame); `OrbitLayoutTest` instead covers
-the pure layout math (ring assignment, relative angular velocity, the
-position formula, and the `MAX_NODES` cap) without needing a GL context.
+## 8. Screen Locker (`imp lock`) & PAM Integration
 
-## Explicitly out of scope so far
+`imp` includes a standalone, OpenGL-rendered screen locker designed for Wayland / Hyprland sessions:
+- **Foreign Function & Memory (FFM) API**: Implemented in `PamAuthService.kt` via Java 25 / Kotlin Project Panama, dynamically loading `libpam.so` without external JNI C glue libraries.
+- **`imp-lock` PAM Service**: Configured via `security.pam.services.imp-lock = { };` in `nixos/modules/hyprland.nix`. This delegates authentication to the standard setuid `unix_chkpwd` helper.
+- **Asynchronous Execution**: PAM conversation callbacks run on dedicated virtual threads so the OpenGL render thread never stutters during password verification.
+- **Login Prompt UI (`LoginPromptTexture.kt`)**: Real-time visual feedback with masked password glyphs, failure indicators, and timeout resets.
 
-No font rendering, icon texture loading, or `DesktopEntryScanner`-to-render-layer
-wiring is missing anymore -- those are done (see the module table above).
-What's left is making the shipped native `imp overlay` binary actually launch
-cleanly under real Wayland (the segfault in section 6) and the Hyprland-side
-wiring (window rules, keybind) in `docs/checklist.md`. Ring-guide circles
-(a visible outline per orbit, not just the nodes on it) and letting the sun
-be an interactive "home"/settings node are both deferred -- neither changes
-the launch-an-app core loop, and the sun's role as a pure visual anchor was
-a deliberate scoping choice (see section 7), not an oversight.
+## 9. Kotlin CLI & Deployment Architecture
+
+- **Spring Shell & Kotlin**: The CLI layer was rewritten in Kotlin (`ImpApplication.kt`, `DotfilesCommands.kt`, `Cli.kt`), enabling interactive prompt mode and subcommands (`deploy`, `uninstall`, `wallpaper`, `overlay`, `lock`, `toggle-hud`).
+- **Decommissioned XFCE Reload Layer**: The legacy XFCE settings applicator (`Xfconf.kt`), desktop reloaders (`DesktopServices.kt`), and CLI options (`--no-xfconf`, `--no-reload`) were removed. `imp deploy` now focuses purely on deterministic symlink deployment and 3D wallpaper management.
+- **Rapid JVM Execution**: Tasks `quick-deploy` and `quick-overlay` allow instant iteration during development without waiting for GraalVM AOT compilation.

@@ -1,5 +1,7 @@
 #!/bin/sh
-# volume.sh --- Volume control with in-place updating OSD for XFCE & PipeWire
+# volume.sh --- Volume control with in-place updating OSD, via PipeWire +
+# freedesktop notifications. Bind to a key in the Hyprland config
+# (e.g. bindel = , XF86AudioRaiseVolume, exec, ~/.config/scripts/volume.sh up).
 set -e
 
 action="$1"

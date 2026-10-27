@@ -2,7 +2,6 @@
 // License: GPL-3.0-or-later
 package dev.petrolal.dotfiles.system
 
-import dev.petrolal.dotfiles.core.Theme
 import dev.petrolal.dotfiles.domain.DotfileError.CommandFailed
 import dev.petrolal.dotfiles.domain.DotfileError.IoError
 import dev.petrolal.dotfiles.domain.Result
@@ -79,11 +78,10 @@ object ProcessRunner {
         }
     }
 
-    /** Same as [.spawnDetached], with additional environment
-     * variables merged in on top of Theme.ENV (e.g. MANGOHUD=1).  */
     /**
      * Fire-and-forget launch: start() without waitFor() genuinely detaches the child
-     * process instead of blocking for its lifetime.
+     * process instead of blocking for its lifetime. `extraEnv` is merged in on
+     * top of the inherited environment (e.g. MANGOHUD=1).
      */
     @JvmStatic
     @JvmOverloads
@@ -93,7 +91,6 @@ object ProcessRunner {
                 .redirectOutput(ProcessBuilder.Redirect.DISCARD)
                 .redirectError(ProcessBuilder.Redirect.DISCARD)
                 .redirectInput(ProcessBuilder.Redirect.from(File("/dev/null")))
-            pb.environment().putAll(Theme.ENV)
             pb.environment().putAll(extraEnv)
             pb.start()
         } catch (_: IOException) {

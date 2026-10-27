@@ -1,16 +1,21 @@
-# Additive: enables Hyprland as a session choice alongside the existing
-# XFCE/X11 setup in desktop.nix. LightDM lists both xsessions and
-# wayland-sessions entries (programs.hyprland.enable adds the latter
-# automatically), so XFCE stays selectable as a fallback while Hyprland and
-# the overlay launcher get proven out on this NVIDIA PRIME hybrid-graphics
-# host. See docs/migration_plan.md for the decommission step that removes
-# desktop.nix's X11/XFCE/LightDM block once Hyprland is confirmed stable.
+# Hyprland is now the only session: XFCE/X11/LightDM (desktop.nix) have been
+# removed outright (see docs/migration_plan.md section 0A). greetd + tuigreet
+# replaces LightDM as a minimal, Wayland-native login manager with no GTK
+# theme/greeter dependency.
 { config, lib, pkgs, ... }:
 
 {
   programs.hyprland = {
     enable = true;
-    xwayland.enable = true; # most XFCE-era apps, and the overlay's dev/testing on X11, still need this
+    xwayland.enable = true; # some apps are still X11-only and need Xwayland
+  };
+
+  services.greetd = {
+    enable = true;
+    settings.default_session = {
+      command = "${pkgs.tuigreet}/bin/tuigreet --time --cmd Hyprland";
+      user = "greeter";
+    };
   };
 
   xdg.portal = {
@@ -19,10 +24,16 @@
     config.common.default = [ "hyprland" ];
   };
 
+  # PAM service for imp's own GL-rendered screen locker (see
+  # src/main/kotlin/dev/petrolal/dotfiles/locker/PamAuthService.kt) -- the
+  # empty attrset gets NixOS's standard unix-auth stack, same as every other
+  # locker (swaylock, hyprlock) declares for itself.
+  security.pam.services.imp-lock = { };
+
   security.polkit.enable = true;
 
-  # XFCE ships its own polkit agent; Hyprland doesn't, so run the
-  # Hyprland-maintained one for its sessions specifically.
+  # Hyprland has no polkit agent of its own, so run the Hyprland-maintained
+  # one for its sessions.
   systemd.user.services.hyprpolkitagent = {
     description = "Hyprland polkit authentication agent";
     wantedBy = [ "graphical-session.target" ];
@@ -33,8 +44,7 @@
     };
   };
 
-  # Required for any Wayland compositor; desktop.nix's X11/XFCE stack
-  # doesn't turn this on today.
+  # Required for any Wayland compositor.
   hardware.graphics = {
     enable = true;
     enable32Bit = true;

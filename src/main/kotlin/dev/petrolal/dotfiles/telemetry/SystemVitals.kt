@@ -6,11 +6,9 @@ import java.nio.file.Files
 import java.nio.file.Path
 
 /**
- * Samples overall CPU and RAM utilization from procfs. Extracted from
- * `wallpaper.WallpaperEvents` (which still owns the X11-specific
- * mouse/workspace/audio polling) so this reading has no X11Canvas/display
- * dependency and can be reused by any render surface -- the Wayland/Hyprland
- * overlay included, which has no equivalent telemetry source today.
+ * Samples overall CPU and RAM utilization from procfs, with no display-server
+ * dependency, so it can be reused by any render surface -- the
+ * Wayland/Hyprland overlay included.
  *
  * One instance per consumer: CPU delta requires state (previous idle/total
  * jiffies) between samples, so sharing an instance across unrelated

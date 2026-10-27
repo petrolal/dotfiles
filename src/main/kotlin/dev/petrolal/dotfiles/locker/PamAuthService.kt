@@ -2,7 +2,6 @@
 // License: GPL-3.0-or-later
 package dev.petrolal.dotfiles.locker
 
-import dev.petrolal.dotfiles.wallpaper.X11Canvas
 import java.lang.AutoCloseable
 import java.lang.foreign.*
 import java.lang.invoke.MethodHandle
@@ -18,8 +17,8 @@ import java.util.function.Supplier
 
 /**
  * Minimal libpam binding (pam_start / pam_authenticate / pam_end) using the
- * same raw java.lang.foreign style as [X11Canvas]
- * -- no JNA dependency, consistent with the rest of this codebase.
+ * raw java.lang.foreign API directly -- no JNA dependency, consistent with
+ * the rest of this codebase.
  * 
  * 
  * The PAM "conversation" callback is a native upcall into
@@ -113,11 +112,11 @@ class PamAuthService : AutoCloseable {
     }
 
     /**
-     * Blocking PAM authentication for `user` against service
-     * `"xfce4-screensaver"` (already shipped in /etc/pam.d on this
-     * NixOS desktop, delegating to the setuid unix_chkpwd helper so no
-     * extra privilege plumbing is required on our side). Call only from
-     * the executor thread (see [.authenticateAsync]).
+     * Blocking PAM authentication for `user` against service `"imp-lock"`
+     * (declared via `security.pam.services.imp-lock` in
+     * `nixos/modules/hyprland.nix`, delegating to the setuid unix_chkpwd
+     * helper so no extra privilege plumbing is required on our side). Call
+     * only from the executor thread (see [.authenticateAsync]).
      */
     private fun authenticateBlocking(user: String?, password: CharArray): Status {
         this.pendingPassword = password
@@ -147,7 +146,7 @@ class PamAuthService : AutoCloseable {
                 pamConv.set(ValueLayout.ADDRESS, 0, convStub)
                 pamConv.set(ValueLayout.ADDRESS, 8, MemorySegment.NULL)
 
-                val serviceName = arena.allocateFrom("xfce4-screensaver")
+                val serviceName = arena.allocateFrom("imp-lock")
                 val userName = arena.allocateFrom(user)
                 val pamhOut = arena.allocate(ValueLayout.ADDRESS)
 

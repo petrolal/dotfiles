@@ -1,26 +1,24 @@
-package dev.petrolal.dotfiles.cli;
+package dev.petrolal.dotfiles.cli
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.Test
 
-import org.junit.jupiter.api.Test;
-
-class SpringShellTest {
-
+internal class SpringShellTest {
     @Test
-    void springShellVersionCommand() {
-        int exitCode = ImpApplication.run(new String[]{"version"});
-        assertEquals(0, exitCode);
+    fun springShellVersionCommand() {
+        val exitCode = ImpApplication.run(arrayOf<String>("version"))
+        Assertions.assertEquals(0, exitCode)
     }
 
     @Test
-    void springShellHelpCommand() {
-        int exitCode = ImpApplication.run(new String[]{"help"});
-        assertEquals(0, exitCode);
+    fun springShellHelpCommand() {
+        val exitCode = ImpApplication.run(arrayOf<String>("help"))
+        Assertions.assertEquals(0, exitCode)
     }
 
     @Test
-    void springShellWallpaperDryRun() {
-        int exitCode = ImpApplication.run(new String[]{"wallpaper", "--dry-run", "--quiet"});
-        assertEquals(0, exitCode);
+    fun springShellOverlayDryRun() {
+        val exitCode = ImpApplication.run(arrayOf<String>("overlay", "--dry-run"))
+        Assertions.assertEquals(0, exitCode)
     }
 }

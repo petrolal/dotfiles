@@ -120,19 +120,6 @@ List<String> getDeployFlags() {
 }
 
 def impFile = layout.projectDirectory.file('bin/imp').asFile
-def themeName = resolveThemeName()
-
-/** Reads Theme.NAME straight out of the Java source instead of keeping a
- * second hardcoded copy here that can silently drift from it. */
-String resolveThemeName() {
-    def themeSource = layout.projectDirectory
-            .file('src/main/kotlin/dev/petrolal/dotfiles/core/Theme.kt').asFile
-    def matcher = themeSource.text =~ /NAME(?:\s*:\s*\w+)?\s*=\s*"([^"]+)"/
-    if (!matcher.find()) {
-        throw new GradleException("Could not find Theme.NAME in ${themeSource}")
-    }
-    return matcher.group(1)
-}
 
 // ---------------------------------------------------------------------------
 // Native Image Configuration
@@ -205,7 +192,7 @@ tasks.named('check') {
     doLast {
         println('==> Running dry-run deploy check...')
         exec {
-            commandLine(impFile.absolutePath, '--dry-run', '--no-reload')
+            commandLine(impFile.absolutePath, '--dry-run')
         }
     }
 }
@@ -223,7 +210,7 @@ tasks.register('install-check', Exec) {
 
 tasks.register('deploy') {
     group = 'Deploy'
-    description = 'Link dotfiles and apply XFCE theme via the native imp.'
+    description = 'Link dotfiles and (re)start the wallpaper daemon via the native imp.'
     dependsOn('nativeCompile')
     doLast {
         def cmd = [impFile.absolutePath] + getDeployFlags()
@@ -252,8 +239,8 @@ tasks.register('quick-deploy', JavaExec) {
     mainClass.set('dev.petrolal.dotfiles.cli.Cli')
     environment('DOTFILES_DIR', projectDir.absolutePath)
     args = getDeployFlags()
-    // This runs for its side effects (symlinks, xfconf, the wallpaper
-    // daemon), not for any declared output Gradle can track -- without this,
+    // This runs for its side effects (symlinks, the wallpaper daemon), not
+    // for any declared output Gradle can track -- without this,
     // Gradle can mark it UP-TO-DATE and skip it entirely on a re-run with
     // unchanged classpath/args, same bug fixed below for quick-overlay.
     outputs.upToDateWhen { false }
@@ -289,68 +276,6 @@ tasks.register('uninstall') {
     }
 }
 
-// ---------------------------------------------------------------------------
-// Desktop Reload Tasks
-// ---------------------------------------------------------------------------
-
-tasks.register('reload') {
-    group = 'Desktop'
-    description = 'Reload all restartable desktop components (panel, xfwm4, xsettingsd, GTK, thunar, notifyd).'
-    doLast {
-        println('==> Reloading all restartable desktop components...')
-        exec {
-            ignoreExitValue = true
-            commandLine(
-                'sh', '-c',
-                """
-                xfce4-panel -r 2>/dev/null || true
-                xfwm4 --replace &
-                xfsettingsd --replace &
-                pkill -f xfce4-notifyd 2>/dev/null || true
-                thunar -q 2>/dev/null || true
-                xfconf-query -c xsettings -p /Net/ThemeName -s "Default" 2>/dev/null || true
-                xfconf-query -c xsettings -p /Net/ThemeName -s "${themeName}" 2>/dev/null || true
-                """
-            )
-        }
-    }
-}
-
-tasks.register('reload-panel') {
-    group = 'Desktop'
-    description = 'Restart only xfce4-panel.'
-    doLast {
-        println('==> Restarting XFCE panel...')
-        exec {
-            ignoreExitValue = true
-            commandLine('xfce4-panel', '-r')
-        }
-    }
-}
-
-tasks.register('reload-wm') {
-    group = 'Desktop'
-    description = 'Restart only xfwm4 window manager.'
-    doLast {
-        println('==> Restarting XFWM4 window manager...')
-        exec {
-            ignoreExitValue = true
-            commandLine('sh', '-c', 'xfwm4 --replace &')
-        }
-    }
-}
-
-tasks.register('reload-theme') {
-    group = 'Desktop'
-    description = 'Trigger instant GTK CSS reload across all windows.'
-    doLast {
-        println('==> Forcing GTK theme stylesheet reload...')
-        exec {
-            ignoreExitValue = true
-            commandLine('sh', '-c', "xfconf-query -c xsettings -p /Net/ThemeName -s Default && xfconf-query -c xsettings -p /Net/ThemeName -s ${themeName}")
-        }
-    }
-}
 // ---------------------------------------------------------------------------
 // NixOS Tasks
 // ---------------------------------------------------------------------------

@@ -1,42 +1,41 @@
-package dev.petrolal.dotfiles.system;
+package dev.petrolal.dotfiles.system
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import dev.petrolal.dotfiles.domain.Result
+import dev.petrolal.dotfiles.system.ProcessRunner.captureOutput
+import dev.petrolal.dotfiles.system.ProcessRunner.run
+import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.Test
 
-import java.util.List;
-import org.junit.jupiter.api.Test;
-
-class ProcessRunnerTest {
-
+internal class ProcessRunnerTest {
     @Test
-    void captureOutputReturnsCleanTextOnSuccess() {
-        var result = ProcessRunner.captureOutput(List.of("echo", "hello world"));
-        assertTrue(result.isOk());
-        assertEquals("hello world\n", result.orElse(""));
+    fun captureOutputReturnsCleanTextOnSuccess() {
+        val result = captureOutput(mutableListOf("echo", "hello world"))
+        Assertions.assertTrue(result.isOk())
+        Assertions.assertEquals("hello world\n", result.orElse(""))
     }
 
     @Test
-    void captureOutputReturnsErrorOnNonZeroExit() {
-        var result = ProcessRunner.captureOutput(List.of("sh", "-c", "exit 42"));
-        assertTrue(result.isErr());
+    fun captureOutputReturnsErrorOnNonZeroExit() {
+        val result = run(mutableListOf("sh", "-c", "exit 42"))
+        Assertions.assertTrue(result.isErr())
     }
 
     @Test
-    void runReturnsOkOnSuccess() {
-        var result = ProcessRunner.run(List.of("true"));
-        assertTrue(result.isOk());
-        assertEquals(0, result.orElse(-1));
+    fun runReturnsOkOnSuccess() {
+        val result = run(mutableListOf("true"))
+        Assertions.assertTrue(result.isOk())
+        Assertions.assertEquals(0, result.orElse(-1))
     }
 
     @Test
-    void runReturnsErrOnNonZeroExit() {
-        var result = ProcessRunner.run(List.of("false"));
-        assertTrue(result.isErr());
+    fun runReturnsErrOnNonZeroExit() {
+        val result = run(mutableListOf("false"))
+        Assertions.assertTrue(result.isErr())
     }
 
     @Test
-    void runReturnsErrOnNonExistentBinary() {
-        var result = ProcessRunner.run(List.of("non_existent_binary_xyz_12345"));
-        assertTrue(result.isErr());
+    fun runReturnsErrOnNonExistentBinary() {
+        val result= run(mutableListOf("non_existent_binary_xyz_12345"))
+        Assertions.assertTrue(result.isErr())
     }
 }

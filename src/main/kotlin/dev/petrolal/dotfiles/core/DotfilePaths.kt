@@ -37,12 +37,12 @@ object DotfilePaths {
             }
         }
         val exePath = ProcessHandle.current().info().command()
-        if (exePath.isPresent()) {
+        if (exePath.isPresent) {
             val exe = Paths.get(exePath.get())
             if (Files.exists(exe)) {
                 try {
                     val real = exe.toRealPath()
-                    val dir = real.getParent()
+                    val dir = real.parent
                     if (dir != null) {
                         return normalizeDirParent(dir)
                     }
