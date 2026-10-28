@@ -44,14 +44,21 @@ object DotfilePaths {
                     val real = exe.toRealPath()
                     val dir = real.parent
                     if (dir != null) {
-                        return normalizeDirParent(dir)
+                        val candidate = normalizeDirParent(dir)
+                        if (Files.exists(candidate.resolve("config")) || Files.exists(candidate.resolve("build.gradle"))) {
+                            return candidate
+                        }
                     }
                 } catch (ignored: IOException) {
                     // fall through to cwd
                 }
             }
         }
-        return Paths.get("").toAbsolutePath().normalize()
+        val cwd = Paths.get("").toAbsolutePath().normalize()
+        if (Files.exists(cwd.resolve("config")) || Files.exists(cwd.resolve("build.gradle"))) {
+            return cwd
+        }
+        return cwd
     }
 
     @JvmStatic

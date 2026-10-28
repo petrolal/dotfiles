@@ -61,23 +61,6 @@ dependencies {
     testImplementation(platform(libs.junit.bom))
     testImplementation(libs.junit.jupiter)
     testRuntimeOnly(libs.junit.platform.launcher)
-
-    implementation(platform(libs.lwjgl.bom))
-    implementation(libs.lwjgl.core)
-    implementation(libs.lwjgl.glfw)
-    implementation(libs.lwjgl.opengl)
-    implementation(libs.joml)
-
-    // Every LWJGL module's own JNI glue (liblwjgl*.so) is LWJGL's compiled
-    // code, not something Mesa/NixOS provides -- NativeLibraryPaths only
-    // routes the *driver* libs (libGL, libglfw) LWJGL's glfw/opengl natives
-    // dlopen at runtime to /run/opengl-driver/lib. All four modules still
-    // need their own bundled natives-linux jar for the JNI bridge itself.
-    runtimeOnly("org.lwjgl:lwjgl::natives-linux")
-    runtimeOnly("org.lwjgl:lwjgl-glfw::natives-linux")
-    runtimeOnly("org.lwjgl:lwjgl-opengl::natives-linux")
-    implementation(libs.lwjgl.stb)
-    runtimeOnly("org.lwjgl:lwjgl-stb::natives-linux")
     testImplementation 'org.jetbrains.kotlin:kotlin-test'
 
     implementation 'org.springframework.shell:spring-shell-starter:3.4.3'
@@ -246,23 +229,7 @@ tasks.register('quick-deploy', JavaExec) {
     outputs.upToDateWhen { false }
 }
 
-tasks.register('quick-overlay', JavaExec) {
-    group = 'Desktop'
-    description = 'Run the overlay launcher directly on the JVM, without a native-image build.'
-    dependsOn('classes')
-    classpath = sourceSets.main.runtimeClasspath
-    mainClass.set('dev.petrolal.dotfiles.overlay.OverlayWindow')
-    // GLFW's bundled native dlopen()s libwayland-client/libxkbcommon (and
-    // libX11 under X11) by soname at runtime; org.lwjgl.librarypath (see
-    // NativeLibraryPaths) only covers LWJGL's own System.load() calls, not
-    // this, so it has to be LD_LIBRARY_PATH. /run/current-system/sw/lib is
-    // where nixos/modules/hyprland.nix's systemPackages put them.
-    environment('LD_LIBRARY_PATH', '/run/current-system/sw/lib:/run/opengl-driver/lib')
-    // Launching a GUI app is a side effect, not a declared output -- without
-    // this, Gradle can (and did) mark this UP-TO-DATE on an unchanged
-    // classpath and skip actually running it, with no error and no output.
-    outputs.upToDateWhen { false }
-}
+
 
 tasks.register('uninstall') {
     group = 'Deploy'

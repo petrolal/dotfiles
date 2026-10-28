@@ -8,6 +8,8 @@ let
 
   buildTools = with pkgs; [
     gnumake
+    cmake
+    pkg-config
     git
     graalvmPackages.graalvm-ce
   ] ++ dynamicLibs;

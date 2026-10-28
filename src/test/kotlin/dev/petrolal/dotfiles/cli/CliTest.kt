@@ -22,7 +22,7 @@ internal class CliTest {
     }
 
     @Test
-    fun overlayDryRunReturnsZeroWithoutOpeningWindow() {
-        Assertions.assertEquals(0, Cli.run(arrayOf<String>("overlay", "--dry-run", "-q")))
+    fun deployDryRunReturnsZero() {
+        Assertions.assertEquals(0, Cli.run(arrayOf<String>("deploy", "--dry-run", "-q")))
     }
 }

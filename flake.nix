@@ -25,16 +25,38 @@
       # needs network for the test-only Maven Central deps -- that's what
       # this devShell is for, the same toolchain bootstrap.sh relies on,
       # just reachable via `nix develop` too.
-      devShells.${system}.default = pkgs.mkShell {
-        packages = [
-          pkgs.gradle
-          pkgs.graalvmPackages.graalvm-ce
-          pkgs.git
-        ];
+      devShells.${system} = {
+        default = pkgs.mkShell {
+          packages = [
+            pkgs.gradle
+            pkgs.graalvmPackages.graalvm-ce
+            pkgs.git
+          ];
 
-        shellHook = ''
-          echo "[dotfiles-imp dev shell] ./gradlew, native-image, gradle available"
-        '';
+          shellHook = ''
+            echo "[dotfiles-imp dev shell] ./gradlew, native-image, gradle available"
+          '';
+        };
+
+        astroland = pkgs.mkShell {
+          inputsFrom = [ pkgs.hyprland ];
+          nativeBuildInputs = [
+            pkgs.cmake
+            pkgs.pkg-config
+            pkgs.gcc
+          ];
+          buildInputs = [
+            pkgs.hyprland.dev
+            pkgs.libdrm
+            pkgs.pixman
+            pkgs.pango
+            pkgs.cairo
+          ];
+
+          shellHook = ''
+            echo "[astroland dev shell] cmake, hyprland headers available to build astroland plugin"
+          '';
+        };
       };
 
       formatter.${system} = pkgs.nixfmt;

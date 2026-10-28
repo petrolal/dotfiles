@@ -31,9 +31,7 @@ object Linker {
     /** Explicit (source -> target) pairs for paths that don't fit the generic
      * root-mirrored layout: renames, or a source linked to more than one target.  */
     @JvmField
-    val OVERRIDES: List<Mapping> = listOf(
-        Mapping("config/gtk-2.0/gtkrc", ".gtkrc-2.0")
-    )
+    val OVERRIDES: List<Mapping> = emptyList()
 
     @JvmStatic
     fun isExcluded(relpath: String): Boolean {

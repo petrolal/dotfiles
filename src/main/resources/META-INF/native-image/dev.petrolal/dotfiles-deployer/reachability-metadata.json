@@ -15,6 +15,18 @@
     {
       "glob": "linux/x64/org/lwjgl/stb/liblwjgl_stb.so",
       "reason": "lwjgl-stb's JNI bridge library -- see the liblwjgl.so entry above for why this is needed."
+    },
+    {
+      "glob": "*.png",
+      "reason": "Astroland sprites (ship.png, dvd.png, char.png, bullet.png, bg.png, moon_*.png, etc.) loaded via TextureLoader."
+    },
+    {
+      "glob": "*.gif",
+      "reason": "Astroland animated GIFs (vax.gif, explode.gif) loaded via TextureLoader."
+    },
+    {
+      "glob": "*.wav",
+      "reason": "Astroland sound effects (shoot_*.wav, explode_*.wav, hold_*.wav, click.wav) loaded via SoundPlayer."
     }
   ],
   "reflection": [

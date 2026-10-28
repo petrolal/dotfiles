@@ -97,6 +97,15 @@
     hyprlock
     hypridle
 
+    # Astroland ecosystem
+    quickshell
+    sox
+    ffmpeg
+    tofi
+    rmpc
+    mpd
+    fyi
+
     # LWJGL's bundled GLFW native dlopen()s these by soname at runtime (see
     # overlay/NativeLibraryPaths.java and docs/migration_plan.md section 5)
     # -- they're pulled in transitively by Hyprland/Wayland already, but

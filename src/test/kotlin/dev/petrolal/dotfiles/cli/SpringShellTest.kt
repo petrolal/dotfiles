@@ -17,8 +17,8 @@ internal class SpringShellTest {
     }
 
     @Test
-    fun springShellOverlayDryRun() {
-        val exitCode = ImpApplication.run(arrayOf<String>("overlay", "--dry-run"))
+    fun springShellDeployDryRun() {
+        val exitCode = ImpApplication.run(arrayOf<String>("deploy", "--dry-run"))
         Assertions.assertEquals(0, exitCode)
     }
 }

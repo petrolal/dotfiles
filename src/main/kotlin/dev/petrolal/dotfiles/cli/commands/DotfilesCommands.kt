@@ -34,14 +34,7 @@ class DotfilesCommands {
         return if (ok) "Uninstall completed successfully." else "Uninstall failed."
     }
 
-    @Command(command = ["overlay"], description = "Start the 3D app-launcher overlay")
-    fun overlay(
-        @Option(longNames = ["dry-run"], shortNames = ['n'], description = "Simulate actions")
-        dryRun: Boolean = false
-    ): String {
-        val ok = Orchestrator.runOverlay(dryRun)
-        return if (ok) "Overlay exited cleanly." else "Overlay encountered an error."
-    }
+
 
     @Command(command = ["version"], alias = ["-v"], description = "Display version information")
     fun version(): String {

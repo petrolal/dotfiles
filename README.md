@@ -1,14 +1,32 @@
 # Dotfiles
 
-NixOS system configuration and Wayland desktop powered by [Hyprland](https://hyprland.org/), featuring custom 3D OpenGL desktop tools written in Kotlin: an Astroland wireframe-orrery overlay launcher, an OpenGL wallpaper engine, and an integrated screen locker with PAM authentication.
+NixOS system configuration and Wayland desktop powered by [Hyprland](https://hyprland.org/),
+featuring a Kotlin port of [astroland_dots](https://codeberg.org/zacoons/astroland_dots) — a
+ship/moon arcade scene where real desktop windows become physics bodies — plus a unified Kotlin
+CLI/deployer and an integrated screen locker.
 
 ## Features
 
-- **Hyprland Desktop**: Minimal, modern Wayland environment managed via Lua (`config/hypr/hyprland.lua`), with [greetd](https://man.sr.ht/~kennylevinsen/greetd/) and [tuigreet](https://github.com/apognu/tuigreet) as the login manager and [AGS](https://github.com/Aylur/ags) as the status bar/shell.
-- **Astroland 3D Overlay Launcher** (`imp overlay`): Real-time interactive celestial orrery launcher rendered with raw LWJGL 3, GLFW, and JOML. Apps are represented as Platonic solid polyhedra (tetrahedron, octahedron, icosahedron) with translucent facet bodies and glowing wireframe edges orbiting a central CPU-reactive star, complete with ray-sphere mouse targeting, tracking HUD labels, and an FBO post-processing pipeline (chromatic aberration, vignette, scanlines).
-- **3D Wallpaper Engine** (`imp wallpaper`): Multi-monitor OpenGL wallpaper daemon with offscreen rendering, shader pipelines, and optional MangoHud telemetry overlay toggled via `imp toggle-hud`.
-- **Screen Locker** (`imp lock`): OpenGL-rendered screen locker using Java 25 Foreign Function & Memory API (Project Panama) for asynchronous PAM authentication against `imp-lock`.
-- **Unified Kotlin CLI & Deployer** (`imp`): Built with Kotlin, Spring Shell, and GraalVM Native Image for instant startup. Includes an interactive shell and deterministic dotfiles symlink management.
+- **Hyprland Desktop**: Minimal, modern Wayland environment managed via Lua
+  (`config/hypr/hyprland.lua`), with [greetd](https://man.sr.ht/~kennylevinsen/greetd/)/
+  [tuigreet](https://github.com/apognu/tuigreet) as the login manager.
+- **Astroland, the real Hyprland plugin** (`astroland/plugin/`, loaded via `hl.plugin.load(...)`):
+  a genuine C++ Hyprland plugin whose actual game logic lives in Kotlin
+  (`astroland/engine/`, compiled to a native `.so` and linked in). Flying your ship into a real
+  window and shooting it is a real `general.layout = "astrolayout"` tiled algorithm, not a
+  simulation. See [docs/astroland_port_handoff.md](docs/astroland_port_handoff.md) for the full
+  architecture, what's faithfully ported vs. simplified, and **known risks before you load it**.
+- **Astroland overlay windows** (`astroland/overlay/`, standalone JVM/LWJGL, no plugin required):
+  - `imp overlay` — the same ship/moon game as a standalone window (no real-window integration).
+  - `imp screensaver` — idle screensaver (bouncing DVD logo + hold music), triggered by `hypridle`.
+  - `imp infooverlay` — battery %/clock HUD, autostarted.
+  - `imp notifsoverlay` — a **real** `org.freedesktop.Notifications` D-Bus daemon + popup UI,
+    autostarted.
+- **Screen Locker**: PAM authentication via Java's Foreign Function & Memory API
+  (`src/main/kotlin/dev/petrolal/dotfiles/locker/`) — currently wired to no UI of its own; actual
+  session locking is `hyprlock` (see the port handoff doc for why).
+- **Unified Kotlin CLI & Deployer** (`imp`): Kotlin + Spring Shell + GraalVM Native Image.
+  Deterministic dotfiles symlink management plus all of the above as subcommands.
 
 ## From-Scratch Install
 
@@ -25,21 +43,20 @@ The bootstrap script only needs what base NixOS provides (`sh`, `git`, `sudo`, `
 1. Link the flake into `/etc/nixos`
 2. Rebuild NixOS (installs Hyprland, greetd, audio, GPU drivers, tools)
 3. Build the native `imp` binary (Gradle + GraalVM native-image)
-4. Deploy dotfiles and start the wallpaper daemon
+4. Deploy dotfiles
 
-Log in to Hyprland for all changes to take effect.
+Log in to Hyprland for all changes to take effect. The real Hyprland plugin (`astroland/plugin/`)
+is **not** built by `bootstrap.sh` -- it needs its own build step and real-headers toolchain, see
+the port handoff doc.
 
 ## Day-to-Day Usage
 
 ### Gradle Tasks
 
-Use Gradle (`./gradlew`) for building and maintenance:
-
 | Command | What it does |
 |---|---|
-| `./gradlew deploy` | Re-deploy dotfiles symlinks and (re)start the 3D wallpaper daemon |
+| `./gradlew deploy` | Re-deploy dotfiles symlinks (rebuilds the native image first) |
 | `./gradlew quick-deploy` | Fast JVM execution of deploy without rebuilding the native image |
-| `./gradlew quick-overlay` | Run the Astroland 3D overlay launcher directly on the JVM |
 | `./gradlew test` | Run all Kotlin unit tests |
 | `./gradlew nativeCompile` | Compile `imp` to a standalone GraalVM native executable (`bin/imp`) |
 | `./gradlew nix-switch` | Rebuild NixOS flake configuration (`sudo nixos-rebuild switch --flake ./nixos`) |
@@ -50,97 +67,64 @@ Use Gradle (`./gradlew`) for building and maintenance:
 
 ### Imp CLI (`bin/imp`)
 
-`imp` can be run directly from the command line or as an interactive Spring Shell when invoked without subcommands:
-
 ```bash
-imp deploy [-n/--dry-run] [-q/--quiet] [--links-only] [--no-wallpaper]
-imp overlay [-n/--dry-run]
-imp wallpaper [-n/--dry-run] [-q/--quiet] [--fps <maxFps>]
-imp lock [-n/--dry-run] [-t/--timeout <seconds>]
-imp toggle-hud [-q/--quiet]
+imp deploy [-n/--dry-run] [-q/--quiet]
 imp uninstall [-n/--dry-run] [-q/--quiet]
 imp version
 ```
 
-### Keybindings (Hyprland)
+Note: `bin/imp` is a GraalVM native-image build that can be rebuilt with `./gradlew nativeCompile`.
+For quick CLI deployment during development, `./gradlew quick-deploy` runs directly on the JVM.
 
-Configured in [config/hypr/hyprland.lua](file:///home/petrolal/dotfiles/config/hypr/hyprland.lua):
+### Keybindings
 
-- `SUPER + CTRL + O`: Open Astroland 3D overlay launcher (`imp overlay`)
-- `SUPER + L`: Lock screen (`imp lock`)
-- `SHIFT + SUPER + P`: Toggle MangoHud on wallpaper daemon (`imp toggle-hud`)
-- `SUPER + RETURN`: Terminal (`kitty`)
-- `SUPER + E`: File manager (`thunar`)
-- `SUPER + B`: Web browser (`google-chrome-stable`)
-- `SUPER + PRINT` / `SUPER + ALT + S`: Screenshot, region select (`grim`+`slurp`)
+See [docs/keybindings.md](docs/keybindings.md) for the full, current list (generated from
+`config/hypr/hyprland.lua`'s `hl.bind(...)` calls) -- it covers windows, workspaces, screenshots,
+multimedia keys, and controls while the astroland plugin is loaded.
 
 ### Shell Integration
 
-Default login shell is [fish](https://fishshell.com/) (`nixos/modules/users.nix`), configured in `config/fish/`. Handy abbreviations include:
-- `dfdeploy`: `./gradlew deploy`
-- `dfdry`: `./gradlew dry-run`
-- `dfuninstall`: `./gradlew uninstall`
-- `dfswitch`: `sudo nixos-rebuild switch --flake ./nixos`
-- `dfupdate`: update flake inputs and rebuild
-- `ff`: fastfetch
-- `dotfiles`: `cd ~/dotfiles`
+Default login shell is [fish](https://fishshell.com/) (`nixos/modules/users.nix`), configured in `config/fish/`.
 
 ## Project Structure
 
 ```
 dotfiles/
-├── bootstrap.sh                        # First-time setup script
-├── build.gradle                        # Gradle build & orchestration tasks
-├── settings.gradle                     # Gradle settings
-├── gradlew                             # Gradle wrapper script
+├── bootstrap.sh                 # First-time setup script
+├── build.gradle / settings.gradle / gradlew
 │
-├── nixos/                              # NixOS system configuration
-│   ├── flake.nix                       # Flake entry point
-│   ├── configuration.nix               # Module imports
-│   └── modules/
-│       ├── hardware.nix                # Boot loader, EFI
-│       ├── networking.nix              # Hostname, NetworkManager, SSH
-│       ├── desktop.nix                 # Audio (PipeWire), locale, console, blueman
-│       ├── hyprland.nix                # Hyprland Wayland session, greetd, portals, polkit, imp-lock PAM
-│       ├── nvidia.nix                  # GPU (PRIME offload)
-│       ├── fonts.nix                   # Nerd Fonts (JetBrainsMono, FiraCode, Hack, Meslo)
-│       ├── users.nix                   # User accounts, default shell (fish)
-│       ├── packages.nix                # System packages
-│       └── development.nix             # direnv, dev-init, devshell
+├── astroland/                   # Official Astroland (https://codeberg.org/zacoons/astroland_dots)
+│   ├── assets/                    Sprites, audio, animated GIFs
+│   └── plugin/                    Hyprland C++ plugin (`libastroland.so`)
 │
-├── src/main/kotlin/dev/petrolal/dotfiles/ # Kotlin deployer & GL tools (GraalVM native binary)
-│   ├── cli/                            # CLI entrypoint & Spring Shell commands (Cli, DotfilesCommands)
-│   ├── core/                           # Orchestration & path resolution (Orchestrator, DotfilePaths)
-│   ├── domain/                         # Functional domain types (Result, DotfileError)
-│   ├── linker/                         # Deterministic symlink engine (Linker)
-│   ├── locker/                         # Screen locker & PAM authentication (ScreenLocker, PamAuthService)
-│   ├── overlay/                        # Astroland 3D orrery launcher (CelestialSystem, PlanetRenderer, etc.)
-│   ├── system/                         # Detached subprocess execution (ProcessRunner)
-│   ├── telemetry/                      # Real-time /proc metrics polling (SystemVitals)
-│   └── wallpaper/                      # 3D OpenGL wallpaper engine (Wallpaper, X11Canvas, ShaderPipeline)
+├── nixos/                       # NixOS system configuration (flake.nix, modules/)
 │
-├── src/test/kotlin/dev/petrolal/dotfiles/ # Unit tests in Kotlin
+├── src/main/kotlin/dev/petrolal/dotfiles/  # Deployer CLI (GraalVM native binary)
+│   ├── cli/                       CLI entrypoint & Spring Shell commands
+│   ├── core/                      Orchestration & path resolution (Orchestrator, DotfilePaths)
+│   ├── domain/                    Functional domain types (Result, DotfileError)
+│   ├── linker/                    Deterministic symlink engine (Linker)
+│   ├── locker/                    PAM authentication (ScreenLocker, PamAuthService)
+│   ├── system/                    Detached subprocess execution (ProcessRunner)
+│   └── telemetry/                 Real-time /proc metrics polling (SystemVitals)
 │
-├── config/                             # Dotfiles (symlinked to ~/.config/)
-│   ├── hypr/                           # Hyprland Lua configuration (hyprland.lua)
-│   ├── fish/                           # Shell prompt, abbreviations, theme
-│   ├── fastfetch/                      # System information display
-│   ├── gtk-3.0/                        # GTK 3 settings
-│   └── gtk-4.0/                        # GTK 4 settings
+├── src/test/kotlin/...           # Unit tests
+│
+├── config/                       # Dotfiles (symlinked to ~/.config/)
+│   ├── hypr/                       hyprland.lua, hypridle.conf, vhs.frag
+│   ├── quickshell/                 Astroland Quickshell overlays (HUD, lockscreen, screensaver)
+│   ├── fish/, fastfetch/, scripts/
 │
 └── docs/
-    ├── migration_plan.md               # Hyprland session migration & overlay architecture
-    ├── checklist.md                    # Migration progress & verification checklist
-    ├── biopunk_plan.md                 # Design notes & roadmap history
-    └── dev-environments.md             # Per-project dev environment guide
+    ├── astroland_port_handoff.md  # Astroland integration & build guide
+    └── keybindings.md             # Keybindings & autostart reference
 ```
 
 ## Documentation
 
-- [docs/migration_plan.md](docs/migration_plan.md): Architectural decisions, native-image considerations, GLFW Wayland caveats, and session migration details.
-- [docs/checklist.md](docs/checklist.md): Step-by-step verification checklist and component status.
-- [docs/biopunk_plan.md](docs/biopunk_plan.md): Design exploration, audit, and rationale behind the overlay's evolutionary pivots.
-- [docs/dev-environments.md](docs/dev-environments.md): Per-project development environments via Nix and direnv.
+- [docs/astroland_port_handoff.md](docs/astroland_port_handoff.md): Guide to Astroland plugin
+  building, Quickshell components, and layout controls.
+- [docs/keybindings.md](docs/keybindings.md): Complete list of Hyprland keybinds and shortcuts.
 
 ## License
 

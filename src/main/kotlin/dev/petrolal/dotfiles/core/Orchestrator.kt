@@ -4,7 +4,7 @@ package dev.petrolal.dotfiles.core
 
 import dev.petrolal.dotfiles.linker.Linker
 import dev.petrolal.dotfiles.linker.Linker.UnlinkOutcome
-import dev.petrolal.dotfiles.overlay.OverlayWindow
+
 
 /**
  * Composes the focused, single-purpose collaborators below into the CLI's
@@ -72,21 +72,7 @@ object Orchestrator {
         return UninstallResult(failures == 0, failures, removedCount)
     }
 
-    /** Starts the 3D app-launcher overlay in-process (blocks the calling
-     * thread until the window closes -- see [OverlayWindow]).  */
-    fun runOverlay(dryRun: Boolean): Boolean {
-        if (dryRun) {
-            println("[DRY-RUN] Would start the 3D app-launcher overlay.")
-            return true
-        }
-        try {
-            OverlayWindow().start()
-            return true
-        } catch (ex: Throwable) {
-            System.err.println("Error on overlay: " + ex.message)
-            return false
-        }
-    }
+
 
     @JvmRecord
     data class DeployResult(val ok: Boolean, val failures: Int, val successes: Int)

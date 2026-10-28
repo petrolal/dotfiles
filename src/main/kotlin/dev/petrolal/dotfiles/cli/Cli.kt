@@ -15,7 +15,6 @@ object Cli {
         println("Commands:")
         println("  deploy            perform full deployment (symlink dotfiles) [default]")
         println("  uninstall         remove all deployed dotfile symlinks safely")
-        println("  overlay           start the 3D app-launcher overlay")
         println("  shell             start interactive Spring Shell REPL\n")
         println("Options:")
         println("  -u, --uninstall   remove all deployed dotfile symlinks safely")
@@ -59,7 +58,6 @@ object Cli {
                 "-q", "--quiet" -> verbose = false
                 "-u", "--uninstall", "uninstall" -> action = Action.UNINSTALL
                 "deploy" -> action = Action.DEPLOY
-                "overlay" -> action = Action.OVERLAY
                 "shell" -> action = Action.SHELL
                 else -> {
                     System.err.println(PROGRAM_NAME + ": unrecognized option '" + arg + "'")
@@ -72,13 +70,12 @@ object Cli {
         val ok = when (action) {
             Action.UNINSTALL -> Orchestrator.uninstall(dryRun, verbose).ok
             Action.DEPLOY -> Orchestrator.deploy(dryRun, verbose).ok
-            Action.OVERLAY -> Orchestrator.runOverlay(dryRun)
             Action.SHELL -> ImpApplication.run(emptyArray()) == 0
         }
         return if (ok) 0 else 1
     }
 
     private enum class Action {
-        DEPLOY, UNINSTALL, OVERLAY, SHELL
+        DEPLOY, UNINSTALL, SHELL
     }
 }
