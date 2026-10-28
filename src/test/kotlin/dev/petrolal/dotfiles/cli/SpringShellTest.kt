@@ -21,4 +21,22 @@ internal class SpringShellTest {
         val exitCode = ImpApplication.run(arrayOf<String>("deploy", "--dry-run"))
         Assertions.assertEquals(0, exitCode)
     }
+
+    @Test
+    fun springShellDesktopCommandsRegistration() {
+        val exitCode = ImpApplication.run(arrayOf<String>("help", "browser"))
+        Assertions.assertEquals(0, exitCode)
+    }
+
+    @Test
+    fun springShellVolumeHelp() {
+        val exitCode = ImpApplication.run(arrayOf<String>("help", "volume"))
+        Assertions.assertEquals(0, exitCode)
+    }
+
+    @Test
+    fun springShellVhsHelp() {
+        val exitCode = ImpApplication.run(arrayOf<String>("help", "vhs"))
+        Assertions.assertEquals(0, exitCode)
+    }
 }

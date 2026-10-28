@@ -30,18 +30,18 @@ class Moon : public PhysicsBody, public Hittable {
 		m_decel = 0;
 	}
 	~Moon() {
-		g_moonCount -= 1;
+		g_moonCount = std::max(0.0, g_moonCount - 1);
 	}
 
 	void onInitialized() override {
-		instantiate<Sprite>(assetPath(std::format("moon_{}.png", rand() % 3)), Transform{{0, 0}, {0.5, 0.5}});
-		instantiate<AnimatedSprite>(assetPath("vax.gif"), true, Transform{{0, 0}, {0.3, 0.3}});
+		if (g_loonMoons && g_loonMoons->value()) {
+			instantiate<AnimatedSprite>(assetPath("vax.gif"), true, Transform{{0, 0}, {0.3, 0.3}});
+		} else {
+			instantiate<Sprite>(assetPath(std::format("moon_{}.png", rand() % 3)), Transform{{0, 0}, {0.5, 0.5}});
+		}
 	}
 
 	void tick(double dt) override {
-		m_children[0]->m_isVisible = !g_loonMoons->value();
-		m_children[1]->m_isVisible = g_loonMoons->value();
-
 		const auto collisions = moveAndCollide(dt);
 		for (const auto& c : collisions) {
 			if (dc<Window*>(c.body)) {

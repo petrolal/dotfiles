@@ -46,6 +46,12 @@ hl.config({
 -- to live) because the ASTROLAND block below also needs it, and that block
 -- runs before the keybindings section.
 local mainMod = "SUPER"
+local imp_bin = (function()
+    local p = (os.getenv("HOME") or "") .. "/dotfiles/bin/imp"
+    local f = io.open(p, "r")
+    if f then f:close(); return p end
+    return "imp"
+end)()
 
 ------------------
 ---- MONITORS ----
@@ -72,7 +78,7 @@ hl.on("hyprland.start", function ()
   -- robot notification popups, lockscreen, and screensaver.
   hl.exec_cmd("qs")
   -- Background notification logger for Tofi notification center
-  hl.exec_cmd(os.getenv("HOME") .. "/.config/scripts/notif-logger.sh")
+  hl.exec_cmd(imp_bin .. " notif-logger")
 end)
 
 -------------------
@@ -151,7 +157,7 @@ hl.config({
 
 -- Applications
 hl.bind(mainMod .. " + RETURN", hl.dsp.exec_cmd("kitty"), { description = "Open the terminal" })
-hl.bind(mainMod .. " + B", hl.dsp.exec_cmd(os.getenv("HOME") .. "/.config/scripts/launch-browser.sh"), { description = "Open the browser" })
+hl.bind(mainMod .. " + B", hl.dsp.exec_cmd(imp_bin .. " browser"), { description = "Open the browser" })
 hl.bind(mainMod .. " + E", hl.dsp.exec_cmd("thunar"), { description = "Open the filemanager" })
 hl.bind(mainMod .. " + SPACE", hl.dsp.exec_cmd("tofi-drun --drun-launch=true"), { description = "Open application launcher (menu)" })
 hl.bind(mainMod .. " + D", hl.dsp.exec_cmd("tofi-drun --drun-launch=true"), { description = "Open application launcher (menu)" })
@@ -203,11 +209,11 @@ hl.bind(mainMod .. " + ALT + F", hl.dsp.exec_cmd("sh -c 'mkdir -p ~/Pictures && 
 hl.bind(mainMod .. " + ALT + S", hl.dsp.exec_cmd("sh -c 'mkdir -p ~/Pictures && grim -g \"$(slurp)\" ~/Pictures/screenshot-$(date +%s).png'"), { description = "Take an instant area screenshot" })
 hl.bind(mainMod .. " + SHIFT + R", hl.dsp.exec_cmd("hyprctl reload"), { description = "Reload Hyprland config" })
 hl.bind(mainMod .. " + SHIFT + B", hl.dsp.exec_cmd("pkill -f quickshell; qs &"), { description = "Reload Quickshell HUD" })
-hl.bind(mainMod .. " + N", hl.dsp.exec_cmd(os.getenv("HOME") .. "/.config/scripts/notif-center.sh"), { description = "Open Tofi notification center" })
+hl.bind(mainMod .. " + N", hl.dsp.exec_cmd(imp_bin .. " notif-center"), { description = "Open Tofi notification center" })
 hl.bind(mainMod .. " + CTRL + L", hl.dsp.exec_cmd("qs ipc call lockscreen lock"), { description = "Lock Screen" })
 hl.bind(mainMod .. " + CTRL + R", hl.dsp.exec_cmd("gpu-screen-recorder-gtk"), { description = "Open screen recorder" })
-hl.bind(mainMod .. " + V", hl.dsp.exec_cmd(os.getenv("HOME") .. "/.config/scripts/toggle-vhs.sh"), { description = "Toggle VHS CRT screen shader" })
-hl.bind(mainMod .. " + SHIFT + V", hl.dsp.exec_cmd(os.getenv("HOME") .. "/.config/scripts/toggle-vhs.sh"), { description = "Toggle VHS CRT screen shader" })
+hl.bind(mainMod .. " + V", hl.dsp.exec_cmd(imp_bin .. " toggle-vhs"), { description = "Toggle VHS CRT screen shader" })
+hl.bind(mainMod .. " + SHIFT + V", hl.dsp.exec_cmd(imp_bin .. " toggle-vhs"), { description = "Toggle VHS CRT screen shader" })
 
 
 -- Special workspace (scratchpad)

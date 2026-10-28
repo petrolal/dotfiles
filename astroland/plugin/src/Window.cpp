@@ -16,13 +16,23 @@ Window::Window(PHLWINDOW window)
 	  PhysicsBody(window->size(Desktop::View::IGeometric::GEOMETRIC_CURRENT), Transform(window->position(Desktop::View::IGeometric::GEOMETRIC_CURRENT))),
 	  Hittable(10),
 	  m_flashAlpha(0.0f) {
-	m_size = {300, 300};
-	m_pos = g_ship->m_pos + g_ship->m_children[0]->getLookDir() * m_size.size() / 2;
+	const auto mon = g_primaryMonitor();
+	const auto defaultSize = mon ? Vector2D{std::max(640.0, mon->m_size.x * 0.45), std::max(480.0, mon->m_size.y * 0.45)} : Vector2D{800, 600};
+	const auto winSize = window->size(Desktop::View::IGeometric::GEOMETRIC_CURRENT);
+	m_size = (winSize.x >= 200 && winSize.y >= 200) ? winSize : defaultSize;
+
+	if (g_ship && !g_ship->m_children.empty()) {
+		m_pos = g_ship->m_pos + g_ship->m_children[0]->getLookDir() * (m_size.size() / 2.0 + 100.0);
+	} else if (mon) {
+		m_pos = mon->m_size / 2.0;
+	} else {
+		m_pos = {0, 0};
+	}
 }
 Window::~Window() {}
 
 bool Window::isVisible() {
-	return m_window->m_isMapped && !m_window->isHidden();
+	return m_window && m_window->m_isMapped && !m_window->isHidden();
 }
 
 void Window::tick(double dt) {
@@ -53,14 +63,28 @@ void Window::hit(const PhysicsBody::Collision& collision, int damage) {
 	}
 }
 
-static SP<Window> getNodeForWindow(PHLWINDOW window) {
+static SP<Window> findNodeForWindow(PHLWINDOW window) {
+	if (!window)
+		return nullptr;
 	for (auto node : g_scene->m_children) {
 		if (const auto w = dynamicPointerCast<Window>(node)) {
-			if (w->m_window == window) {
+			if (w->m_window == window && !w->is_disposed) {
 				return w;
 			}
 		}
 	}
+	return nullptr;
+}
+
+static SP<Window> getNodeForWindow(PHLWINDOW window, bool createIfNotFound = true) {
+	if (!window)
+		return nullptr;
+	const auto existing = findNodeForWindow(window);
+	if (existing)
+		return existing;
+
+	if (!createIfNotFound || !window->m_isMapped || window->isHidden())
+		return nullptr;
 
 	const auto node = g_scene->instantiate<Window>(window);
 	return node;

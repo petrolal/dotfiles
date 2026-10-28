@@ -57,9 +57,8 @@ static int onTick(void* data) {
 
 	if (g_spawnMoons->value()) {
 		if (g_moonCount < MAX_MOONS && g_moonSpawnT >= S_BETWEEN_WAVES) {
-			// spawn some moons
-			auto n = rand() % MAX_MOONS_PER_WAVE + 1;
-			for (; n > 0; n--) {
+			const auto toSpawn = rand() % MAX_MOONS_PER_WAVE + 1;
+			for (int i = 0; i < toSpawn; i++) {
 				auto x = rand() % (int)monitor->m_size.x - monitor->m_size.x / 2;
 				x *= rand() % 3 - 1;
 
@@ -77,7 +76,7 @@ static int onTick(void* data) {
 				const auto dir = g_ship->m_pos - pos;
 				moon->m_velocity = dir / dir.size() * 100;
 			}
-			g_moonCount += n;
+			g_moonCount += toSpawn;
 			g_moonSpawnT = 0;
 		}
 		// only spawn moons if player is moving around
@@ -90,7 +89,11 @@ static int onTick(void* data) {
 	Vector2D targetPos;
 	const auto& focusedWindow = Desktop::focusState()->window();
 	if (focusedWindow) {
-		targetPos = getNodeForWindow(focusedWindow)->m_pos;
+		const auto node = findNodeForWindow(focusedWindow);
+		if (node)
+			targetPos = node->m_pos;
+		else
+			targetPos = g_ship->m_pos * monitor->m_scale;
 	} else {
 		targetPos = g_ship->m_pos * monitor->m_scale;
 	}
@@ -156,7 +159,7 @@ void drawSurfaceHook(void* thisptr, WP<CSurfacePassElement> element, const CRegi
 	if (!element->m_data.pWindow)
 		return;
 
-	const auto winNode = getNodeForWindow(element->m_data.pWindow);
+	const auto winNode = findNodeForWindow(element->m_data.pWindow);
 	if (!winNode)
 		return;
 
@@ -298,9 +301,12 @@ APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE handle) {
 	}
 
 	g_windowCloseListener = Event::bus()->m_events.window.close.listen([](PHLWINDOW window) {
-		if (const auto& windowNode = getNodeForWindow(window)) {
+		if (const auto& windowNode = findNodeForWindow(window)) {
 			windowNode->dispose();
 		}
+		const auto monitor = g_primaryMonitor();
+		if (monitor)
+			g_layoutManager->recalculateMonitor(monitor.lock(), Layout::CLayoutManager::RECALCULATE_MONITOR_REASON_UNKNOWN);
 	});
 
 	g_windowFocusListener = Event::bus()->m_events.window.active.listen([](PHLWINDOW window, Desktop::eFocusReason reason) {

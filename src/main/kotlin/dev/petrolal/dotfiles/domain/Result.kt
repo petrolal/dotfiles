@@ -16,6 +16,15 @@ sealed interface Result<T> {
 
     fun isErr(): Boolean = this is Err<*>
 
+    fun getOrNull(): T? {
+        return if (this is Ok<*>) {
+            @Suppress("UNCHECKED_CAST")
+            (this as Ok<T>).value
+        } else {
+            null
+        }
+    }
+
     fun orElse(fallback: T): T {
         return if (this is Ok<*>) {
             @Suppress("UNCHECKED_CAST")

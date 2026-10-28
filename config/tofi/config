@@ -14,7 +14,7 @@ default-result-color = #ffffff
 alternate-result-color = #ffffff
 selection-color = #000000
 selection-background = #ffffff
-selection-match-color = #ffffff
+selection-match-color = #00000000
 border-color = #999999
 
 width = 40%

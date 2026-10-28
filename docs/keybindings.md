@@ -9,7 +9,7 @@ are hot-reloadable — only plugin changes need a full Hyprland restart).
 | Keys | Action |
 |---|---|
 | `SUPER + Return` | Open the terminal (kitty) |
-| `SUPER + B` | Open the browser (google-chrome-stable) |
+| `SUPER + B` | Open the browser (`imp browser`) |
 | `SUPER + E` | Open the file manager (thunar) |
 | `SUPER + Space` / `SUPER + D` | Open application launcher (menu / tofi) |
 
@@ -57,7 +57,8 @@ are hot-reloadable — only plugin changes need a full Hyprland restart).
 |---|---|
 | `SUPER + SHIFT + R` | Reload Hyprland config (`hyprctl reload`) — does **not** reload plugins |
 | `SUPER + SHIFT + B` | Restart Quickshell HUD (`pkill -f quickshell; qs &`) |
-| `SUPER + N` | Open Tofi notification center (`~/.config/scripts/notif-center.sh`) |
+| `SUPER + N` | Open Tofi notification center (`imp notif-center`) |
+| `SUPER + V` / `SUPER + SHIFT + V` | Toggle VHS / CRT screen shader (`imp toggle-vhs`) |
 | `SUPER + CTRL + L` | Lock screen (quickshell / hyprlock) |
 | `SUPER + CTRL + R` | Open screen recorder (gpu-screen-recorder-gtk) |
 

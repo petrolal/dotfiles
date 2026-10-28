@@ -17,6 +17,8 @@ class AstroLayout : public Layout::ITiledAlgorithm {
 	~AstroLayout() {}
 
 	void newTarget(SP<Layout::ITarget> target) override {
+		if (!target || !target->window() || !target->window()->m_isMapped || target->window()->isHidden())
+			return;
 		auto it = std::ranges::find_if(m_targets, [&target](const auto& t) { return t.lock() == target; });
 		if (it == m_targets.end())
 			m_targets.emplace_back(target);
@@ -24,7 +26,28 @@ class AstroLayout : public Layout::ITiledAlgorithm {
 	}
 
 	void movedTarget(SP<Layout::ITarget> target, std::optional<Vector2D> focalPoint = std::nullopt) override {
-		newTarget(target);
+		if (target && target->window() && target->window()->m_isMapped && !target->window()->isHidden()) {
+			auto node = getNodeForWindow(target->window());
+			if (node) {
+				const auto win = target->window();
+				PHLMONITOR winMonitor = nullptr;
+				for (const auto& m : State::monitorState()->monitors()) {
+					if (m->m_id == win->monitorID()) {
+						winMonitor = m;
+						break;
+					}
+				}
+				const auto defaultMonitor = g_primaryMonitor();
+				const auto mon = winMonitor ? PHLMONITORREF{winMonitor} : defaultMonitor;
+				if (mon) {
+					const auto centerGlobal = target->position().pos() + target->position().size() / 2.0;
+					const auto monPos = centerGlobal - mon->m_position;
+					node->m_pos = g_monitorToWorld(mon, monPos);
+					node->m_velocity = {0, 0};
+				}
+			}
+			newTarget(target);
+		}
 	}
 
 	void removeTarget(SP<Layout::ITarget> target) override {
@@ -33,8 +56,16 @@ class AstroLayout : public Layout::ITiledAlgorithm {
 	}
 
 	void resizeTarget(const Vector2D& delta, SP<Layout::ITarget> target, Layout::eRectCorner corner = Layout::CORNER_NONE) override {
+		if (!target || !target->window() || !target->window()->m_isMapped || target->window()->isHidden())
+			return;
 		auto node = getNodeForWindow(target->window());
+		if (!node)
+			return;
 		node->m_size += delta;
+		if (node->m_size.x < 100)
+			node->m_size.x = 100;
+		if (node->m_size.y < 100)
+			node->m_size.y = 100;
 		recalculate();
 	}
 
@@ -47,7 +78,7 @@ class AstroLayout : public Layout::ITiledAlgorithm {
 
 		for (const auto& target : targets) {
 			const auto win = target->window();
-			if (!win)
+			if (!win || !win->m_isMapped || win->isHidden())
 				continue;
 			PHLMONITOR winMonitor = nullptr;
 			for (const auto& m : State::monitorState()->monitors()) {
@@ -60,6 +91,8 @@ class AstroLayout : public Layout::ITiledAlgorithm {
 			if (!mon)
 				continue;
 			auto node = getNodeForWindow(win);
+			if (!node)
+				continue;
 			const auto pos = g_worldToMonitor(mon, node->m_pos - node->m_size / 2);
 			const CBox newBox(pos + mon->m_position, node->m_size);
 			if (target->position() != newBox)
@@ -130,7 +163,22 @@ class AstroLayout : public Layout::ITiledAlgorithm {
 	}
 
 	std::vector<SP<Layout::ITarget>> liveTargets() {
-		std::erase_if(m_targets, [](const auto& target) { return !target || !target.lock(); });
+		auto parent = m_parent.lock();
+		auto mySpace = parent ? parent->space() : nullptr;
+
+		std::erase_if(m_targets, [&](const auto& targetRef) {
+			const auto target = targetRef.lock();
+			if (!target)
+				return true;
+			const auto win = target->window();
+			if (!win)
+				return true;
+			if (!win->m_isMapped || win->isHidden())
+				return true;
+			if (mySpace && target->space() != mySpace)
+				return true;
+			return false;
+		});
 
 		std::vector<SP<Layout::ITarget>> result;
 		for (const auto& target : m_targets) {

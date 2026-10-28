@@ -14,70 +14,104 @@
 #include <iostream>
 #include <managers/KeybindManager.hpp>
 #include <render/pass/TexPassElement.hpp>
+#include <unordered_map>
+#include <vector>
+
+struct CachedGif {
+	std::vector<SP<Render::ITexture>> frames;
+	double frameDelay = 0.05;
+};
+
+inline std::unordered_map<std::string, CachedGif> g_cachedGifs;
+
+static CachedGif* getOrLoadGif(const std::string& gifPath) {
+	const auto it = g_cachedGifs.find(gifPath);
+	if (it != g_cachedGifs.end()) {
+		return &it->second;
+	}
+
+	gd_GIF* gif = gd_open_gif(gifPath.c_str());
+	if (!gif) {
+		Log::logger->log(Log::ERR, "Failed to open GIF: {}", gifPath);
+		return nullptr;
+	}
+
+	CachedGif cached;
+	cached.frameDelay = std::max(0.01, (double)gif->gce.delay * 0.01);
+	const auto gifSize = gif->width * gif->height;
+	auto frame = (uint8_t*)malloc(gifSize * 3);
+	auto frame2 = (uint8_t*)malloc(gifSize * 4);
+
+	while (gd_get_frame(gif) != -1) {
+		gd_render_frame(gif, frame);
+
+		for (int i = 0; i < gifSize; i++) {
+			const auto b = frame[(i * 3) + 0];
+			const auto g = frame[(i * 3) + 1];
+			const auto r = frame[(i * 3) + 2];
+			const auto a = b + g + r > 0;
+			frame2[(i * 4) + 0] = r * a;
+			frame2[(i * 4) + 1] = g * a;
+			frame2[(i * 4) + 2] = b * a;
+			frame2[(i * 4) + 3] = a * 255;
+		}
+
+		const auto cr = cairo_image_surface_create_for_data(frame2, CAIRO_FORMAT_ARGB32, gif->width, gif->height, gif->width * 4);
+		auto tex = g_pHyprRenderer->createTexture(cr);
+		cairo_surface_destroy(cr);
+
+		if (tex) {
+			cached.frames.push_back(tex);
+		}
+	}
+
+	free(frame);
+	free(frame2);
+	gd_close_gif(gif);
+
+	auto [inserted, _] = g_cachedGifs.emplace(gifPath, std::move(cached));
+	return &inserted->second;
+}
 
 class AnimatedSprite : public Sprite {
   public:
-	gd_GIF* m_gif;
-	uint8_t* m_frame;
-	uint8_t* m_frame2;
+	CachedGif* m_cached = nullptr;
+	int m_currentFrame = 0;
 	double m_t = 0;
 	bool m_repeat;
 
 	AnimatedSprite(std::string gifPath, bool repeat, Transform transform = {}) : m_repeat(repeat), Sprite(transform) {
-		m_gif = gd_open_gif(gifPath.c_str());
-		m_frame = (uint8_t*)malloc(m_gif->width * m_gif->height * 3);
-		m_frame2 = (uint8_t*)malloc(m_gif->width * m_gif->height * 4);
 		m_texPath = gifPath;
-		loadNextFrame();
+		m_cached = getOrLoadGif(gifPath);
+		if (m_cached && !m_cached->frames.empty()) {
+			m_tex = m_cached->frames[0];
+		}
 	}
-	~AnimatedSprite() {
-		gd_close_gif(m_gif);
-		free(m_frame);
-		free(m_frame2);
-	}
+	~AnimatedSprite() = default;
 
 	virtual void tick(double dt) override {
-		m_t += dt;
-		if (m_t >= m_gif->gce.delay * 0.01) {
-			if (!loadNextFrame()) {
-				if (m_repeat) {
-					gd_rewind(m_gif);
-					loadNextFrame();
-				} else {
-					dispose();
-					return;
+		if (!isVisible()) {
+			Body::tick(dt);
+			return;
+		}
+
+		if (m_cached && !m_cached->frames.empty()) {
+			m_t += dt;
+			if (m_t >= m_cached->frameDelay) {
+				m_t = 0;
+				m_currentFrame++;
+				if (m_currentFrame >= (int)m_cached->frames.size()) {
+					if (m_repeat) {
+						m_currentFrame = 0;
+					} else {
+						dispose();
+						return;
+					}
 				}
+				m_tex = m_cached->frames[m_currentFrame];
 			}
-			m_t = 0;
 		}
 
 		Sprite::tick(dt);
-	}
-
-	bool loadNextFrame() {
-		if (gd_get_frame(m_gif) == -1)
-			return false;
-
-		gd_render_frame(m_gif, m_frame);
-
-		const auto gifSize = m_gif->width * m_gif->height;
-		auto cIn = m_frame;
-		auto cOut = m_frame2;
-		for (int i = 0; i < gifSize; i++) {
-			const auto b = m_frame[(i * 3) + 0];
-			const auto g = m_frame[(i * 3) + 1];
-			const auto r = m_frame[(i * 3) + 2];
-			const auto a = b + g + r > 0;
-			m_frame2[(i * 4) + 0] = r * a;
-			m_frame2[(i * 4) + 1] = g * a;
-			m_frame2[(i * 4) + 2] = b * a;
-			m_frame2[(i * 4) + 3] = a * 255;
-		}
-
-		const auto cr = cairo_image_surface_create_for_data(m_frame2, CAIRO_FORMAT_ARGB32, m_gif->width, m_gif->height, m_gif->width * 4);
-		m_tex = g_pHyprRenderer->createTexture(cr);
-		cairo_surface_destroy(cr);
-
-		return true;
 	}
 };

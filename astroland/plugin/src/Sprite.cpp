@@ -52,6 +52,11 @@ class Sprite : public Body {
 	}
 
 	virtual void tick(double dt) override {
+		if (!isVisible()) {
+			Body::tick(dt);
+			return;
+		}
+
 		auto [box, _] = boundingBoxes();
 		box = expandToFitRotated(box, m_rot).expand(1);
 

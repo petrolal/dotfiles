@@ -44,6 +44,8 @@ if status is-interactive
     set -gx VISUAL nano
     set -gx PAGER less
     
+    fish_add_path -m $HOME/dotfiles/bin $HOME/.local/bin
+
     # --- dotfiles workflow shortcuts (see README.md "Day-to-Day Usage";
     # -p lets these run from anywhere, no `cd ~/dotfiles` needed) ---
     abbr -a dotfiles    'cd ~/dotfiles'
