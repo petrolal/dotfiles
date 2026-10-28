@@ -66,10 +66,10 @@ hl.on("hyprland.start", function ()
   -- Idle-triggered screensaver -- see config/hypr/hypridle.conf.
   hl.exec_cmd("hypridle")
   -- Quickshell handles Astroland overlays: battery/clock info overlay,
-  -- lockscreen, and screensaver.
+  -- robot notification popups, lockscreen, and screensaver.
   hl.exec_cmd("qs")
-  -- SwayNotificationCenter standard notification daemon & control center
-  hl.exec_cmd("swaync")
+  -- Background notification logger for Tofi notification center
+  hl.exec_cmd(os.getenv("HOME") .. "/.config/scripts/notif-logger.sh")
 end)
 
 -------------------
@@ -200,7 +200,7 @@ hl.bind(mainMod .. " + ALT + F", hl.dsp.exec_cmd("sh -c 'mkdir -p ~/Pictures && 
 hl.bind(mainMod .. " + ALT + S", hl.dsp.exec_cmd("sh -c 'mkdir -p ~/Pictures && grim -g \"$(slurp)\" ~/Pictures/screenshot-$(date +%s).png'"), { description = "Take an instant area screenshot" })
 hl.bind(mainMod .. " + SHIFT + R", hl.dsp.exec_cmd("hyprctl reload"), { description = "Reload Hyprland config" })
 hl.bind(mainMod .. " + SHIFT + B", hl.dsp.exec_cmd("pkill -f quickshell; qs &"), { description = "Reload Quickshell HUD" })
-hl.bind(mainMod .. " + N", hl.dsp.exec_cmd("swaync-client -t -sw"), { description = "Toggle notification center" })
+hl.bind(mainMod .. " + N", hl.dsp.exec_cmd(os.getenv("HOME") .. "/.config/scripts/notif-center.sh"), { description = "Open Tofi notification center" })
 hl.bind(mainMod .. " + CTRL + L", hl.dsp.exec_cmd("qs ipc call lockscreen lock"), { description = "Lock Screen" })
 hl.bind(mainMod .. " + CTRL + R", hl.dsp.exec_cmd("gpu-screen-recorder-gtk"), { description = "Open screen recorder" })
 

@@ -11,6 +11,7 @@ let
     cmake
     pkg-config
     git
+    gcc  # C compiler for Tree-sitter parsers & telescope-fzf-native (TetraVim/nvim)
     graalvmPackages.graalvm-ce
   ] ++ dynamicLibs;
 
@@ -30,10 +31,23 @@ let
     kiro
   ];
 
-  # Fast search, used by Hell Emacs' consult-ripgrep/consult-find (C-c s p / C-c s f).
+  # Fast search, used by Hell Emacs' consult-ripgrep/consult-find (C-c s p / C-c s f)
+  # and by TetraVim's (~/TetraVim, symlinked to ~/.config/nvim) Telescope/Snacks
+  # picker and live grep.
   searchTools = with pkgs; [
     ripgrep
     fd
+  ];
+
+  # TetraVim (~/TetraVim) requirements not already covered above: Neovim itself,
+  # Java (jdk21, see jetbrains.nix), ripgrep/fd (searchTools), gcc/make
+  # (buildTools), git, docker/kubectl (containers.nix) and Nerd Fonts
+  # (fonts.nix) are provided by other modules. These cover the rest.
+  nvimTools = with pkgs; [
+    lazygit     # Git TUI modal (<leader>gg)
+    grpcurl     # gRPC interactive client (<leader>ag)
+    grpcui
+    osv-scanner # dependency CVE vulnerability audits (<leader>xv)
   ];
 
   # Language servers, linters and CLIs that Hell Emacs' modules (:lang glsl,
@@ -95,6 +109,7 @@ in {
     ++ wallpaperTools
     ++ devTools
     ++ searchTools
+    ++ nvimTools
     ++ languageTools
     ++ systemTools
     ++ mediaUtils

@@ -9,7 +9,7 @@ import "./LockController.qml"
 import "./ScreensaverComponent.qml"
 
 ShellRoot {
-    // NotifsOverlay {} // Disabled in favor of standard SwayNC notification center
+    NotifsOverlay {}
 
     InfoOverlay {
         id: infoOverlay

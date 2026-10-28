@@ -24,6 +24,32 @@ PanelWindow {
         command: ["play", "/home/petrolal/dotfiles/astroland/assets/click.wav"]
     }
 
+    Process {
+        id: logNotifCmd
+    }
+    Process {
+        id: dndCheckProc
+        command: ["sh", "-c", "cat ~/.cache/notifications/dnd 2>/dev/null || echo false"]
+        stdout: SplitParser {
+            onRead: data => {
+                const isDnd = (data.trim() === "true");
+                if (isDnd) {
+                    if (root.currentNotif) {
+                        try { root.currentNotif.dismiss(); } catch (e) {}
+                    }
+                    root.notifs = [];
+                    return;
+                }
+                if (!root.visible) {
+                    pauseCmd.command = ["rmpc", "pause"];
+                    pauseCmd.running = true;
+                    root.visible = true;
+                    inAnim.running = true;
+                }
+            }
+        }
+    }
+
     anchors {
         left: true
         top: true
@@ -36,15 +62,18 @@ PanelWindow {
         onNotification: notif => {
             notif.tracked = true;
 
+            const now = new Date();
+            const pad = n => n.toString().padStart(2, '0');
+            const dt = `${pad(now.getDate())}/${pad(now.getMonth() + 1)} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+            const app = (notif.appName || "Sistema").replace(/[\t\n\r]/g, " ");
+            const sum = (notif.summary || "(sem título)").replace(/[\t\n\r]/g, " ");
+            const body = (notif.body || "").replace(/[\t\n\r]/g, " ");
+            logNotifCmd.command = ["bash", "-c", `mkdir -p "$HOME/.cache/notifications" && printf "%s\\t%s\\t%s\\t%s\\n" "$1" "$2" "$3" "$4" >> "$HOME/.cache/notifications/history.tsv"`, "_", dt, app, sum, body];
+            logNotifCmd.running = true;
+
             root.notifs = [...root.notifs, notif];
             autoDismissTimer.restart();
-
-            if (!root.visible) {
-                pauseCmd.command = ["rmpc", "pause"];
-                pauseCmd.running = true;
-                root.visible = true;
-                inAnim.running = true;
-            }
+            dndCheckProc.running = true;
         }
     }
 
