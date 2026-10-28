@@ -346,7 +346,7 @@ APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE handle) {
 						return;
 
 					auto [_, scaledBox] = sprite->boundingBoxes();
-					CTexPassElement::SRenderData rdata = {.tex = sprite->m_tex, .box = scaledBox};
+					CTexPassElement::SRenderData rdata = {.tex = sprite->m_tex, .box = scaledBox, .a = sprite->m_alpha};
 					g_pHyprRenderer->m_renderPass.add(makeUnique<CTexPassElement>(rdata));
 				}
 			});
@@ -356,10 +356,10 @@ APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE handle) {
 					return;
 
 				if (const auto& sprite = dc<Sprite*>(child.get())) {
-					// Window charring texture renders on top of the window
+					// Window charring texture renders on top of the window with fade out
 					if (const auto& w = dc<Window*>(sprite->m_parent.get())) {
 						auto [_, scaledBox] = sprite->boundingBoxes();
-						CTexPassElement::SRenderData rdata = {.tex = sprite->m_tex, .box = scaledBox};
+						CTexPassElement::SRenderData rdata = {.tex = sprite->m_tex, .box = scaledBox, .a = sprite->m_alpha};
 						rdata.clipBox = w->m_window->getFullWindowBoundingBox().scale(monitor->m_scale);
 						g_pHyprRenderer->m_renderPass.add(makeUnique<CTexPassElement>(rdata));
 					}

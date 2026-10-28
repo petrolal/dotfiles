@@ -46,7 +46,9 @@ void Window::hit(const PhysicsBody::Collision& collision, int damage) {
 	} else {
 		m_flashAlpha = 1.0;
 		const auto localCollisionPos = getWorldTransform().inv().multiply(collision.pos);
-		instantiate<Sprite>(assetPath("char.png"), Transform{localCollisionPos});
+		const auto charSprite = instantiate<Sprite>(assetPath("char.png"), Transform{localCollisionPos});
+		charSprite->m_lifetime = 2.5;
+		charSprite->m_initialLifetime = 2.5;
 	}
 }
 

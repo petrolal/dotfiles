@@ -47,43 +47,21 @@ local mainMod = "SUPER"
 ------------------
 ---- MONITORS ----
 ------------------
+-- Automatically detect and configure any connected display (laptop screen,
+-- external HDMI, DisplayPort, etc.) with its best native resolution and
+-- refresh rate, while enforcing integer 1:1 scale (scale = 1) so it never
+-- blurs or shrinks the desktop with fractional scaling.
 hl.monitor({
-    output = "eDP-1",
-    mode = "preferred",
-    position = "0x0",
-    scale = "auto",
-})
-
-hl.monitor({
-    output = "DP-1",
-    mode = "preferred",
-    position = "1920x0",
-    scale = "auto",
-})
-
--- Or using directional keywords:
-hl.monitor({
-    output = "HDMI-A-1",
-    mode = "preferred",
-    position = "auto-left",
-    scale = "auto",
-})
-
-hl.monitor({
-    output = "",
-    mode = "preferred",
+    output   = "",
+    mode     = "preferred",
     position = "auto",
-    scale = "auto",
+    scale    = 1,
 })
 
 -------------------
 ---- AUTOSTART ----
 -------------------
 hl.on("hyprland.start", function ()
-  -- Bare `ags` (no subcommand) just prints its own help and exits --
-  -- confirmed empirically, Cobra has no default subcommand here -- so the
-  -- AGS shell (bar/notifications/OSD, config/ags/) needs `run` explicitly.
-  hl.exec_cmd("ags run")
   hl.exec_cmd("hyprpaper")
   -- Idle-triggered screensaver -- see config/hypr/hypridle.conf.
   hl.exec_cmd("hypridle")
@@ -170,6 +148,8 @@ hl.config({
 hl.bind(mainMod .. " + RETURN", hl.dsp.exec_cmd("kitty"), { description = "Open the terminal" })
 hl.bind(mainMod .. " + B", hl.dsp.exec_cmd("google-chrome-stable"), { description = "Open the browser" })
 hl.bind(mainMod .. " + E", hl.dsp.exec_cmd("thunar"), { description = "Open the filemanager" })
+hl.bind(mainMod .. " + SPACE", hl.dsp.exec_cmd("tofi-drun --drun-launch=true"), { description = "Open application launcher (menu)" })
+hl.bind(mainMod .. " + D", hl.dsp.exec_cmd("tofi-drun --drun-launch=true"), { description = "Open application launcher (menu)" })
 
 -- Workspaces: focus with mainMod + [0-9], move window with mainMod + SHIFT + [0-9]
 for i = 1, 10 do

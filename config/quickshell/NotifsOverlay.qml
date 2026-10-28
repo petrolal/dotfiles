@@ -9,8 +9,8 @@ PanelWindow {
     id: root
 
     property list<Notification> notifs
-    property Notification currentNotif: notifs[0]
-    property string currentSummary: root.currentNotif.summary == "wait, it's all flat?" ? "always has been 🔫" : root.currentNotif.summary
+    property Notification currentNotif: (notifs && notifs.length > 0) ? notifs[0] : null
+    property string currentSummary: root.currentNotif ? (root.currentNotif.summary == "wait, it's all flat?" ? "always has been 🔫" : (root.currentNotif.summary || "")) : ""
 
     WlrLayershell.namespace: "shell:notifications"
     exclusionMode: ExclusionMode.Ignore
@@ -37,6 +37,7 @@ PanelWindow {
             notif.tracked = true;
 
             root.notifs = [...root.notifs, notif];
+            autoDismissTimer.restart();
 
             if (!root.visible) {
                 pauseCmd.command = ["rmpc", "pause"];
@@ -45,6 +46,13 @@ PanelWindow {
                 inAnim.running = true;
             }
         }
+    }
+
+    Timer {
+        id: autoDismissTimer
+        interval: 8000
+        repeat: false
+        onTriggered: root.dismiss()
     }
 
     Process {
@@ -126,6 +134,13 @@ PanelWindow {
                 root.dismiss();
         }
     }
+    Shortcut {
+        sequence: "Escape"
+        onActivated: {
+            clickCmd.running = true;
+            root.dismiss();
+        }
+    }
 
     Rectangle {
         id: container
@@ -164,9 +179,43 @@ PanelWindow {
                 width: 800
                 height: 200
 
+                MouseArea {
+                    anchors.fill: parent
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: {
+                        clickCmd.running = true;
+                        if (!notifText.finished) {
+                            notifText.finish();
+                            espeakCmd.running = false;
+                        } else {
+                            root.dismiss();
+                        }
+                    }
+                }
+
+                Text {
+                    text: "✕"
+                    color: "#888"
+                    font.pointSize: 18
+                    font.bold: true
+                    anchors.right: parent.right
+                    anchors.top: parent.top
+                    anchors.margins: 10
+                    z: 10
+
+                    MouseArea {
+                        anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: {
+                            clickCmd.running = true;
+                            root.dismiss();
+                        }
+                    }
+                }
+
                 SlowText {
                     id: notifText
-                    fullText: root.currentSummary + "\n\n" + root.currentNotif.body
+                    fullText: root.currentNotif ? (root.currentSummary + "\n\n" + (root.currentNotif.body || "")) : ""
                     anchors.fill: parent
                     anchors.margins: 20
                 }
@@ -200,6 +249,15 @@ PanelWindow {
                     id: radioTransform
                     origin.x: 170
                     origin.y: 500
+                }
+
+                MouseArea {
+                    anchors.fill: parent
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: {
+                        clickCmd.running = true;
+                        root.dismiss();
+                    }
                 }
             }
             SequentialAnimation {
@@ -271,15 +329,23 @@ PanelWindow {
     }
 
     function dismiss() {
-        if (!root.currentNotif)
-            return;
-
-        root.currentNotif.dismiss();
-        root.notifs.shift();
-        if (root.notifs.length == 0) {
+        if (root.currentNotif) {
+            try { root.currentNotif.dismiss(); } catch (e) {}
+        }
+        if (root.notifs && root.notifs.length > 0) {
+            root.notifs = root.notifs.slice(1);
+        } else {
+            root.notifs = [];
+        }
+        if (!root.notifs || root.notifs.length === 0) {
             outAnim.running = true;
-            pauseCmd.command = ["rmpc", "unpause"];
-            pauseCmd.running = true;
+            autoDismissTimer.stop();
+            try {
+                pauseCmd.command = ["rmpc", "unpause"];
+                pauseCmd.running = true;
+            } catch (e) {}
+        } else {
+            autoDismissTimer.restart();
         }
     }
 

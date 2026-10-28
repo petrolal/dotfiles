@@ -19,6 +19,9 @@ class Sprite : public Body {
   public:
 	std::string m_texPath;
 	SP<Render::ITexture> m_tex;
+	float m_alpha = 1.0f;
+	double m_lifetime = -1.0;
+	double m_initialLifetime = -1.0;
 
 	CBox m_prevBox;
 
@@ -51,6 +54,16 @@ class Sprite : public Body {
 	virtual void tick(double dt) override {
 		auto [box, _] = boundingBoxes();
 		box = expandToFitRotated(box, m_rot).expand(1);
+
+		if (m_lifetime > 0) {
+			m_lifetime -= dt;
+			if (m_lifetime <= 0) {
+				dispose();
+				return;
+			}
+			m_alpha = std::clamp((float)(m_lifetime / m_initialLifetime), 0.0f, 1.0f);
+			g_pHyprRenderer->damageBox(box);
+		}
 
 		if (box != m_prevBox || box.rot != m_prevBox.rot) {
 			g_pHyprRenderer->damageBox(m_prevBox);

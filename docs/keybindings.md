@@ -11,6 +11,7 @@ are hot-reloadable — only plugin changes need a full Hyprland restart).
 | `SUPER + Return` | Open the terminal (kitty) |
 | `SUPER + B` | Open the browser (google-chrome-stable) |
 | `SUPER + E` | Open the file manager (thunar) |
+| `SUPER + Space` / `SUPER + D` | Open application launcher (menu / tofi) |
 
 ## Workspaces
 

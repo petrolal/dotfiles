@@ -21,7 +21,7 @@ Rectangle {
 
         Process {
             id: batProc
-            command: ["cat", "/sys/class/power_supply/BAT1/capacity"]
+            command: ["sh", "-c", "cat /sys/class/power_supply/BAT*/capacity 2>/dev/null | head -n 1"]
             running: true
             stdout: SplitParser {
                 onRead: data => {
