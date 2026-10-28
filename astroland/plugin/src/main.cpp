@@ -156,7 +156,13 @@ void drawSurfaceHook(void* thisptr, WP<CSurfacePassElement> element, const CRegi
 	if (!element->m_data.pWindow)
 		return;
 
-	const auto alpha = getNodeForWindow(element->m_data.pWindow)->m_flashAlpha;
+	const auto winNode = getNodeForWindow(element->m_data.pWindow);
+	if (!winNode)
+		return;
+
+	const auto alpha = winNode->m_flashAlpha;
+	if (alpha <= 0.001f)
+		return;
 
 	const auto self = (IElementRenderer*)thisptr;
 	const auto data = element->m_data;

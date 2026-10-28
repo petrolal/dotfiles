@@ -98,6 +98,8 @@
     rmpc
     mpd
     fyi
+    libnotify
+    swaynotificationcenter
 
     # Wayland runtime/client libraries
     wayland

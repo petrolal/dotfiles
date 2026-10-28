@@ -12,7 +12,7 @@ class Window : public PhysicsBody, public Hittable {
 	const float FLASH_FADE_SPEED = 5.0; // fades in 1/FLASH_FADE_SPEED seconds
 
 	PHLWINDOW m_window;
-	float m_flashAlpha;
+	float m_flashAlpha = 0.0f;
 
 	Window(PHLWINDOW window);
 	~Window();

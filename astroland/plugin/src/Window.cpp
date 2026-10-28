@@ -14,7 +14,8 @@
 Window::Window(PHLWINDOW window)
 	: m_window(window),
 	  PhysicsBody(window->size(Desktop::View::IGeometric::GEOMETRIC_CURRENT), Transform(window->position(Desktop::View::IGeometric::GEOMETRIC_CURRENT))),
-	  Hittable(10) {
+	  Hittable(10),
+	  m_flashAlpha(0.0f) {
 	m_size = {300, 300};
 	m_pos = g_ship->m_pos + g_ship->m_children[0]->getLookDir() * m_size.size() / 2;
 }
