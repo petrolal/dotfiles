@@ -38,7 +38,7 @@ Rectangle {
         Image {
             id: bat
             anchors.right: parent.right
-            source: "/home/petrolal/dotfiles/astroland/assets/battery.svg"
+            source: "/home/petrolal/dotfiles/astroland/assets/battery_full.svg"
             sourceSize.width: 200
             opacity: 0.7
         }
@@ -78,7 +78,7 @@ Rectangle {
 
     AnimatedImage {
         id: reflection
-        source: "/home/petrolal/dotfiles/astroland/assets/reflection.webp"
+        source: "/home/petrolal/dotfiles/astroland/assets/reflection.gif"
         anchors.fill: parent
         fillMode: Image.FillMode.PreserveAspectCrop
         visible: false

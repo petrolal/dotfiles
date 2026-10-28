@@ -192,7 +192,7 @@ PanelWindow {
             }
 
             Image {
-                source: "/home/petrolal/dotfiles/astroland/assets/radio.webp"
+                source: "/home/petrolal/dotfiles/astroland/assets/radio.png"
                 anchors.bottom: parent.bottom
                 x: 300
                 fillMode: Image.PreserveAspectFit

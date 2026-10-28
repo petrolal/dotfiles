@@ -39,7 +39,7 @@ Rectangle {
 
     Image {
         id: dvd
-        source: "/home/petrolal/dotfiles/astroland/assets/dvd.webp"
+        source: "/home/petrolal/dotfiles/astroland/assets/dvd.png"
         x: 0
         y: 0
         fillMode: Image.PreserveAspectFit
