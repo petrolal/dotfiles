@@ -151,7 +151,7 @@ hl.config({
 
 -- Applications
 hl.bind(mainMod .. " + RETURN", hl.dsp.exec_cmd("kitty"), { description = "Open the terminal" })
-hl.bind(mainMod .. " + B", hl.dsp.exec_cmd("google-chrome-stable"), { description = "Open the browser" })
+hl.bind(mainMod .. " + B", hl.dsp.exec_cmd(os.getenv("HOME") .. "/.config/scripts/launch-browser.sh"), { description = "Open the browser" })
 hl.bind(mainMod .. " + E", hl.dsp.exec_cmd("thunar"), { description = "Open the filemanager" })
 hl.bind(mainMod .. " + SPACE", hl.dsp.exec_cmd("tofi-drun --drun-launch=true"), { description = "Open application launcher (menu)" })
 hl.bind(mainMod .. " + D", hl.dsp.exec_cmd("tofi-drun --drun-launch=true"), { description = "Open application launcher (menu)" })
@@ -206,6 +206,8 @@ hl.bind(mainMod .. " + SHIFT + B", hl.dsp.exec_cmd("pkill -f quickshell; qs &"),
 hl.bind(mainMod .. " + N", hl.dsp.exec_cmd(os.getenv("HOME") .. "/.config/scripts/notif-center.sh"), { description = "Open Tofi notification center" })
 hl.bind(mainMod .. " + CTRL + L", hl.dsp.exec_cmd("qs ipc call lockscreen lock"), { description = "Lock Screen" })
 hl.bind(mainMod .. " + CTRL + R", hl.dsp.exec_cmd("gpu-screen-recorder-gtk"), { description = "Open screen recorder" })
+hl.bind(mainMod .. " + V", hl.dsp.exec_cmd(os.getenv("HOME") .. "/.config/scripts/toggle-vhs.sh"), { description = "Toggle VHS CRT screen shader" })
+hl.bind(mainMod .. " + SHIFT + V", hl.dsp.exec_cmd(os.getenv("HOME") .. "/.config/scripts/toggle-vhs.sh"), { description = "Toggle VHS CRT screen shader" })
 
 
 -- Special workspace (scratchpad)

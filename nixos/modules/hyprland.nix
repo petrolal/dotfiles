@@ -43,34 +43,31 @@
   hardware.graphics = {
     enable = true;
     enable32Bit = true;
+    extraPackages = with pkgs; [
+      intel-media-driver
+      libvdpau-va-gl
+    ];
   };
 
-  # NVIDIA + wlroots rough edges -- only takes effect on hosts where
-  # dotfiles.nvidia.enable is set (see modules/nvidia.nix, host "primary").
+  # NVIDIA modesetting kernel parameters when discrete GPU is enabled
   boot.kernelParams = lib.mkIf config.dotfiles.nvidia.enable [
     "nvidia_drm.modeset=1"
     "nvidia_drm.fbdev=1"
   ];
 
-  environment.sessionVariables = lib.mkMerge [
-    (lib.mkIf config.dotfiles.nvidia.enable {
-      # Auto-detection of the GL/VA-API vendor is unreliable under PRIME
-      # offload, so route it to NVIDIA explicitly.
-      LIBVA_DRIVER_NAME = "nvidia";
-      GBM_BACKEND = "nvidia-drm";
-      __GLX_VENDOR_LIBRARY_NAME = "nvidia";
-    })
-    {
-      # AstalNotifd aborts at startup ("Settings schema 'io.astal.notifd'
-      # is not installed") unless its compiled GSettings schema is on this
-      # path -- confirmed empirically: `ags` is a generic launcher, not
-      # built with wrapGAppsHook against astal.notifd specifically, so
-      # nothing else wires this up automatically the way a single
-      # self-contained GTK app's own nixpkgs derivation would.
-      GSETTINGS_SCHEMA_DIR =
-        "${pkgs.astal.notifd}/share/gsettings-schemas/${pkgs.astal.notifd.name}/glib-2.0/schemas";
-    }
-  ];
+  environment.sessionVariables = {
+    # Tell Chromium/Chrome/Electron to use native Wayland
+    NIXOS_OZONE_WL = "1";
+
+    # AstalNotifd aborts at startup ("Settings schema 'io.astal.notifd'
+    # is not installed") unless its compiled GSettings schema is on this
+    # path -- confirmed empirically: `ags` is a generic launcher, not
+    # built with wrapGAppsHook against astal.notifd specifically, so
+    # nothing else wires this up automatically the way a single
+    # self-contained GTK app's own nixpkgs derivation would.
+    GSETTINGS_SCHEMA_DIR =
+      "${pkgs.astal.notifd}/share/gsettings-schemas/${pkgs.astal.notifd.name}/glib-2.0/schemas";
+  };
 
   environment.systemPackages = with pkgs; [
     ags

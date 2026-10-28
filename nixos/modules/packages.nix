@@ -50,6 +50,26 @@ let
     osv-scanner # dependency CVE vulnerability audits (<leader>xv)
   ];
 
+  # Runtimes mason-tool-installer.nvim's own installers shell out to.
+  # development.nix deliberately keeps node/python/go out of
+  # environment.systemPackages (per-project only, via direnv) -- but Mason
+  # isn't a project, it's the editor's own package manager, so most of
+  # lua/TetraVim/plugins/tools-mason.lua's ensure_installed list (npm
+  # installs for typescript-language-server, eslint-lsp, the Vue/Svelte/
+  # Astro/Angular/html/css/json/yaml servers, prettier, tree-sitter-cli,
+  # ...; pip/venv installs for basedpyright, ruff, ansible-lint, cfn-lint,
+  # yamllint, djlint) silently no-ops without these on $PATH -- bootstrap.sh
+  # prints "node/python3/go not found -- skipping ..." and moves on instead
+  # of failing loudly. go covers bootstrap.sh's `go install` fallbacks
+  # (yamlfmt, shfmt, grpcurl/osv-scanner before nvimTools above wins on
+  # $PATH anyway); most other Go/Rust Mason packages fetch prebuilt release
+  # binaries and don't need a local toolchain.
+  nvimRuntimes = with pkgs; [
+    nodejs_22 # includes npm/npx
+    python3   # includes pip/venv
+    go
+  ];
+
   # Language servers, linters and CLIs that Hell Emacs' modules (:lang glsl,
   # :lang nix, :lang sh, :lang terraform, :lang sql, :lang protobuf, :lang org)
   # shell out to but don't install themselves.
@@ -110,6 +130,7 @@ in {
     ++ devTools
     ++ searchTools
     ++ nvimTools
+    ++ nvimRuntimes
     ++ languageTools
     ++ systemTools
     ++ mediaUtils
