@@ -1,6 +1,7 @@
 package dev.petrolal.dotfiles.cli.commands
 
 import dev.petrolal.dotfiles.desktop.BrowserLauncher
+import dev.petrolal.dotfiles.desktop.KeybindHelper
 import dev.petrolal.dotfiles.desktop.NotificationCenter
 import dev.petrolal.dotfiles.desktop.NotificationLogger
 import dev.petrolal.dotfiles.desktop.VhsShader
@@ -48,5 +49,17 @@ class DesktopCommands {
     ): String {
         val result = VolumeControl.run(action)
         return if (result.isOk()) result.getOrNull() ?: "Volume adjusted." else "Failed to adjust volume."
+    }
+
+    @Command(command = ["lock"], description = "Lock session with Astroland retro lockscreen")
+    fun lock(): String {
+        val result = dev.petrolal.dotfiles.system.ProcessRunner.run(listOf("qs", "ipc", "call", "lockscreen", "lock"))
+        return if (result.isOk()) "Session locked." else "Failed to lock session."
+    }
+
+    @Command(command = ["keybinds"], alias = ["keys", "help-keys"], description = "Show a Tofi keybinding cheat sheet")
+    fun keybinds(): String {
+        val exitCode = KeybindHelper.show()
+        return if (exitCode == 0) "Keybind helper closed." else "Keybind helper exited with code $exitCode."
     }
 }

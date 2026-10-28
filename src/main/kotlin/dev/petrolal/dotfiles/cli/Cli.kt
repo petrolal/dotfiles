@@ -25,6 +25,7 @@ object Cli {
         println("  notif-center      open interactive Tofi notification center")
         println("  notif-logger      run background D-Bus notification logger daemon")
         println("  volume <action>   volume control: up, down, mute, mic-mute")
+        println("  lock              lock session with Astroland retro lockscreen")
         println("  shell             start interactive Spring Shell REPL\n")
         println("Options:")
         println("  -u, --uninstall   remove all deployed dotfile symlinks safely")
@@ -76,6 +77,7 @@ object Cli {
                 "notif-center" -> action = Action.NOTIF_CENTER
                 "notif-logger" -> action = Action.NOTIF_LOGGER
                 "volume" -> action = Action.VOLUME
+                "lock" -> action = Action.LOCK
                 "shell" -> action = Action.SHELL
                 else -> {
                     if (action != null) {
@@ -104,12 +106,13 @@ object Cli {
             Action.NOTIF_CENTER -> NotificationCenter.show() == 0
             Action.NOTIF_LOGGER -> NotificationLogger.run() == 0
             Action.VOLUME -> VolumeControl.run(extraArgs.firstOrNull() ?: "up").isOk()
+            Action.LOCK -> dev.petrolal.dotfiles.system.ProcessRunner.run(listOf("qs", "ipc", "call", "lockscreen", "lock")).isOk()
             Action.SHELL -> ImpApplication.run(emptyArray()) == 0
         }
         return if (ok) 0 else 1
     }
 
     private enum class Action {
-        DEPLOY, UNINSTALL, BROWSER, VHS, NOTIF_CENTER, NOTIF_LOGGER, VOLUME, SHELL
+        DEPLOY, UNINSTALL, BROWSER, VHS, NOTIF_CENTER, NOTIF_LOGGER, VOLUME, LOCK, SHELL
     }
 }

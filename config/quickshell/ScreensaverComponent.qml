@@ -19,6 +19,7 @@ Rectangle {
         } else {
             introSound.running = false;
             music.running = false;
+            dvdEffect.visible = false;
             pauseCmd.command = ["rmpc", "unpause"];
             pauseCmd.running = true;
         }
@@ -27,7 +28,7 @@ Rectangle {
     Process {
         id: introSound
         command: ["play", "-v", "4", "/home/petrolal/dotfiles/astroland/assets/hold_intro.wav"]
-        running: true
+        running: false
         onExited: music.running = root.visible
     }
     Process {

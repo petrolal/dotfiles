@@ -40,6 +40,14 @@ hl.config({
     decoration = {
         screen_shader = os.getenv("HOME") .. "/.config/hypr/vhs.frag",
     },
+    render = {
+        -- Direct scanout skips the compositor pass (screen_shader above,
+        -- Astroland's custom render pass) for newly mapped/fullscreen
+        -- windows, so they show as a blank frame until something forces a
+        -- full composite (e.g. grim screenshotting the output). Disabling
+        -- it routes every frame through the normal render path.
+        direct_scanout = false,
+    },
 })
 
 -- Declared up top (rather than down in ---- KEYBINDINGS ---- where it used
@@ -209,8 +217,10 @@ hl.bind(mainMod .. " + ALT + F", hl.dsp.exec_cmd("sh -c 'mkdir -p ~/Pictures && 
 hl.bind(mainMod .. " + ALT + S", hl.dsp.exec_cmd("sh -c 'mkdir -p ~/Pictures && grim -g \"$(slurp)\" ~/Pictures/screenshot-$(date +%s).png'"), { description = "Take an instant area screenshot" })
 hl.bind(mainMod .. " + SHIFT + R", hl.dsp.exec_cmd("hyprctl reload"), { description = "Reload Hyprland config" })
 hl.bind(mainMod .. " + SHIFT + B", hl.dsp.exec_cmd("pkill -f quickshell; qs &"), { description = "Reload Quickshell HUD" })
-hl.bind(mainMod .. " + N", hl.dsp.exec_cmd(imp_bin .. " notif-center"), { description = "Open Tofi notification center" })
-hl.bind(mainMod .. " + CTRL + L", hl.dsp.exec_cmd("qs ipc call lockscreen lock"), { description = "Lock Screen" })
+hl.bind(mainMod .. " + N",        hl.dsp.exec_cmd(imp_bin .. " notif-center"), { description = "Open Tofi notification center" })
+hl.bind(mainMod .. " + SLASH",    hl.dsp.exec_cmd(imp_bin .. " keybinds"), { description = "Show Tofi keybinding cheat sheet" })
+hl.bind(mainMod .. " + L",        hl.dsp.exec_cmd(imp_bin .. " lock"), { description = "Lock Screen" })
+hl.bind(mainMod .. " + CTRL + L", hl.dsp.exec_cmd(imp_bin .. " lock"), { description = "Lock Screen" })
 hl.bind(mainMod .. " + CTRL + R", hl.dsp.exec_cmd("gpu-screen-recorder-gtk"), { description = "Open screen recorder" })
 hl.bind(mainMod .. " + V", hl.dsp.exec_cmd(imp_bin .. " toggle-vhs"), { description = "Toggle VHS CRT screen shader" })
 hl.bind(mainMod .. " + SHIFT + V", hl.dsp.exec_cmd(imp_bin .. " toggle-vhs"), { description = "Toggle VHS CRT screen shader" })

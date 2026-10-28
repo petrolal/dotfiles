@@ -142,8 +142,8 @@ Rectangle {
     MultiEffect {
         id: scrcp
         anchors.centerIn: parent
-        width: 1920
-        height: 1200
+        width: root.width > 0 ? root.width : 1920
+        height: root.height > 0 ? root.height : 1080
         source: scrcpImage
         brightness: 0
     }
@@ -245,6 +245,16 @@ Rectangle {
             target: container
             property: "visible"
             value: true
+        }
+    }
+
+    Connections {
+        target: root.context
+
+        function onUnlocked() {
+            tvOffSound.running = false;
+            flickerSound.running = false;
+            noiseSound.running = false;
         }
     }
 }
