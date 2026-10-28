@@ -39,6 +39,15 @@ hl.config({
     },
     decoration = {
         screen_shader = os.getenv("HOME") .. "/.config/hypr/vhs.frag",
+        -- Disabled: on this host's NVIDIA/Intel PRIME setup, Hyprland
+        -- aborts every time a window's drop shadow gets rendered
+        -- (CHyprDropShadowDecoration::render -> renderRoundedShadow),
+        -- crashing the whole session back to the greetd/tuigreet login
+        -- screen the instant any window opens (autostart apps, kitty, ...).
+        -- Confirmed from journalctl coredump backtraces on 2026-10-28.
+        shadow = {
+            enabled = false,
+        },
     },
     render = {
         -- Direct scanout skips the compositor pass (screen_shader above,

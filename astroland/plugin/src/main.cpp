@@ -408,8 +408,12 @@ APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE handle) {
 		}
 	});
 	g_keyListener = Event::bus()->m_events.input.keyboard.key.listen([](const IKeyboard::SKeyEvent& e, Event::SCallbackInfo& cbInfo) {
-		// do nothing if focused window
-		if (Desktop::focusState()->window())
+		// do nothing if a window or a layer surface (app launcher, lockscreen,
+		// notification center, ...) holds keyboard focus -- window() alone
+		// misses layer-shell surfaces like tofi-drun, which focus via
+		// rawSurfaceFocus() and leave window() null, so WASD/arrows kept
+		// getting eaten here instead of reaching the launcher.
+		if (Desktop::focusState()->window() || Desktop::focusState()->surface())
 			return;
 
 		const auto isPressed = e.state == WL_KEYBOARD_KEY_STATE_PRESSED;

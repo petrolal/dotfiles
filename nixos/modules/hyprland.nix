@@ -13,7 +13,14 @@
   services.greetd = {
     enable = true;
     settings.default_session = {
-      command = "${pkgs.tuigreet}/bin/tuigreet --time --cmd Hyprland";
+      # `start-hyprland` (not the bare `Hyprland` binary) is Hyprland's own
+      # uwsm-integration entrypoint: it registers the session as a proper
+      # systemd user unit, which is what gives a crashing/closing session a
+      # clean handoff back to the greeter instead of leaving the VT in a
+      # half-torn-down state. Previously this was "Hyprland", which tuigreet
+      # happened to resolve to the same session via its wayland-sessions
+      # desktop-file matching -- spelling it out removes that indirection.
+      command = "${pkgs.tuigreet}/bin/tuigreet --time --cmd start-hyprland";
       user = "greeter";
     };
   };

@@ -17,7 +17,7 @@ Window::Window(PHLWINDOW window)
 	  Hittable(10),
 	  m_flashAlpha(0.0f) {
 	const auto mon = g_primaryMonitor();
-	const auto defaultSize = mon ? Vector2D{std::max(640.0, mon->m_size.x * 0.45), std::max(480.0, mon->m_size.y * 0.45)} : Vector2D{800, 600};
+	const auto defaultSize = Vector2D{300, 300};
 	const auto winSize = window->size(Desktop::View::IGeometric::GEOMETRIC_CURRENT);
 	m_size = (winSize.x >= 200 && winSize.y >= 200) ? winSize : defaultSize;
 

@@ -5,9 +5,9 @@
 
 if status is-interactive
     set -g fish_greeting
-    if type -q fastfetch
-        fastfetch
-    end
+    # if type -q fastfetch
+    # 	fastfetch
+    # end
 
     # --- Imp98 shell palette (same hexes as config/xfce4/terminal/terminalrc) ---
     set -g __imp_bg    16171d
@@ -61,5 +61,5 @@ if status is-interactive
     abbr -a g  git
     abbr -a gs 'git status'
     abbr -a gd 'git diff'
-    abbr -a ff 'fastfetch'
+    # abbr -a ff 'fastfetch'
 end
