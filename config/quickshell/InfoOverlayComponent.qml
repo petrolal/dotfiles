@@ -45,7 +45,7 @@ Rectangle {
 
         Process {
             id: dateProc
-            command: ["date", "+%H%M"]
+            command: ["date", "+%H:%M"]
             running: true
             stdout: SplitParser {
                 onRead: data => timetxt.text = data
@@ -53,16 +53,15 @@ Rectangle {
         }
         Text {
             id: timetxt
-            text: "1700"
+            text: "00:00"
             color: "#ffffff"
             font.pointSize: 64
-            font.family: "monospace"
+            font.family: "BigBlueTermPlus Nerd Font"
             font.bold: true
             font.italic: true
-            // verticalAlignment: "center"
             Layout.fillHeight: true
             verticalAlignment: Text.AlignVCenter
-            opacity: 0.7
+            opacity: 0.85
         }
 
         Timer {

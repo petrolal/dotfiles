@@ -37,6 +37,9 @@ hl.config({
         disable_splash_rendering = true,
         background_color = 0x000000,
     },
+    decoration = {
+        screen_shader = os.getenv("HOME") .. "/.config/hypr/vhs.frag",
+    },
 })
 
 -- Declared up top (rather than down in ---- KEYBINDINGS ---- where it used

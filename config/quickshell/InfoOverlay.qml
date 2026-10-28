@@ -17,9 +17,8 @@ PanelWindow {
     // Give the window an empty click mask so all clicks pass through it.
     mask: Region {}
 
-    // Use the wlroots specific layer property to ensure it displays over
-    // fullscreen windows.
-    WlrLayershell.layer: WlrLayer.Overlay
+    // Use Bottom layer so it stays beneath tiled windows and doesn't obstruct reading.
+    WlrLayershell.layer: WlrLayer.Bottom
 
     property alias showInfo: component.showInfo
 
