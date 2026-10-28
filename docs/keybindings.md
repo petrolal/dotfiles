@@ -64,6 +64,7 @@ are hot-reloadable — only plugin changes need a full Hyprland restart).
 | Keys | Action |
 |---|---|
 | `SUPER + CTRL + SHIFT + S` | Save current ship/bullet/moon state to `~/.config/hypr/save.lua` (auto-loaded on next Hyprland start) |
+| `SUPER + Escape` | Unfocus all windows to immediately pilot the ship |
 
 While the plugin is loaded (`general.layout = "astrolayout"`), normal window movement is supplemented
 by the game: **WASD flies the ship, mouse aims, left-click shoots** (or focuses a window if one's

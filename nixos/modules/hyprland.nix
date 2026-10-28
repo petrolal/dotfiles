@@ -54,8 +54,6 @@
 
   environment.sessionVariables = lib.mkMerge [
     (lib.mkIf config.dotfiles.nvidia.enable {
-      # Works around cursor corruption/invisibility on NVIDIA's wlroots backend.
-      WLR_NO_HARDWARE_CURSORS = "1";
       # Auto-detection of the GL/VA-API vendor is unreliable under PRIME
       # offload, so route it to NVIDIA explicitly.
       LIBVA_DRIVER_NAME = "nvidia";

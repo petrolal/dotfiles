@@ -28,6 +28,14 @@ hl.config({
     input = {
         kb_layout = "us",
         kb_variant = "intl",
+        touchpad = {
+            disable_while_typing = false,
+        },
+    },
+    misc = {
+        disable_hyprland_logo = true,
+        disable_splash_rendering = true,
+        background_color = 0x000000,
     },
 })
 
@@ -40,6 +48,13 @@ local mainMod = "SUPER"
 ---- MONITORS ----
 ------------------
 hl.monitor({
+    output = "eDP-1",
+    mode = "preferred",
+    position = "0x0",
+    scale = "auto",
+})
+
+hl.monitor({
     output = "DP-1",
     mode = "preferred",
     position = "1920x0",
@@ -51,6 +66,13 @@ hl.monitor({
     output = "HDMI-A-1",
     mode = "preferred",
     position = "auto-left",
+    scale = "auto",
+})
+
+hl.monitor({
+    output = "",
+    mode = "preferred",
+    position = "auto",
     scale = "auto",
 })
 
@@ -108,6 +130,11 @@ if hl.plugin.astroland ~= nil then
         hl.plugin.astroland.save()
     end, { description = "Save astroland game state" })
 
+    -- mod+Escape to unfocus all windows and immediately pilot the ship
+    hl.bind(mainMod .. " + Escape", function()
+        hl.plugin.astroland.unfocus()
+    end, { description = "Unfocus windows to pilot astroland ship" })
+
     -- Load the save file (if any) once Hyprland's ready, same as the original.
     hl.on("hyprland.start", function()
         local savePath = os.getenv("HOME") .. "/.config/hypr/save.lua"
@@ -122,6 +149,18 @@ end
 -------------------------------
 hl.env("XCURSOR_SIZE", "24")
 hl.env("HYPRCURSOR_SIZE", "24")
+
+----------------
+---- CURSOR ----
+----------------
+-- Explicitly enable hardware cursors on all displays (including external NVIDIA
+-- HDMI). Prevents software cursor composition and page-flip bottlenecks at high
+-- polling rates (e.g. 1000Hz gaming mice) that cause tearing when moving the mouse.
+hl.config({
+    cursor = {
+        no_hardware_cursors = false,
+    },
+})
 
 ---------------------
 ---- KEYBINDINGS ----
@@ -179,7 +218,7 @@ hl.bind(mainMod .. " + ALT + F", hl.dsp.exec_cmd("sh -c 'mkdir -p ~/Pictures && 
 hl.bind(mainMod .. " + ALT + S", hl.dsp.exec_cmd("sh -c 'mkdir -p ~/Pictures && grim -g \"$(slurp)\" ~/Pictures/screenshot-$(date +%s).png'"), { description = "Take an instant area screenshot" })
 hl.bind(mainMod .. " + SHIFT + R", hl.dsp.exec_cmd("hyprctl reload"), { description = "Reload Hyprland config" })
 hl.bind(mainMod .. " + SHIFT + B", hl.dsp.exec_cmd("killall ags; ags run &"), { description = "Reload Status Bar" })
-hl.bind(mainMod .. " + CTRL + L", hl.dsp.exec_cmd("hyprlock"), { description = "Lock Screen" })
+hl.bind(mainMod .. " + CTRL + L", hl.dsp.exec_cmd("qs ipc call lockscreen lock"), { description = "Lock Screen" })
 hl.bind(mainMod .. " + CTRL + R", hl.dsp.exec_cmd("gpu-screen-recorder-gtk"), { description = "Open screen recorder" })
 
 
@@ -195,9 +234,6 @@ hl.bind(mainMod .. " + mouse_down", hl.dsp.focus({ workspace = "e+1" }), { descr
 hl.bind(mainMod .. " + mouse_up",   hl.dsp.focus({ workspace = "e-1" }), { description = "Switch to previous workspace" })
 
 
-
-
-
 -- Laptop multimedia keys for volume and LCD brightness
 hl.bind("XF86AudioRaiseVolume", hl.dsp.exec_cmd("wpctl set-volume -l 1 @DEFAULT_AUDIO_SINK@ 5%+"), { locked = true, repeating = true, description = "Raise volume" })
 hl.bind("XF86AudioLowerVolume", hl.dsp.exec_cmd("wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-"),      { locked = true, repeating = true, description = "Lower volume" })
@@ -209,3 +245,18 @@ hl.bind("XF86AudioNext",  hl.dsp.exec_cmd("playerctl next"),       { locked = tr
 hl.bind("XF86AudioPause", hl.dsp.exec_cmd("playerctl play-pause"), { locked = true, description = "Pause audio" })
 hl.bind("XF86AudioPlay",  hl.dsp.exec_cmd("playerctl play-pause"), { locked = true, description = "Play audio" })
 hl.bind("XF86AudioPrev",  hl.dsp.exec_cmd("playerctl previous"),   { locked = true, description = "Previous track" })
+
+--------------------------------
+---- WINDOWS AND WORKSPACES ----
+--------------------------------
+hl.window_rule({
+    name = "suppress-fullscreen-events",
+    match = { class = ".*" },
+    suppress_event = "fullscreen",
+})
+
+hl.window_rule({
+    name = "suppress-maximize-events",
+    match = { class = ".*" },
+    suppress_event = "maximize",
+})

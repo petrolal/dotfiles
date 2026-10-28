@@ -17,7 +17,9 @@ class AstroLayout : public Layout::ITiledAlgorithm {
 	~AstroLayout() {}
 
 	void newTarget(SP<Layout::ITarget> target) override {
-		m_targets.emplace_back(target);
+		auto it = std::ranges::find_if(m_targets, [&target](const auto& t) { return t.lock() == target; });
+		if (it == m_targets.end())
+			m_targets.emplace_back(target);
 		recalculate();
 	}
 
@@ -41,14 +43,25 @@ class AstroLayout : public Layout::ITiledAlgorithm {
 		if (targets.empty())
 			return;
 
-		const auto monitor = g_primaryMonitor();
-		if (!monitor)
-			return;
+		const auto defaultMonitor = g_primaryMonitor();
 
 		for (const auto& target : targets) {
-			auto node = getNodeForWindow(target->window());
-			const auto pos = g_worldToMonitor(monitor, node->m_pos - node->m_size / 2);
-			const CBox newBox(pos, node->m_size);
+			const auto win = target->window();
+			if (!win)
+				continue;
+			PHLMONITOR winMonitor = nullptr;
+			for (const auto& m : State::monitorState()->monitors()) {
+				if (m->m_id == win->monitorID()) {
+					winMonitor = m;
+					break;
+				}
+			}
+			const auto mon = winMonitor ? PHLMONITORREF{winMonitor} : defaultMonitor;
+			if (!mon)
+				continue;
+			auto node = getNodeForWindow(win);
+			const auto pos = g_worldToMonitor(mon, node->m_pos - node->m_size / 2);
+			const CBox newBox(pos + mon->m_position, node->m_size);
 			if (target->position() != newBox)
 				target->setPositionGlobal(newBox);
 		}

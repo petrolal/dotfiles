@@ -44,8 +44,12 @@ using namespace Render;
 inline HANDLE PHANDLE = nullptr;
 
 static int onTick(void* data) {
+	if (g_tickSource)
+		wl_event_source_timer_update(g_tickSource, MS_BETWEEN_TICKS);
+
 	auto dt = g_tickTimer.getSeconds();
 	g_tickTimer.reset();
+	dt = std::clamp(dt, 0.0f, 0.05f);
 
 	const auto monitor = g_primaryMonitor();
 	if (!monitor)
@@ -84,8 +88,9 @@ static int onTick(void* data) {
 	g_scene->tick(dt);
 
 	Vector2D targetPos;
-	if (const auto& w = Desktop::focusState()->window()) {
-		targetPos = getNodeForWindow(w)->m_pos;
+	const auto& focusedWindow = Desktop::focusState()->window();
+	if (focusedWindow) {
+		targetPos = getNodeForWindow(focusedWindow)->m_pos;
 	} else {
 		targetPos = g_ship->m_pos * monitor->m_scale;
 	}
@@ -93,6 +98,8 @@ static int onTick(void* data) {
 	g_actualCamPos.x = std::lerp(g_camPos.x, targetPos.x, dt * CAM_SPEED);
 	g_actualCamPos.y = std::lerp(g_camPos.y, targetPos.y, dt * CAM_SPEED);
 	g_layoutManager->recalculateMonitor(monitor.lock(), Layout::CLayoutManager::RECALCULATE_MONITOR_REASON_UNKNOWN);
+
+	const auto prevCamPos = g_camPos;
 
 	if (g_camShakeIntensity > 0) {
 		g_camPos.x = g_actualCamPos.x + stb_perlin_noise3(g_camShakeNoiseIndex.x, 0, 0, 0, 0, 0) * 2 * g_camShakeIntensity;
@@ -108,7 +115,20 @@ static int onTick(void* data) {
 		g_camShakeIntensity = 0;
 	}
 
-	return wl_event_source_timer_update(g_tickSource, MS_BETWEEN_TICKS);
+	if (!std::isfinite(g_camPos.x) || !std::isfinite(g_camPos.y)) {
+		g_camPos = {0, 0};
+		g_actualCamPos = {0, 0};
+	}
+	if (!std::isfinite(g_ship->m_pos.x) || !std::isfinite(g_ship->m_pos.y)) {
+		g_ship->m_pos = {0, 0};
+		g_ship->m_velocity = {0, 0};
+	}
+
+	if (g_camPos != prevCamPos) {
+		g_pHyprRenderer->damageMonitor(monitor.lock());
+	}
+
+	return 0;
 }
 
 static CFunctionHook* addHook(const std::string& className, const std::string& methodName, const void* fnPtr) {
@@ -234,6 +254,12 @@ int luaSave(lua_State* L) {
 	return 0;
 }
 
+int luaUnfocus(lua_State* L) {
+	Desktop::focusState()->fullWindowFocus(nullptr, Desktop::FOCUS_REASON_OTHER, nullptr, false);
+	Desktop::focusState()->resetWindowFocus();
+	return 0;
+}
+
 APICALL EXPORT std::string PLUGIN_API_VERSION() { return HYPRLAND_API_VERSION; }
 
 APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE handle) {
@@ -249,13 +275,21 @@ APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE handle) {
 	g_ship = g_scene->instantiate<Ship>();
 	g_ship->m_name = "ship";
 
-	g_readyListener = Event::bus()->m_events.ready.listen([]() {
+	auto initTimer = []() {
 		g_tickTimer.reset();
 		g_tickSource = wl_event_loop_add_timer(g_pCompositor->m_wlEventLoop, onTick, &g_tickTimer);
 		if (!g_tickSource || wl_event_source_timer_update(g_tickSource, MS_BETWEEN_TICKS))
 			HyprlandAPI::addNotification(PHANDLE, "[astroland] failed to create tick timer", CHyprColor{1.0, 1.0, 0.2, 1.0}, 10000);
-		g_readyListener.reset();
-	});
+	};
+
+	if (g_pCompositor->m_initialized) {
+		initTimer();
+	} else {
+		g_readyListener = Event::bus()->m_events.ready.listen([initTimer]() {
+			initTimer();
+			g_readyListener.reset();
+		});
+	}
 
 	g_windowCloseListener = Event::bus()->m_events.window.close.listen([](PHLWINDOW window) {
 		if (const auto& windowNode = getNodeForWindow(window)) {
@@ -275,6 +309,10 @@ APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE handle) {
 		const auto monitor = g_primaryMonitor();
 		if (!monitor)
 			return;
+
+		if (g_pHyprRenderer->m_renderData.pMonitor.lock() != monitor.lock())
+			return;
+
 		if (stage == RENDER_POST_WALLPAPER) {
 			const double scale = 1.0;
 			const auto scaledSize = g_tex_bg->m_size * scale;
@@ -296,24 +334,35 @@ APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE handle) {
 			}
 
 			// drawBox({1.0, 0.0, 0.0, 1.0}, {tlTilePos, size});
+		} else if (stage == RENDER_PRE_WINDOWS) {
+			g_scene->forEachChildRecursive([&](SP<Body> child) {
+				if (!child->isVisible())
+					return;
+
+				if (const auto& sprite = dc<Sprite*>(child.get())) {
+					// Window charring overlays are rendered on top of windows in RENDER_POST_WINDOWS;
+					// all other sprites (ship, moons, bullets, etc.) render behind windows here.
+					if (dc<Window*>(sprite->m_parent.get()))
+						return;
+
+					auto [_, scaledBox] = sprite->boundingBoxes();
+					CTexPassElement::SRenderData rdata = {.tex = sprite->m_tex, .box = scaledBox};
+					g_pHyprRenderer->m_renderPass.add(makeUnique<CTexPassElement>(rdata));
+				}
+			});
 		} else if (stage == RENDER_POST_WINDOWS) {
 			g_scene->forEachChildRecursive([&](SP<Body> child) {
 				if (!child->isVisible())
 					return;
 
 				if (const auto& sprite = dc<Sprite*>(child.get())) {
-					auto [_, scaledBox] = sprite->boundingBoxes();
-
-					CTexPassElement::SRenderData rdata = {.tex = sprite->m_tex, .box = scaledBox};
-
-					// SUUUPER janky hack specifically for the window charring texture, but I've got a deadline
+					// Window charring texture renders on top of the window
 					if (const auto& w = dc<Window*>(sprite->m_parent.get())) {
+						auto [_, scaledBox] = sprite->boundingBoxes();
+						CTexPassElement::SRenderData rdata = {.tex = sprite->m_tex, .box = scaledBox};
 						rdata.clipBox = w->m_window->getFullWindowBoundingBox().scale(monitor->m_scale);
+						g_pHyprRenderer->m_renderPass.add(makeUnique<CTexPassElement>(rdata));
 					}
-
-					g_pHyprRenderer->m_renderPass.add(makeUnique<CTexPassElement>(rdata));
-
-					// drawBox({1.0, 0.0, 0.0, 1.0}, g_monitorToWorld(monitor, scaledBox).scale(1.0 / monitor->m_scale));
 				}
 			});
 		}
@@ -322,6 +371,10 @@ APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE handle) {
 #define LMB 272
 		if (e.button == LMB) {
 			const auto mouseCoords = g_pInputManager->getMouseCoordsInternal();
+			const auto mouseMonitor = State::CMonitorQuery(*State::monitorState()).vec(mouseCoords).run();
+			if (!mouseMonitor || mouseMonitor != g_primaryMonitor().lock())
+				return;
+
 			const auto w = Desktop::CViewHitTester(*Desktop::viewState())
 				.windowAt(mouseCoords, Desktop::View::ALLOW_FLOATING | Desktop::View::RESERVED_EXTENTS | Desktop::View::INPUT_EXTENTS);
 
@@ -332,8 +385,10 @@ APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE handle) {
 					// if no focused window, start shooting
 					if (!Desktop::focusState()->window())
 						g_ship->m_isShooting = true;
-					else
+					else {
 						Desktop::focusState()->fullWindowFocus(nullptr, Desktop::FOCUS_REASON_OTHER, nullptr, false);
+						Desktop::focusState()->resetWindowFocus();
+					}
 				}
 
 				cbInfo.cancelled = true;
@@ -346,19 +401,19 @@ APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE handle) {
 			return;
 
 		const auto isPressed = e.state == WL_KEYBOARD_KEY_STATE_PRESSED;
-		if (e.keycode == KEY_W) {
+		if (e.keycode == KEY_W || e.keycode == KEY_W + 8 || e.keycode == KEY_UP || e.keycode == KEY_UP + 8) {
 			g_isUpDown = isPressed;
 			cbInfo.cancelled = true;
 		}
-		if (e.keycode == KEY_S) {
+		if (e.keycode == KEY_S || e.keycode == KEY_S + 8 || e.keycode == KEY_DOWN || e.keycode == KEY_DOWN + 8) {
 			g_isDownDown = isPressed;
 			cbInfo.cancelled = true;
 		}
-		if (e.keycode == KEY_A) {
+		if (e.keycode == KEY_A || e.keycode == KEY_A + 8 || e.keycode == KEY_LEFT || e.keycode == KEY_LEFT + 8) {
 			g_isLeftDown = isPressed;
 			cbInfo.cancelled = true;
 		}
-		if (e.keycode == KEY_D) {
+		if (e.keycode == KEY_D || e.keycode == KEY_D + 8 || e.keycode == KEY_RIGHT || e.keycode == KEY_RIGHT + 8) {
 			g_isRightDown = isPressed;
 			cbInfo.cancelled = true;
 		}
@@ -381,6 +436,7 @@ APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE handle) {
 	HyprlandAPI::addLuaFunction(PHANDLE, "astroland", "spawn_moon", luaSpawnMoon);
 
 	HyprlandAPI::addLuaFunction(PHANDLE, "astroland", "save", luaSave);
+	HyprlandAPI::addLuaFunction(PHANDLE, "astroland", "unfocus", luaUnfocus);
 
 	HyprlandAPI::reloadConfig();
 

@@ -23,6 +23,7 @@ let
 
   devTools = with pkgs; [
     emacs
+    nvim
     claude-code
     claude-desktop-fhs
     bruno

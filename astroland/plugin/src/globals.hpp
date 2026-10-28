@@ -22,6 +22,7 @@
 #include <cstdlib>
 #include <hyprland/src/state/MonitorState.hpp>
 #include <hyprland/src/state/MonitorQuery.hpp>
+#include <hyprland/src/desktop/state/FocusState.hpp>
 
 class Ship;
 class Body;
@@ -43,6 +44,11 @@ inline std::string assetPath(const std::string& fileName) {
 }
 
 inline PHLMONITORREF g_primaryMonitor() {
+    if (const auto focused = Desktop::focusState()->monitor())
+        return PHLMONITORREF{focused};
+    const auto ppos = g_pInputManager->getMouseCoordsInternal();
+    if (const auto mouseMon = State::CMonitorQuery(*State::monitorState()).vec(ppos).run())
+        return PHLMONITORREF{mouseMon};
     const auto& all = State::monitorState()->monitors();
     return all.empty() ? PHLMONITORREF{} : PHLMONITORREF{all[0]};
 }
