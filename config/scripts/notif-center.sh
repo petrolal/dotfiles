@@ -9,7 +9,11 @@ mkdir -p "$CACHE_DIR"
 touch "$HISTORY_FILE"
 
 get_dnd_status() {
-    if [ -f "$DND_FILE" ] && [ "$(cat "$DND_FILE" 2>/dev/null)" = "true" ]; then
+    local status
+    status=$(qs ipc call notifs getDnd 2>/dev/null)
+    if [ "$status" = "ATIVADO" ] || [ "$status" = "DESATIVADO" ]; then
+        echo "$status"
+    elif [ -f "$DND_FILE" ] && [ "$(cat "$DND_FILE" 2>/dev/null)" = "true" ]; then
         echo "ATIVADO"
     else
         echo "DESATIVADO"
@@ -17,10 +21,18 @@ get_dnd_status() {
 }
 
 toggle_dnd() {
-    if [ "$(get_dnd_status)" = "ATIVADO" ]; then
+    local new_status
+    new_status=$(qs ipc call notifs toggleDnd 2>/dev/null)
+    if [ "$new_status" = "ATIVADO" ]; then
+        echo "true" > "$DND_FILE"
+    elif [ "$new_status" = "DESATIVADO" ]; then
         echo "false" > "$DND_FILE"
     else
-        echo "true" > "$DND_FILE"
+        if [ "$(get_dnd_status)" = "ATIVADO" ]; then
+            echo "false" > "$DND_FILE"
+        else
+            echo "true" > "$DND_FILE"
+        fi
     fi
 }
 
@@ -29,8 +41,8 @@ show_menu() {
     dnd_status=$(get_dnd_status)
 
     local menu_items=""
-    menu_items+="[ X ] Limpar todas as notificações"$'\n'
-    menu_items+="[ ! ] Alternar Não Perturbe (DND: $dnd_status)"$'\n'
+    menu_items+="1. [ Limpar todas as notificações ]"$'\n'
+    menu_items+="2. [ Alternar Não Perturbe (DND: $dnd_status) ]"$'\n'
     menu_items+="──────────────────────────────────────────────────"$'\n'
 
     local notif_count=0
@@ -58,24 +70,27 @@ show_menu() {
         done
     fi
 
-    # Display in Tofi
+    # Display in Tofi (interactive selection via keyboard arrows / numbers + Enter)
     local selected
-    selected=$(echo -n "$menu_items" | tofi --prompt-text="notificações: " --placeholder-text="buscar histórico...")
+    selected=$(echo -n "$menu_items" | tofi --prompt-text="notificações [↑/↓ e Enter]: " --placeholder-text="digite 1, 2 ou busque...")
 
     # If user pressed Escape or closed
     [ -z "$selected" ] && exit 0
 
     case "$selected" in
-        "[ X ] Limpar todas as notificações")
+        *[Ll]impar*|*[Cc]lear*|*\[X\]*|*\[\ X\ \]*|"1"|"1."*)
             > "$HISTORY_FILE"
-            exit 0
+            qs ipc call notifs clear 2>/dev/null || true
+            sleep 0.15
+            exec "$0"
             ;;
-        "[ ! ] Alternar Não Perturbe"*)
+        *[Pp]erturbe*|*[Dd][Nn][Dd]*|*\[\!\]*|*\[\ !\ \]*|"2"|"2."*)
             toggle_dnd
+            sleep 0.15
             exec "$0"
             ;;
         "───"*|"(Nenhuma notificação"*)
-            exec "$0"
+            exit 0
             ;;
         *)
             # The user selected a notification. Find it in history and show details.
@@ -99,14 +114,15 @@ show_details() {
     done < "$HISTORY_FILE"
 
     if [ -z "$found_entry" ]; then
+        sleep 0.15
         exec "$0"
     fi
 
     IFS=$'\t' read -r dt app sum bdy <<< "$found_entry"
 
     local detail_view=""
-    detail_view+="[ < Voltar ]"$'\n'
-    detail_view+="[ X Excluir esta notificação ]"$'\n'
+    detail_view+="1. [ < Voltar ]"$'\n'
+    detail_view+="2. [ Excluir esta notificação ]"$'\n'
     detail_view+="──────────────────────────────────────────────────"$'\n'
     detail_view+="Data/Hora : $dt"$'\n'
     detail_view+="Aplicação : $app"$'\n'
@@ -116,10 +132,10 @@ show_details() {
     fi
 
     local action
-    action=$(echo -n "$detail_view" | tofi --prompt-text="detalhes: " --placeholder-text="detalhes da notificação...")
+    action=$(echo -n "$detail_view" | tofi --prompt-text="detalhes [↑/↓ e Enter]: " --placeholder-text="digite 1 para voltar, 2 para excluir...")
 
     case "$action" in
-        "[ X Excluir esta notificação ]")
+        *[Ee]xcluir*|*[Dd]elete*|*2*|"2."*)
             # Remove this specific line from history
             local tmp_file
             tmp_file=$(mktemp)
@@ -130,9 +146,11 @@ show_details() {
                 printf "%s\t%s\t%s\t%s\n" "$d" "$a" "$s" "$b" >> "$tmp_file"
             done < "$HISTORY_FILE"
             mv "$tmp_file" "$HISTORY_FILE"
+            sleep 0.15
             exec "$0"
             ;;
         *)
+            sleep 0.15
             exec "$0"
             ;;
     esac

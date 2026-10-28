@@ -8,6 +8,7 @@ import Quickshell.Services.Notifications
 PanelWindow {
     id: root
 
+    property bool dnd: false
     property list<Notification> notifs
     property Notification currentNotif: (notifs && notifs.length > 0) ? notifs[0] : null
     property string currentSummary: root.currentNotif ? (root.currentNotif.summary == "wait, it's all flat?" ? "always has been 🔫" : (root.currentNotif.summary || "")) : ""
@@ -27,27 +28,11 @@ PanelWindow {
     Process {
         id: logNotifCmd
     }
-    Process {
-        id: dndCheckProc
-        command: ["sh", "-c", "cat ~/.cache/notifications/dnd 2>/dev/null || echo false"]
-        stdout: SplitParser {
-            onRead: data => {
-                const isDnd = (data.trim() === "true");
-                if (isDnd) {
-                    if (root.currentNotif) {
-                        try { root.currentNotif.dismiss(); } catch (e) {}
-                    }
-                    root.notifs = [];
-                    return;
-                }
-                if (!root.visible) {
-                    pauseCmd.command = ["rmpc", "pause"];
-                    pauseCmd.running = true;
-                    root.visible = true;
-                    inAnim.running = true;
-                }
-            }
-        }
+
+    FileView {
+        id: dndFile
+        path: "/home/petrolal/.cache/notifications/dnd"
+        printErrors: false
     }
 
     anchors {
@@ -71,9 +56,20 @@ PanelWindow {
             logNotifCmd.command = ["bash", "-c", `mkdir -p "$HOME/.cache/notifications" && printf "%s\\t%s\\t%s\\t%s\\n" "$1" "$2" "$3" "$4" >> "$HOME/.cache/notifications/history.tsv"`, "_", dt, app, sum, body];
             logNotifCmd.running = true;
 
+            if (root.dnd || dndFile.text().trim() === "true") {
+                try { notif.dismiss(); } catch (e) {}
+                return;
+            }
+
             root.notifs = [...root.notifs, notif];
             autoDismissTimer.restart();
-            dndCheckProc.running = true;
+
+            if (!root.visible) {
+                pauseCmd.command = ["rmpc", "pause"];
+                pauseCmd.running = true;
+                root.visible = true;
+                inAnim.running = true;
+            }
         }
     }
 
@@ -355,6 +351,20 @@ PanelWindow {
                 }
             }
         }
+    }
+
+    function clearAll() {
+        if (root.currentNotif) {
+            try { root.currentNotif.dismiss(); } catch (e) {}
+        }
+        root.notifs = [];
+        root.visible = false;
+        outAnim.running = false;
+        autoDismissTimer.stop();
+        try {
+            pauseCmd.command = ["rmpc", "unpause"];
+            pauseCmd.running = true;
+        } catch (e) {}
     }
 
     function dismiss() {

@@ -9,7 +9,24 @@ import "./LockController.qml"
 import "./ScreensaverComponent.qml"
 
 ShellRoot {
-    NotifsOverlay {}
+    NotifsOverlay {
+        id: notifsOverlay
+    }
+
+    IpcHandler {
+        target: "notifs"
+
+        function toggleDnd(): string {
+            notifsOverlay.dnd = !notifsOverlay.dnd;
+            return notifsOverlay.dnd ? "ATIVADO" : "DESATIVADO";
+        }
+        function getDnd(): string {
+            return notifsOverlay.dnd ? "ATIVADO" : "DESATIVADO";
+        }
+        function clear(): void {
+            notifsOverlay.clearAll();
+        }
+    }
 
     InfoOverlay {
         id: infoOverlay
