@@ -3,7 +3,7 @@ import QtQuick.Effects
 import QtQuick.Layouts
 import QtQuick.Controls.Fusion
 import Quickshell.Io
-import "./InfoOverlayComponent.qml"
+import "../overlay"
 
 Rectangle {
     id: root

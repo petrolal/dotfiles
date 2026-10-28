@@ -6,6 +6,7 @@ import dev.petrolal.dotfiles.desktop.NotificationCenter
 import dev.petrolal.dotfiles.desktop.NotificationLogger
 import dev.petrolal.dotfiles.desktop.VhsShader
 import dev.petrolal.dotfiles.desktop.VolumeControl
+import dev.petrolal.dotfiles.system.ProcessRunner
 import org.springframework.shell.command.annotation.Command
 import org.springframework.shell.command.annotation.Option
 
@@ -17,7 +18,7 @@ class DesktopCommands {
         @Option(longNames = ["browser"], description = "Browser executable name", defaultValue = "google-chrome-stable")
         browser: String = "google-chrome-stable",
 
-        @Option(description = "Additional arguments to pass to the browser")
+        @Option(longNames = ["args"], description = "Additional arguments to pass to the browser")
         args: List<String>? = null
     ): String {
         val result = BrowserLauncher.launch(browser, args ?: emptyList())
@@ -44,7 +45,7 @@ class DesktopCommands {
 
     @Command(command = ["volume"], description = "Control volume and OSD notifications (up, down, mute, mic-mute)")
     fun volume(
-        @Option(description = "Action: up, down, mute, mic-mute", required = true)
+        @Option(longNames = ["action"], description = "Action: up, down, mute, mic-mute", required = true)
         action: String
     ): String {
         val result = VolumeControl.run(action)
@@ -53,7 +54,7 @@ class DesktopCommands {
 
     @Command(command = ["lock"], description = "Lock session with Astroland retro lockscreen")
     fun lock(): String {
-        val result = dev.petrolal.dotfiles.system.ProcessRunner.run(listOf("qs", "ipc", "call", "lockscreen", "lock"))
+        val result = ProcessRunner.run(listOf("qs", "ipc", "call", "lockscreen", "lock"))
         return if (result.isOk()) "Session locked." else "Failed to lock session."
     }
 

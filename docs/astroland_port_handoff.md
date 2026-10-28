@@ -16,19 +16,22 @@ dotfiles/
 │   ├── assets/              # Sounds (WAV), images (PNG/WEBP), animations (GIF)
 │   └── plugin/              # Official C++ Hyprland Plugin (`libastroland.so`)
 │       ├── CMakeLists.txt   # Modern CMake build with Hyprland dev headers
-│       └── src/             # Physics engine, Astrolayout, ship, moons, bullets
+│       └── src/             # engine/ + game/ primitives, vendor/ third-party libs,
+│                             # main.cpp + AstroLayout.cpp (Hyprland plugin glue)
 │
 ├── config/
 │   ├── hypr/
-│   │   ├── hyprland.lua     # Hyprland lua config loading libastroland.so
+│   │   ├── hyprland.lua     # loader: dofile()s each conf/*.lua module below
+│   │   ├── conf/            # input, monitors, autostart, astroland, env,
+│   │   │                    # cursor, keybindings, window-rules (one file each)
 │   │   ├── hypridle.conf    # Idle trigger activating Quickshell screensaver
 │   │   └── vhs.frag         # CRT / VHS retro post-processing shader
-│   └── quickshell/          # Quickshell QML overlays & shell
+│   └── quickshell/          # Quickshell QML overlays & shell, grouped by feature
 │       ├── shell.qml        # Root Quickshell entrypoint
-│       ├── InfoOverlay.qml  # Clock & battery HUD
-│       ├── NotifsOverlay.qml# Desktop notification daemon (D-Bus)
-│       ├── ScreensaverComponent.qml # Bouncing DVD screensaver + audio
-│       └── LockSurface.qml  # Astroland retro lockscreen
+│       ├── overlay/         # InfoOverlay.qml, InfoOverlayComponent.qml (clock & battery HUD)
+│       ├── notif/           # NotifsOverlay.qml (desktop notification daemon, D-Bus)
+│       ├── screensaver/     # ScreensaverComponent.qml (bouncing DVD screensaver + audio)
+│       └── lock/            # LockContext.qml, LockController.qml, LockSurface.qml (retro lockscreen)
 │
 └── nixos/modules/hyprland.nix # Astroland package dependencies (quickshell, sox, mpd, etc.)
 ```
@@ -57,10 +60,10 @@ hl.plugin.load(os.getenv("HOME") .. "/dotfiles/astroland/plugin/build/libastrola
 ## 3. Quickshell Overlays
 
 Overlays run via `qs` (Quickshell):
-1. **Clock & Battery HUD** (`InfoOverlay.qml`): Displays battery level and time in retro-styled digital and analog formats.
-2. **Notifications** (`NotifsOverlay.qml`): Listens on `org.freedesktop.Notifications` with animated typewriter text reveal and sound effects.
-3. **Idle Screensaver** (`ScreensaverComponent.qml`): Triggered by `hypridle` after 300 seconds (`qs ipc call screensaver on/off`).
-4. **Lockscreen** (`LockSurface.qml`): Authenticates via PAM (`pam/password.conf`).
+1. **Clock & Battery HUD** (`overlay/InfoOverlay.qml`): Displays battery level and time in retro-styled digital and analog formats.
+2. **Notifications** (`notif/NotifsOverlay.qml`): Listens on `org.freedesktop.Notifications` with animated typewriter text reveal and sound effects.
+3. **Idle Screensaver** (`screensaver/ScreensaverComponent.qml`): Triggered by `hypridle` after 300 seconds (`qs ipc call screensaver on/off`).
+4. **Lockscreen** (`lock/LockSurface.qml`): Authenticates via PAM (`pam/password.conf`).
 
 ---
 

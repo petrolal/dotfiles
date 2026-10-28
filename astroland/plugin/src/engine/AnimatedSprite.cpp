@@ -1,19 +1,8 @@
-#pragma once
-
-#include "Sprite.cpp"
+#include "AnimatedSprite.hpp"
 #include "gifdec.h"
+#include "globals.hpp"
 #include <cairo.h>
-#include <debug/log/Logger.hpp>
-#include <helpers/Color.hpp>
-#include <hyprland/src/desktop/Workspace.hpp>
-#include <hyprland/src/managers/input/InputManager.hpp>
-#include <hyprland/src/plugins/PluginAPI.hpp>
-#include <hyprland/src/render/Renderer.hpp>
-#include <hyprland/src/render/Texture.hpp>
-#include <hyprutils/math/Vector2D.hpp>
-#include <iostream>
-#include <managers/KeybindManager.hpp>
-#include <render/pass/TexPassElement.hpp>
+#include <cstdlib>
 #include <unordered_map>
 #include <vector>
 
@@ -22,7 +11,7 @@ struct CachedGif {
 	double frameDelay = 0.05;
 };
 
-inline std::unordered_map<std::string, CachedGif> g_cachedGifs;
+static std::unordered_map<std::string, CachedGif> g_cachedGifs;
 
 static CachedGif* getOrLoadGif(const std::string& gifPath) {
 	const auto it = g_cachedGifs.find(gifPath);
@@ -73,45 +62,36 @@ static CachedGif* getOrLoadGif(const std::string& gifPath) {
 	return &inserted->second;
 }
 
-class AnimatedSprite : public Sprite {
-  public:
-	CachedGif* m_cached = nullptr;
-	int m_currentFrame = 0;
-	double m_t = 0;
-	bool m_repeat;
-
-	AnimatedSprite(std::string gifPath, bool repeat, Transform transform = {}) : m_repeat(repeat), Sprite(transform) {
-		m_texPath = gifPath;
-		m_cached = getOrLoadGif(gifPath);
-		if (m_cached && !m_cached->frames.empty()) {
-			m_tex = m_cached->frames[0];
-		}
+AnimatedSprite::AnimatedSprite(std::string gifPath, bool repeat, Transform transform) : m_repeat(repeat), Sprite(transform) {
+	m_texPath = gifPath;
+	m_cached = getOrLoadGif(gifPath);
+	if (m_cached && !m_cached->frames.empty()) {
+		m_tex = m_cached->frames[0];
 	}
-	~AnimatedSprite() = default;
+}
 
-	virtual void tick(double dt) override {
-		if (!isVisible()) {
-			Body::tick(dt);
-			return;
-		}
+void AnimatedSprite::tick(double dt) {
+	if (!isVisible()) {
+		Body::tick(dt);
+		return;
+	}
 
-		if (m_cached && !m_cached->frames.empty()) {
-			m_t += dt;
-			if (m_t >= m_cached->frameDelay) {
-				m_t = 0;
-				m_currentFrame++;
-				if (m_currentFrame >= (int)m_cached->frames.size()) {
-					if (m_repeat) {
-						m_currentFrame = 0;
-					} else {
-						dispose();
-						return;
-					}
+	if (m_cached && !m_cached->frames.empty()) {
+		m_t += dt;
+		if (m_t >= m_cached->frameDelay) {
+			m_t = 0;
+			m_currentFrame++;
+			if (m_currentFrame >= (int)m_cached->frames.size()) {
+				if (m_repeat) {
+					m_currentFrame = 0;
+				} else {
+					dispose();
+					return;
 				}
-				m_tex = m_cached->frames[m_currentFrame];
 			}
+			m_tex = m_cached->frames[m_currentFrame];
 		}
-
-		Sprite::tick(dt);
 	}
-};
+
+	Sprite::tick(dt);
+}

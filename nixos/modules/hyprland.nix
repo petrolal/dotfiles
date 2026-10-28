@@ -94,6 +94,13 @@
     hyprlock
     hypridle
 
+    # Traditional black XCursor pointer (DMZ-Black) -- with no XCursor theme
+    # package installed at all, Hyprland falls back to its own bundled
+    # hyprcursor theme (a stylized white/cyan rounded pointer), which is
+    # what config/hypr/conf/cursor.lua's XCURSOR_THEME/HYPRCURSOR_THEME env
+    # vars need an actual theme on disk to point at.
+    vanilla-dmz
+
     # Astroland ecosystem
     quickshell
     sox

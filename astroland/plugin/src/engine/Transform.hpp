@@ -6,6 +6,8 @@
 
 using namespace Hyprutils::Math;
 
+// Header-only: a small value type (like Hyprutils' own Vector2D/Mat3x3),
+// not a candidate for the Body/PhysicsBody out-of-line split below it.
 class Transform {
   public:
 	Mat3x3 m_mat;

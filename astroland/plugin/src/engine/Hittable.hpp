@@ -1,7 +1,8 @@
 #pragma once
 
-#include "PhysicsBody.cpp"
+#include "PhysicsBody.hpp"
 
+// Header-only: every member is already trivial/inline.
 class Hittable {
   public:
 	int m_health;

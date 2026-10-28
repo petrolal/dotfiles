@@ -1,12 +1,10 @@
 import QtQuick
 import Quickshell
 import Quickshell.Io
-import "./NotifsOverlay.qml"
-import "./InfoOverlay.qml"
-import "./LockContext.qml"
-import "./LockSurface.qml"
-import "./LockController.qml"
-import "./ScreensaverComponent.qml"
+import "./notif"
+import "./overlay"
+import "./lock"
+import "./screensaver"
 
 ShellRoot {
     NotifsOverlay {

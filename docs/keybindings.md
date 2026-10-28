@@ -1,8 +1,9 @@
 # Keybindings
 
-Generated from `config/hypr/hyprland.lua`'s `hl.bind(...)` calls. `mainMod` = `SUPER`. If you
-rebind something, edit that file directly and re-run `hyprctl reload` (ordinary keybind changes
-are hot-reloadable — only plugin changes need a full Hyprland restart).
+Generated from `config/hypr/conf/keybindings.lua`'s `hl.bind(...)` calls (`hyprland.lua` is just
+the loader that `dofile()`s each `conf/*.lua` module). `mainMod` = `SUPER`. If you rebind
+something, edit that file directly and re-run `hyprctl reload` (ordinary keybind changes are
+hot-reloadable — only plugin changes need a full Hyprland restart).
 
 ## Applications
 
@@ -63,7 +64,7 @@ are hot-reloadable — only plugin changes need a full Hyprland restart).
 | `SUPER + L` / `SUPER + CTRL + L` | Lock screen (Astroland retro lockscreen: `imp lock`) |
 | `SUPER + CTRL + R` | Open screen recorder (gpu-screen-recorder-gtk) |
 
-## Astroland plugin (loaded via `hl.plugin.load` in `hyprland.lua`)
+## Astroland plugin (loaded via `hl.plugin.load` in `conf/astroland.lua`)
 
 | Keys | Action |
 |---|---|
@@ -82,9 +83,9 @@ the mouse or keyboard runs `qs ipc call screensaver off`. See `config/hypr/hypri
 ## Info overlay (autostarted via quickshell)
 
 Quickshell (`qs`) starts automatically at Hyprland launch, rendering the HUD battery percentage and
-analog/digital clock (`config/quickshell/InfoOverlay.qml`).
+analog/digital clock (`config/quickshell/overlay/InfoOverlay.qml`).
 
 ## Notifications overlay (autostarted via quickshell)
 
-Quickshell implements an `org.freedesktop.Notifications` D-Bus daemon (`config/quickshell/NotifsOverlay.qml`)
+Quickshell implements an `org.freedesktop.Notifications` D-Bus daemon (`config/quickshell/notif/NotifsOverlay.qml`)
 at Hyprland launch — any app's notifications land here as a sliding panel with audio feedback.

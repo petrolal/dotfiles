@@ -1,8 +1,7 @@
 #pragma once
 
-#define MINIAUDIO_IMPLEMENTATION
-#define STB_PERLIN_IMPLEMENTATION
-
+// Declarations only -- see vendor/vendor_impl.cpp for why the
+// *_IMPLEMENTATION macros are deliberately NOT defined here.
 #include "miniaudio.c"
 #include "stb_perlin.c"
 #include <Compositor.hpp>

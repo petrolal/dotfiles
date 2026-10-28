@@ -24,9 +24,41 @@ pkg_check_modules(deps REQUIRED IMPORTED_TARGET
 	pangocairo
 )
 
-add_library(astroland SHARED "src/main.cpp")
+# Real separate compilation: each of these is its own translation unit now
+# (previously main.cpp #include'd every other .cpp as text, so only it was
+# ever listed here). Header-only classes (Transform, Hittable) need no .cpp.
+# gifdec.c has no vendor_impl.cpp-style guard of its own -- it's a plain
+# two-file C library (gifdec.h declarations + gifdec.c implementation), so
+# it just needs to be compiled once, same as any other source here.
+add_library(astroland SHARED
+	src/main.cpp
+	src/AstroLayout.cpp
+	src/engine/Body.cpp
+	src/engine/PhysicsBody.cpp
+	src/engine/Sprite.cpp
+	src/engine/AnimatedSprite.cpp
+	src/game/Ship.cpp
+	src/game/Bullet.cpp
+	src/game/Moon.cpp
+	src/game/Window.cpp
+	src/vendor/gifdec.c
+	src/vendor/vendor_impl.cpp
+)
+# gifdec.c is C, not C++, but every other TU here is compiled as C++ (it was
+# always textually spliced into a .cpp file under the old unity build) --
+# compile it as C++ too rather than introducing a C/C++ linkage split.
+set_source_files_properties(src/vendor/gifdec.c PROPERTIES LANGUAGE CXX)
+
 target_include_directories(astroland PRIVATE
 	src
+	# Every internal #include is a bare filename resolved off this search
+	# path, so each subfolder the source tree is split into (engine/game
+	# primitives vs. vendored single-header libs) has to be listed here
+	# too, rather than needing every #include rewritten with a
+	# subdirectory prefix.
+	src/engine
+	src/game
+	src/vendor
 	${deps_INCLUDE_DIRS}
 	/nix/store/qiknd62cc6pia2v17c9vnpvjz9f12hbk-hyprutils-0.14.2-dev/include
 	/nix/store/57j09q44cvs95qnfcqq5ryy5gngwcciz-systemd-minimal-libs-260.4-dev/include

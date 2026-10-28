@@ -1,15 +1,9 @@
-#pragma once
-
 #include "Window.hpp"
-#include "AnimatedSprite.cpp"
-#include "Hittable.cpp"
-#include "PhysicsBody.cpp"
-#include "Ship.cpp"
-#include "Sprite.cpp"
-#include <desktop/view/Window.hpp>
-#include <hyprutils/math/Vector2D.hpp>
-#include <hyprutils/memory/Atomic.hpp>
-#include <render/Renderer.hpp>
+#include "AnimatedSprite.hpp"
+#include "Ship.hpp"
+#include "Sprite.hpp"
+#include "globals.hpp"
+#include <hyprutils/memory/Casts.hpp>
 
 Window::Window(PHLWINDOW window)
 	: m_window(window),
@@ -63,7 +57,7 @@ void Window::hit(const PhysicsBody::Collision& collision, int damage) {
 	}
 }
 
-static SP<Window> findNodeForWindow(PHLWINDOW window) {
+SP<Window> findNodeForWindow(PHLWINDOW window) {
 	if (!window)
 		return nullptr;
 	for (auto node : g_scene->m_children) {
@@ -76,7 +70,7 @@ static SP<Window> findNodeForWindow(PHLWINDOW window) {
 	return nullptr;
 }
 
-static SP<Window> getNodeForWindow(PHLWINDOW window, bool createIfNotFound = true) {
+SP<Window> getNodeForWindow(PHLWINDOW window, bool createIfNotFound) {
 	if (!window)
 		return nullptr;
 	const auto existing = findNodeForWindow(window);
