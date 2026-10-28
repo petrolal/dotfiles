@@ -24,11 +24,6 @@
     config.common.default = [ "hyprland" ];
   };
 
-  # PAM service for imp's own GL-rendered screen locker (see
-  # src/main/kotlin/dev/petrolal/dotfiles/locker/PamAuthService.kt) -- the
-  # empty attrset gets NixOS's standard unix-auth stack, same as every other
-  # locker (swaylock, hyprlock) declares for itself.
-  security.pam.services.imp-lock = { };
 
   security.polkit.enable = true;
 
@@ -106,11 +101,7 @@
     mpd
     fyi
 
-    # LWJGL's bundled GLFW native dlopen()s these by soname at runtime (see
-    # overlay/NativeLibraryPaths.java and docs/migration_plan.md section 5)
-    # -- they're pulled in transitively by Hyprland/Wayland already, but
-    # nothing exposes them under a stable, non-hashed path until listed
-    # here, which puts them in /run/current-system/sw/lib.
+    # Wayland runtime/client libraries
     wayland
     libxkbcommon
   ];

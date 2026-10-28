@@ -104,9 +104,7 @@ dotfiles/
 │   ├── core/                      Orchestration & path resolution (Orchestrator, DotfilePaths)
 │   ├── domain/                    Functional domain types (Result, DotfileError)
 │   ├── linker/                    Deterministic symlink engine (Linker)
-│   ├── locker/                    PAM authentication (ScreenLocker, PamAuthService)
-│   ├── system/                    Detached subprocess execution (ProcessRunner)
-│   └── telemetry/                 Real-time /proc metrics polling (SystemVitals)
+│   └── system/                    Detached subprocess execution (ProcessRunner)
 │
 ├── src/test/kotlin/...           # Unit tests
 │
