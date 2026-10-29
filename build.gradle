@@ -7,6 +7,17 @@ plugins {
     id 'application'
     id 'org.graalvm.buildtools.native' version '0.11.5'
     id 'org.jetbrains.kotlin.jvm'
+    // Required for GraalVM native-image builds of a @SpringBootApplication:
+    // inside a native image, Spring Boot's AotDetector unconditionally
+    // expects an AOT-generated ApplicationContextInitializer to exist
+    // (NativeDetector.inNativeImage() short-circuits that check to true,
+    // with no opt-out), so without this plugin's `processAot` task wired
+    // into `nativeCompile`, every native `imp` invocation fails at startup
+    // with AotInitializerNotFoundException. processAot generates the
+    // initializer named after `application.mainClass` (Cli), which also
+    // matches what SpringApplication deduces at runtime from the "main"
+    // stack frame -- so both sides agree on `Cli__ApplicationContextInitializer`.
+    id 'org.springframework.boot' version '3.5.15'
 }
 
 group = 'dev.petrolal'
@@ -34,6 +45,9 @@ tasks.withType(Test).configureEach {
 }
 
 tasks.withType(JavaExec).configureEach {
+    // processAot/processTestAot (Spring Boot AOT plugin) set their own
+    // `javaLauncher` toolchain and conflict if `executable` is also forced here.
+    if (name == 'processAot' || name == 'processTestAot') return
     def graalHome = resolveGraalVmHome()
     if (graalHome != null) {
         executable = new File(graalHome, 'bin/java').absolutePath
@@ -45,12 +59,19 @@ application {
 }
 
 tasks.jar {
+    enabled = true
     archiveBaseName.set('dotfiles-deployer')
     manifest {
         attributes 'Main-Class': 'dev.petrolal.dotfiles.cli.Cli',
                    'Implementation-Title': 'dotfiles-deployer',
                    'Implementation-Version': project.version
     }
+}
+
+// The plain jar (above) is what the native-image build and the fat-jar-free
+// `java -jar` path both expect; bootJar's own fat jar isn't used anywhere.
+tasks.named('bootJar') {
+    enabled = false
 }
 
 repositories {
@@ -68,6 +89,14 @@ dependencies {
 
 tasks.test {
     useJUnitPlatform()
+}
+
+// processTestAot (wired in by the Spring Boot plugin for native *test*
+// images, which this project doesn't build) fails outright since there's no
+// spring-boot-test dependency on the test classpath, and nothing here needs
+// native test support -- only the main `imp` binary does.
+tasks.named('processTestAot') {
+    enabled = false
 }
 
 // ---------------------------------------------------------------------------

@@ -26,18 +26,26 @@ void Ship::tick(double dt) {
 	dirToPointer /= dirToPointer.size();
 
 	if (!Desktop::focusState()->window()) {
-		const auto desiredRot = std::atan2(dirToPointer.y, dirToPointer.x) + ANGLE_90;
-		m_children[0]->m_rot = slerp(m_children[0]->m_rot, desiredRot, dt * ROT_SPEED);
+		if (g_isRotLeftDown || g_isRotRightDown) {
+			const auto rotDir = (-g_isRotLeftDown + g_isRotRightDown);
+			m_children[0]->m_rot += rotDir * ROT_SPEED * dt;
+		} else {
+			const auto desiredRot = std::atan2(dirToPointer.y, dirToPointer.x) + ANGLE_90;
+			m_children[0]->m_rot = slerp(m_children[0]->m_rot, desiredRot, dt * ROT_SPEED);
+		}
 	}
 
 	moveAndCollide(dt);
 
 	PhysicsBody::tick(dt);
 
-	if (m_isShooting && m_shootTimer >= TIME_BETWEEN_SHOTS) {
+	const auto facingDir = Vector2D{std::cos(m_children[0]->m_rot - ANGLE_90), std::sin(m_children[0]->m_rot - ANGLE_90)};
+	const auto shootDir = (g_isRotLeftDown || g_isRotRightDown) ? facingDir : dirToPointer;
+
+	if ((m_isShooting || g_isShootKeyDown) && m_shootTimer >= TIME_BETWEEN_SHOTS) {
 		ma_engine_play_sound(&g_ma, assetPath(std::format("shoot_{}.wav", std::rand() % 3)).c_str(), nullptr);
 		// Spawn a bullet
-		g_scene->instantiate<Bullet>(dirToPointer, worldPos + dirToPointer * m_size.x / 2);
+		g_scene->instantiate<Bullet>(shootDir, worldPos + shootDir * m_size.x / 2);
 		m_shootTimer = 0;
 	} else
 		m_shootTimer += dt;

@@ -72,8 +72,9 @@ hot-reloadable — only plugin changes need a full Hyprland restart).
 | `SUPER + Escape` | Unfocus all windows to immediately pilot the ship |
 
 While the plugin is loaded (`general.layout = "astrolayout"`), normal window movement is supplemented
-by the game: **WASD flies the ship, mouse aims, left-click shoots** (or focuses a window if one's
-under the cursor). See `docs/astroland_port_handoff.md` for how it is compiled and loaded into Hyprland.
+by the game: **ASDF (a=left, s=down, d=up, f=right), HJKL (neovim-style), or arrow keys fly the ship,
+mouse aims, left-click shoots** (or focuses a window if one's under the cursor). See
+`docs/astroland_port_handoff.md` for how it is compiled and loaded into Hyprland.
 
 ## Idle / screensaver (automatic via hypridle & quickshell)
 

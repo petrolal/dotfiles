@@ -317,6 +317,9 @@ APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE handle) {
 		g_isLeftDown = false;
 		g_isRightDown = false;
 		g_inputVec = {0, 0};
+		g_isRotLeftDown = false;
+		g_isRotRightDown = false;
+		g_isShootKeyDown = false;
 	});
 
 	g_renderListener = Event::bus()->m_events.render.stage.listen([](eRenderStage stage) {
@@ -413,29 +416,48 @@ APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE handle) {
 		// do nothing if a window or a layer surface (app launcher, lockscreen,
 		// notification center, ...) holds keyboard focus -- window() alone
 		// misses layer-shell surfaces like tofi-drun, which focus via
-		// rawSurfaceFocus() and leave window() null, so WASD/arrows kept
+		// rawSurfaceFocus() and leave window() null, so movement keys kept
 		// getting eaten here instead of reaching the launcher.
 		if (Desktop::focusState()->window() || Desktop::focusState()->surface())
 			return;
 
 		const auto isPressed = e.state == WL_KEYBOARD_KEY_STATE_PRESSED;
-		if (e.keycode == KEY_W || e.keycode == KEY_W + 8 || e.keycode == KEY_UP || e.keycode == KEY_UP + 8) {
+		// asdf (inverted neovim: a=left, s=down, d=up, f=right), hjkl (neovim: h=left, j=down, k=up, l=right), and arrow keys
+		if (e.keycode == KEY_D || e.keycode == KEY_D + 8 || e.keycode == KEY_K || e.keycode == KEY_K + 8 ||
+			e.keycode == KEY_UP || e.keycode == KEY_UP + 8) {
 			g_isUpDown = isPressed;
 			cbInfo.cancelled = true;
 		}
-		if (e.keycode == KEY_S || e.keycode == KEY_S + 8 || e.keycode == KEY_DOWN || e.keycode == KEY_DOWN + 8) {
+		if (e.keycode == KEY_S || e.keycode == KEY_S + 8 || e.keycode == KEY_J || e.keycode == KEY_J + 8 ||
+			e.keycode == KEY_DOWN || e.keycode == KEY_DOWN + 8) {
 			g_isDownDown = isPressed;
 			cbInfo.cancelled = true;
 		}
-		if (e.keycode == KEY_A || e.keycode == KEY_A + 8 || e.keycode == KEY_LEFT || e.keycode == KEY_LEFT + 8) {
+		if (e.keycode == KEY_A || e.keycode == KEY_A + 8 || e.keycode == KEY_H || e.keycode == KEY_H + 8 ||
+			e.keycode == KEY_LEFT || e.keycode == KEY_LEFT + 8) {
 			g_isLeftDown = isPressed;
 			cbInfo.cancelled = true;
 		}
-		if (e.keycode == KEY_D || e.keycode == KEY_D + 8 || e.keycode == KEY_RIGHT || e.keycode == KEY_RIGHT + 8) {
+		if (e.keycode == KEY_F || e.keycode == KEY_F + 8 || e.keycode == KEY_L || e.keycode == KEY_L + 8 ||
+			e.keycode == KEY_RIGHT || e.keycode == KEY_RIGHT + 8) {
 			g_isRightDown = isPressed;
 			cbInfo.cancelled = true;
 		}
 		g_inputVec = {-g_isLeftDown + g_isRightDown, -g_isUpDown + g_isDownDown};
+
+		// z/x manually rotate the ship, c shoots
+		if (e.keycode == KEY_Z || e.keycode == KEY_Z + 8) {
+			g_isRotLeftDown = isPressed;
+			cbInfo.cancelled = true;
+		}
+		if (e.keycode == KEY_X || e.keycode == KEY_X + 8) {
+			g_isRotRightDown = isPressed;
+			cbInfo.cancelled = true;
+		}
+		if (e.keycode == KEY_C || e.keycode == KEY_C + 8) {
+			g_isShootKeyDown = isPressed;
+			cbInfo.cancelled = true;
+		}
 	});
 
 	g_drawSurfaceHook = addHook("IElementRenderer", "drawSurface", (void*)drawSurfaceHook);

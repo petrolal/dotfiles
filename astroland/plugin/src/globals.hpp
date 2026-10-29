@@ -105,6 +105,10 @@ inline bool g_isLeftDown;
 inline bool g_isRightDown;
 inline Vector2D g_inputVec;
 
+inline bool g_isRotLeftDown;
+inline bool g_isRotRightDown;
+inline bool g_isShootKeyDown;
+
 inline CTimer g_tickTimer;
 inline wl_event_source* g_tickSource;
 

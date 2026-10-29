@@ -70,7 +70,7 @@ Overlays run via `qs` (Quickshell):
 ## 4. Controls
 
 When `astrolayout` is active in Hyprland:
-- **WASD**: Pilot the spaceship
+- **ASDF / HJKL / Arrow keys**: Pilot the spaceship (a/h/←=left, s/j/↓=down, d/k/↑=up, f/l/→=right)
 - **Mouse cursor**: Aim ship direction
 - **Left click**: Fire bullets (or focus window if clicked directly)
 - **SUPER + CTRL + SHIFT + S**: Save state to `~/.config/hypr/save.lua`
