@@ -30,6 +30,7 @@ internal class DesktopComponentsTest {
     @Test
     fun notificationEntryFormatting() {
         val entry = NotificationCenter.NotificationEntry(
+            line = 0,
             datetime = "28/10 15:30",
             app = "Terminal",
             summary = "Done",
@@ -38,6 +39,7 @@ internal class DesktopComponentsTest {
         Assertions.assertEquals("[28/10 15:30] Terminal: Done — OK", entry.toMenuLabel())
 
         val entryWithoutBody = NotificationCenter.NotificationEntry(
+            line = 1,
             datetime = "28/10 15:30",
             app = "Terminal",
             summary = "Build Complete",
@@ -46,6 +48,7 @@ internal class DesktopComponentsTest {
         Assertions.assertEquals("[28/10 15:30] Terminal: Build Complete", entryWithoutBody.toMenuLabel())
 
         val longEntry = NotificationCenter.NotificationEntry(
+            line = 2,
             datetime = "28/10 15:30",
             app = "Terminal",
             summary = "Super long summary that exceeds the maximum display length for tofi",

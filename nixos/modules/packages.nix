@@ -48,6 +48,24 @@ let
     grpcurl     # gRPC interactive client (<leader>ag)
     grpcui
     osv-scanner # dependency CVE vulnerability audits (<leader>xv)
+
+    # core/devops.lua shells out to these directly -- not Mason-installable
+    # (they're plain CLIs, not LSPs/linters mason-registry packages).
+    tflint       # <leader>otl terraform lint
+    trivy        # <leader>ots terraform security scan (preferred over tfsec)
+    awscli2      # cloudformation validate fallback when cfn-lint is absent
+    aws-sam-cli  # <leader>oc* sam build/local invoke/start-api
+    lazydocker   # <leader>od docker dashboard / editor-snacks.lua terminal
+
+    # jq: health/clients.lua HTTP client tool (<leader>ahj response filtering)
+    jq
+
+    # bootstrap.sh currently npm/go-installs these on first run; declaring
+    # them here means a fresh machine has them without that imperative step.
+    stylua             # Lua formatter (tools-formatting.lua), npm fallback in bootstrap.sh
+    yamlfmt            # YAML formatter (conform.nvim), go-installed in bootstrap.sh
+    mermaid-cli         # `mmdc`, Snacks.image Mermaid rendering, npm-installed in bootstrap.sh
+    sonar-scanner-cli   # `sonar-scanner`, <leader>xsp whole-codebase scan, npm-installed in bootstrap.sh
   ];
 
   # Runtimes mason-tool-installer.nvim's own installers shell out to.
@@ -84,6 +102,7 @@ let
     protobuf        # protoc
     postgresql      # psql client
     pandoc          # extended Org exports
+    google-cloud-sdk # gcloud/gsutil/bq CLIs
   ];
 
 

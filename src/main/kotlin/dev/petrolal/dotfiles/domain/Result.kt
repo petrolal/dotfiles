@@ -2,8 +2,7 @@
 // License: GPL-3.0-or-later
 package dev.petrolal.dotfiles.domain
 
-import java.util.*
-import java.util.function.Consumer
+import java.util.Objects
 
 sealed interface Result<T> {
     @JvmRecord
@@ -32,23 +31,6 @@ sealed interface Result<T> {
         } else {
             fallback
         }
-    }
-
-    fun ifOk(action: Consumer<in T>): Result<T> {
-        Objects.requireNonNull(action)
-        if (this is Ok<*>) {
-            @Suppress("UNCHECKED_CAST")
-            action.accept((this as Ok<T>).value)
-        }
-        return this
-    }
-
-    fun ifErr(action: Consumer<in DotfileError>): Result<T> {
-        Objects.requireNonNull(action)
-        if (this is Err<*>) {
-            action.accept(this.error)
-        }
-        return this
     }
 
     companion object {

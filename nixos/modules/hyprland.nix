@@ -27,8 +27,13 @@
 
   xdg.portal = {
     enable = true;
-    extraPortals = [ pkgs.xdg-desktop-portal-hyprland ];
-    config.common.default = [ "hyprland" ];
+    # xdg-desktop-portal-hyprland doesn't implement org.freedesktop.portal.
+    # Settings (color-scheme/gtk-theme), so apps asking the portal whether to
+    # render dark (Chrome, GTK4 apps) got no answer and fell back to light
+    # even with gtk-application-prefer-dark-theme set. xdg-desktop-portal-gtk
+    # backs that interface by reading the GTK/dconf settings directly.
+    extraPortals = [ pkgs.xdg-desktop-portal-hyprland pkgs.xdg-desktop-portal-gtk ];
+    config.common.default = [ "hyprland" "gtk" ];
   };
 
 

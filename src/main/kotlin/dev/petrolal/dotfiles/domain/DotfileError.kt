@@ -14,16 +14,4 @@ sealed interface DotfileError {
 
     @JvmRecord
     data class IoError(val message: String?) : DotfileError
-
-    @JvmRecord
-    data class ParseError(val message: String?) : DotfileError
-
-    fun describe(): String {
-        return when (this) {
-            is CommandFailed -> "command failed (" + exitCode + "): " + command
-            is FileNotFound -> "file not found: " + path
-            is IoError -> "I/O error: " + message
-            is ParseError -> "parse error: " + message
-        }
-    }
 }

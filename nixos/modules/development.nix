@@ -10,79 +10,69 @@ let
   pythonTemplate = ../templates/python;
   templates = ../templates;
 
+  # mkLangInit --- single-language variant of dev-init below: drops that
+  # language's shell.nix + .envrc into the current directory, pinned to
+  # VERSION (default: `default`), and allows it in direnv. Generates the
+  # jvm-init/node-init/go-init/python-init commands, which used to be four
+  # hand-copied scripts differing only in these four values.
+  mkLangInit = { name, attr, label, default, template }:
+    pkgs.writeShellScriptBin name ''
+      set -eu
+      version="''${1:-${default}}"
+      for f in shell.nix .envrc; do
+        if [ -e "$f" ]; then
+          echo "${name}: $f already exists, refusing to overwrite" >&2
+          exit 1
+        fi
+      done
+      ${pkgs.gnused}/bin/sed "s/${attr} ? \"${default}\"/${attr} ? \"$version\"/" \
+        ${template}/shell.nix > shell.nix
+      install -m 644 ${template}/.envrc .envrc
+      ${pkgs.direnv}/bin/direnv allow .
+      echo "${name}: ${label} $version environment created; it loads on cd."
+    '';
+
   # jvm-init [VERSION] --- drop the JVM shell.nix + .envrc into the current
   # directory, pinned to JDK VERSION (default 25), and allow it in direnv.
-  jvm-init = pkgs.writeShellScriptBin "jvm-init" ''
-    set -eu
-    version="''${1:-25}"
-    for f in shell.nix .envrc; do
-      if [ -e "$f" ]; then
-        echo "jvm-init: $f already exists, refusing to overwrite" >&2
-        exit 1
-      fi
-    done
-    ${pkgs.gnused}/bin/sed "s/java ? \"25\"/java ? \"$version\"/" \
-      ${jvmTemplate}/shell.nix > shell.nix
-    install -m 644 ${jvmTemplate}/.envrc .envrc
-    ${pkgs.direnv}/bin/direnv allow .
-    echo "jvm-init: JDK $version environment created; it loads on cd."
-  '';
+  jvm-init = mkLangInit {
+    name = "jvm-init";
+    attr = "java";
+    label = "JDK";
+    default = "25";
+    template = jvmTemplate;
+  };
 
   # node-init [VERSION] --- drop the Node.js shell.nix + .envrc into the
   # current directory, pinned to Node.js VERSION (default 22), and allow it in
   # direnv.
-  node-init = pkgs.writeShellScriptBin "node-init" ''
-    set -eu
-    version="''${1:-22}"
-    for f in shell.nix .envrc; do
-      if [ -e "$f" ]; then
-        echo "node-init: $f already exists, refusing to overwrite" >&2
-        exit 1
-      fi
-    done
-    ${pkgs.gnused}/bin/sed "s/node ? \"22\"/node ? \"$version\"/" \
-      ${nodeTemplate}/shell.nix > shell.nix
-    install -m 644 ${nodeTemplate}/.envrc .envrc
-    ${pkgs.direnv}/bin/direnv allow .
-    echo "node-init: Node.js $version environment created; it loads on cd."
-  '';
+  node-init = mkLangInit {
+    name = "node-init";
+    attr = "node";
+    label = "Node.js";
+    default = "22";
+    template = nodeTemplate;
+  };
 
   # go-init [VERSION] --- drop the Go shell.nix + .envrc into the current
   # directory, pinned to Go VERSION (default 1.26), and allow it in direnv.
-  go-init = pkgs.writeShellScriptBin "go-init" ''
-    set -eu
-    version="''${1:-1.26}"
-    for f in shell.nix .envrc; do
-      if [ -e "$f" ]; then
-        echo "go-init: $f already exists, refusing to overwrite" >&2
-        exit 1
-      fi
-    done
-    ${pkgs.gnused}/bin/sed "s/go ? \"1.26\"/go ? \"$version\"/" \
-      ${goTemplate}/shell.nix > shell.nix
-    install -m 644 ${goTemplate}/.envrc .envrc
-    ${pkgs.direnv}/bin/direnv allow .
-    echo "go-init: Go $version environment created; it loads on cd."
-  '';
+  go-init = mkLangInit {
+    name = "go-init";
+    attr = "go";
+    label = "Go";
+    default = "1.26";
+    template = goTemplate;
+  };
 
   # python-init [VERSION] --- drop the Python shell.nix + .envrc into the
   # current directory, pinned to Python VERSION (default 3.13), and allow it
   # in direnv.
-  python-init = pkgs.writeShellScriptBin "python-init" ''
-    set -eu
-    version="''${1:-3.13}"
-    for f in shell.nix .envrc; do
-      if [ -e "$f" ]; then
-        echo "python-init: $f already exists, refusing to overwrite" >&2
-        exit 1
-      fi
-    done
-    ${pkgs.gnused}/bin/sed "s/python ? \"3.13\"/python ? \"$version\"/" \
-      ${pythonTemplate}/shell.nix > shell.nix
-    install -m 644 ${pythonTemplate}/.envrc .envrc
-    ${pkgs.direnv}/bin/direnv allow .
-    echo "python-init: Python $version environment created; it loads on cd."
-  '';
+  python-init = mkLangInit {
+    name = "python-init";
+    attr = "python";
+    label = "Python";
+    default = "3.13";
+    template = pythonTemplate;
+  };
 
   # dev-init [LANG...] --- compose a multi-language environment in the current
   # directory: copies each LANG template (default: all of them) into

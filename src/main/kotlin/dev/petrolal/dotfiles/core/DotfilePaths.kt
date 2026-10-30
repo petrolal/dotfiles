@@ -60,22 +60,4 @@ object DotfilePaths {
         }
         return cwd
     }
-
-    @JvmStatic
-    fun commandExists(cmd: String?): Boolean {
-        if (cmd.isNullOrEmpty()) return false
-        if (cmd.indexOf('/') >= 0) {
-            val p = Paths.get(cmd)
-            return Files.isRegularFile(p) && Files.isExecutable(p)
-        }
-        val pathEnv = System.getenv("PATH") ?: return false
-        for (dir in pathEnv.split(":".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()) {
-            if (dir.isEmpty()) continue
-            val candidate = Paths.get(dir).resolve(cmd)
-            if (Files.isRegularFile(candidate) && Files.isExecutable(candidate)) {
-                return true
-            }
-        }
-        return false
-    }
 }

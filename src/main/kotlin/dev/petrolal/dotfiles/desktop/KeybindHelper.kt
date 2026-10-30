@@ -2,9 +2,6 @@
 // License: GPL-3.0-or-later
 package dev.petrolal.dotfiles.desktop
 
-import java.io.OutputStreamWriter
-import java.nio.charset.StandardCharsets
-
 object KeybindHelper {
     data class Bind(val keys: String, val action: String) {
         fun toMenuLabel(): String {
@@ -58,30 +55,10 @@ object KeybindHelper {
         Bind("XF86AudioNext/Pause/Play/Prev", "Media playback (playerctl)"),
     )
 
-    private fun runTofi(input: String): String? {
-        val pb = ProcessBuilder(
-            "tofi",
-            "--prompt-text=> ",
-            "--placeholder-text=keybinds:"
-        )
-        return try {
-            val process = pb.start()
-            OutputStreamWriter(process.outputStream, StandardCharsets.UTF_8).use { writer ->
-                writer.write(input)
-                writer.flush()
-            }
-            val output = process.inputStream.bufferedReader(StandardCharsets.UTF_8).readText().trim()
-            val exitCode = process.waitFor()
-            if (exitCode == 0 && output.isNotEmpty()) output else null
-        } catch (_: Exception) {
-            null
-        }
-    }
-
     @JvmStatic
     fun show(): Int {
         val menu = binds.joinToString("\n") { it.toMenuLabel() }
-        runTofi(menu)
+        Tofi.prompt(menu, "> ", "keybinds:")
         return 0
     }
 }

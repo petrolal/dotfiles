@@ -7,17 +7,11 @@ import org.springframework.boot.builder.SpringApplicationBuilder
 import org.springframework.shell.CommandNotFound
 import org.springframework.shell.command.CommandExecution.CommandParserExceptionsException
 import org.springframework.shell.command.annotation.CommandScan
-import kotlin.system.exitProcess
 
 @SpringBootApplication
 @CommandScan(basePackages = ["dev.petrolal.dotfiles.cli.commands"])
 open class ImpApplication {
     companion object {
-        @JvmStatic
-        fun main(argv: Array<String>) {
-            exitProcess(run(argv))
-        }
-
         // Spring Shell's non-interactive runner throws instead of returning a
         // failing exit code for an unknown command or a bad/missing option
         // (CommandNotFound / CommandParserExceptionsException) -- left

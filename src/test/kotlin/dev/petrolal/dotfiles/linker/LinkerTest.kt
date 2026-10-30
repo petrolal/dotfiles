@@ -4,7 +4,6 @@ import dev.petrolal.dotfiles.linker.Linker.UnlinkOutcome
 import dev.petrolal.dotfiles.linker.Linker.isExcluded
 import dev.petrolal.dotfiles.linker.Linker.isPrefixMatch
 import dev.petrolal.dotfiles.linker.Linker.linkFile
-import dev.petrolal.dotfiles.linker.Linker.rootTargetFor
 import dev.petrolal.dotfiles.linker.Linker.unlinkFile
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
@@ -12,7 +11,6 @@ import org.junit.jupiter.api.io.TempDir
 import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.Path
-import java.util.*
 
 internal class LinkerTest {
     @Test

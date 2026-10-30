@@ -8,9 +8,9 @@ import dev.petrolal.dotfiles.linker.Linker.UnlinkOutcome
 
 /**
  * Composes the focused, single-purpose collaborators below into the CLI's
- * commands (deploy, uninstall, overlay). This class's one reason to change
- * is how those commands are sequenced -- not how linking actually works,
- * which lives in its own class:
+ * commands (deploy, uninstall). This class's one reason to change is how
+ * those commands are sequenced -- not how linking actually works, which
+ * lives in its own class:
  *
  *  * [Linker] -- symlink discovery/creation/removal
  *

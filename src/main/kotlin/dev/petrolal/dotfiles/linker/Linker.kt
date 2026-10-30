@@ -8,7 +8,6 @@ import dev.petrolal.dotfiles.domain.Result
 import java.io.IOException
 import java.nio.file.*
 import java.nio.file.attribute.BasicFileAttributes
-import java.util.*
 
 object Linker {
     /** Source prefixes (relative to the repo root) auto-discovered and mirrored
@@ -48,7 +47,7 @@ object Linker {
     }
 
     @JvmStatic
-    fun rootTargetFor(relpath: String): Optional<Mapping> {
+    fun rootTargetFor(relpath: String): Mapping? {
         var best: Mapping? = null
         for (entry in ROOT_TARGETS) {
             if (isPrefixMatch(
@@ -59,7 +58,7 @@ object Linker {
                 best = entry
             }
         }
-        return Optional.ofNullable(best)
+        return best
     }
 
     @JvmStatic
@@ -102,14 +101,13 @@ object Linker {
         val out = ArrayList<Mapping>(OVERRIDES)
         for (top in topLevelRoots()) {
             for (fileRel in scanTree(top, root)) {
-                rootTargetFor(fileRel).ifPresent { entry ->
-                    out.add(
-                        Mapping(
-                            fileRel,
-                            entry.to + fileRel.substring(entry.from.length)
-                        )
+                val entry = rootTargetFor(fileRel) ?: continue
+                out.add(
+                    Mapping(
+                        fileRel,
+                        entry.to + fileRel.substring(entry.from.length)
                     )
-                }
+                )
             }
         }
         return out
