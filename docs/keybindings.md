@@ -1,9 +1,15 @@
 # Keybindings
 
-Generated from `config/hypr/conf/keybindings.lua`'s `hl.bind(...)` calls (`hyprland.lua` is just
+Hand-curated from `config/hypr/conf/keybindings.lua`'s `hl.bind(...)` calls (`hyprland.lua` is just
 the loader that `dofile()`s each `conf/*.lua` module). `mainMod` = `SUPER`. If you rebind
 something, edit that file directly and re-run `hyprctl reload` (ordinary keybind changes are
 hot-reloadable — only plugin changes need a full Hyprland restart).
+
+For a version that can never drift out of sync with that file (because it's parsed from it at
+run time instead of hand-copied), run `imp keybinds` -- it scrapes every `hl.bind(...)` call's
+keys and description directly (see `KeybindHelper.kt`). This page exists alongside it for the
+extra narrative context (grouping, idle/overlay behavior) that a flat generated list doesn't
+carry.
 
 ## Applications
 
@@ -57,12 +63,29 @@ hot-reloadable — only plugin changes need a full Hyprland restart).
 | Keys | Action |
 |---|---|
 | `SUPER + SHIFT + R` | Reload Hyprland config (`hyprctl reload`) — does **not** reload plugins |
-| `SUPER + SHIFT + B` | Restart Quickshell HUD (`pkill -f quickshell; qs &`) |
+| `SUPER + SHIFT + B` | Reload Quickshell HUD (`pkill -f quickshell; qs &`) |
 | `SUPER + N` | Open Tofi notification center (`imp notif-center`) |
 | `SUPER + /` | Show Tofi keybinding cheat sheet (`imp keybinds`) |
 | `SUPER + V` / `SUPER + SHIFT + V` | Toggle VHS / CRT screen shader (`imp toggle-vhs`) |
 | `SUPER + L` / `SUPER + CTRL + L` | Lock screen (RetroVHSSucks retro lockscreen: `imp lock`) |
 | `SUPER + CTRL + R` | Open screen recorder (gpu-screen-recorder-gtk) |
+
+## Media & volume keys
+
+| Keys | Action |
+|---|---|
+| `XF86AudioRaiseVolume` | Raise volume (`imp volume --action up`) |
+| `XF86AudioLowerVolume` | Lower volume (`imp volume --action down`) |
+| `XF86AudioMute` | Mute audio (`imp volume --action mute`) |
+| `XF86AudioMicMute` | Mute microphone (`imp volume --action mic-mute`) |
+| `XF86AudioNext` | Next track (`playerctl next`) |
+| `XF86AudioPause` | Pause audio (`playerctl play-pause`) |
+| `XF86AudioPlay` | Play audio (`playerctl play-pause`) |
+| `XF86AudioPrev` | Previous track (`playerctl previous`) |
+
+The four volume/mic keys route through `imp volume` (`VolumeControl.kt`) rather than raw `wpctl`,
+so they get the same in-place-updating OSD notification (via the shared `Notifier` helper) as
+every other `imp_bin`-fronted binding above. The media transport keys need `playerctl`.
 
 ## Idle / screensaver (automatic via hypridle & quickshell)
 

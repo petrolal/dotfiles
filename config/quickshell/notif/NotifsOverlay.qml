@@ -9,7 +9,12 @@ import ".."
 PanelWindow {
     id: root
 
+    // Quickshell owns DND state outright: `dnd` is seeded from the persisted
+    // file once at startup and written back on every change, so it's the
+    // only thing anyone (the IPC handler in shell.qml, imp's NotificationCenter)
+    // needs to read -- no separate file-reading fallback anywhere else.
     property bool dnd: false
+    onDndChanged: dndFile.setText(dnd ? "true" : "false")
     property list<Notification> notifs
     property Notification currentNotif: (notifs && notifs.length > 0) ? notifs[0] : null
     property string currentSummary: root.currentNotif ? (root.currentNotif.summary == "wait, it's all flat?" ? "always has been 🔫" : (root.currentNotif.summary || "")) : ""
@@ -36,6 +41,10 @@ PanelWindow {
         printErrors: false
     }
 
+    Component.onCompleted: {
+        root.dnd = dndFile.text().trim() === "true";
+    }
+
     anchors {
         left: true
         top: true
@@ -57,7 +66,7 @@ PanelWindow {
             logNotifCmd.command = ["bash", "-c", `mkdir -p "$HOME/.cache/notifications" && printf "%s\\t%s\\t%s\\t%s\\n" "$1" "$2" "$3" "$4" >> "$HOME/.cache/notifications/history.tsv"`, "_", dt, app, sum, body];
             logNotifCmd.running = true;
 
-            if (root.dnd || dndFile.text().trim() === "true") {
+            if (root.dnd) {
                 try { notif.dismiss(); } catch (e) {}
                 return;
             }

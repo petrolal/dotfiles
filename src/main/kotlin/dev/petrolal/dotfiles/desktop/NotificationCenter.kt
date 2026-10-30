@@ -3,7 +3,6 @@
 package dev.petrolal.dotfiles.desktop
 
 import dev.petrolal.dotfiles.system.ProcessRunner
-import java.io.File
 import java.nio.charset.StandardCharsets
 
 object NotificationCenter {
@@ -36,37 +35,16 @@ object NotificationCenter {
         }
     }
 
-    private fun getDndFile(): File = File(NotificationLogger.getCacheDir(), "dnd")
-
+    /** Quickshell (notifsOverlay.dnd in shell.qml) is the sole owner of DND
+     * state -- it persists it, not us -- so this is a pure IPC round trip
+     * with no local cache/fallback to keep in sync.  */
     fun getDndStatus(): String {
-        val result = ProcessRunner.captureOutput(listOf("qs", "ipc", "call", "notifs", "getDnd"))
-        val status = result.getOrNull()?.trim()
-        if (status == "ATIVADO" || status == "DESATIVADO") {
-            return status
-        }
-        val dndFile = getDndFile()
-        if (dndFile.exists() && dndFile.readText().trim() == "true") {
-            return "ATIVADO"
-        }
-        return "DESATIVADO"
+        val status = ProcessRunner.captureOutput(listOf("qs", "ipc", "call", "notifs", "getDnd")).getOrNull()?.trim()
+        return if (status == "ATIVADO") "ATIVADO" else "DESATIVADO"
     }
 
     fun toggleDnd() {
-        val result = ProcessRunner.captureOutput(listOf("qs", "ipc", "call", "notifs", "toggleDnd"))
-        val newStatus = result.getOrNull()?.trim()
-        val dndFile = getDndFile()
-        when (newStatus) {
-            "ATIVADO" -> dndFile.writeText("true")
-            "DESATIVADO" -> dndFile.writeText("false")
-            else -> {
-                val current = getDndStatus()
-                if (current == "ATIVADO") {
-                    dndFile.writeText("false")
-                } else {
-                    dndFile.writeText("true")
-                }
-            }
-        }
+        ProcessRunner.captureOutput(listOf("qs", "ipc", "call", "notifs", "toggleDnd"))
     }
 
     fun clearNotifications() {

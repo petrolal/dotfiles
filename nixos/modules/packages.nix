@@ -31,9 +31,7 @@ let
     emacs
     neovim
     claude-code
-    claude-desktop-fhs
     bruno
-    kiro
   ];
 
   # Fast search, used by Hell Emacs' consult-ripgrep/consult-find (C-c s p / C-c s f)
