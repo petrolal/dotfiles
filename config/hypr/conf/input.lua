@@ -32,6 +32,7 @@ hl.config({
             inactive_border = 0xff4a4a4a,
         },
         border_size = 2,
+        gaps_out = 8,
     },
     decoration = {
         -- Square corners to match the Windows-98 look the old theme had.
