@@ -20,7 +20,10 @@ object VolumeControl {
             else -> return Result.err(CommandFailed("Unknown volume action: $action", 1))
         }
 
-        ProcessRunner.run(wpCmd)
+        when (val wpResult = ProcessRunner.run(wpCmd)) {
+            is Result.Err -> return Result.err(wpResult.error)
+            is Result.Ok -> {}
+        }
 
         val volInfo = ProcessRunner.captureOutput(listOf("wpctl", "get-volume", "@DEFAULT_AUDIO_SINK@"))
             .getOrNull() ?: ""

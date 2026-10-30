@@ -91,11 +91,16 @@ end, { description = "Move window to special workspace scratchpad" })
 hl.bind(mainMod .. " + mouse_down", hl.dsp.focus({ workspace = "e+1" }), { description = "Switch to next workspace" })
 hl.bind(mainMod .. " + mouse_up",   hl.dsp.focus({ workspace = "e-1" }), { description = "Switch to previous workspace" })
 
--- Laptop multimedia keys for volume and LCD brightness
-hl.bind("XF86AudioRaiseVolume", hl.dsp.exec_cmd("wpctl set-volume -l 1 @DEFAULT_AUDIO_SINK@ 5%+"), { locked = true, repeating = true, description = "Raise volume" })
-hl.bind("XF86AudioLowerVolume", hl.dsp.exec_cmd("wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-"),      { locked = true, repeating = true, description = "Lower volume" })
-hl.bind("XF86AudioMute",        hl.dsp.exec_cmd("wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"),     { locked = true, repeating = true, description = "Mute audio" })
-hl.bind("XF86AudioMicMute",     hl.dsp.exec_cmd("wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle"),   { locked = true, repeating = true, description = "Mute microphone" })
+-- Laptop multimedia keys for volume and LCD brightness. Routed through
+-- `imp volume` (VolumeControl.kt) rather than raw wpctl so these get the
+-- same in-place-updating OSD notification as every other imp_bin-fronted
+-- action here -- bare wpctl gives no OSD at all. imp is a GraalVM
+-- native-image binary (~70ms per invocation measured), so this is fine
+-- even held down with `repeating = true`.
+hl.bind("XF86AudioRaiseVolume", hl.dsp.exec_cmd(imp_bin .. " volume --action up"),       { locked = true, repeating = true, description = "Raise volume" })
+hl.bind("XF86AudioLowerVolume", hl.dsp.exec_cmd(imp_bin .. " volume --action down"),     { locked = true, repeating = true, description = "Lower volume" })
+hl.bind("XF86AudioMute",        hl.dsp.exec_cmd(imp_bin .. " volume --action mute"),     { locked = true, repeating = true, description = "Mute audio" })
+hl.bind("XF86AudioMicMute",     hl.dsp.exec_cmd(imp_bin .. " volume --action mic-mute"), { locked = true, repeating = true, description = "Mute microphone" })
 
 -- Requires playerctl
 hl.bind("XF86AudioNext",  hl.dsp.exec_cmd("playerctl next"),       { locked = true, description = "Next track" })

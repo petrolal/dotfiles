@@ -6,7 +6,7 @@ import org.springframework.shell.command.annotation.Command
 import org.springframework.shell.command.annotation.Option
 
 @Command(group = "Dotfiles Management")
-class DotfilesCommands {
+class DotfilesCommands : ImpCommandSupport() {
 
     @Command(command = ["deploy"], description = "Perform full deployment (symlink dotfiles)")
     fun deploy(
@@ -16,9 +16,9 @@ class DotfilesCommands {
         @Option(longNames = ["quiet"], shortNames = ['q'], description = "Suppress non-error output")
         quiet: Boolean = false
     ): String {
-        val verbose = !quiet
-        val ok = Orchestrator.deploy(dryRun, verbose).ok
-        return if (ok) "Deployment completed successfully." else "Deployment failed."
+        val result = Orchestrator.deploy(dryRun, !quiet)
+        if (!result.ok) throw CommandFailedException("deployment failed: ${result.failures} failure(s)")
+        return "Deployment completed successfully."
     }
 
     @Command(command = ["uninstall"], alias = ["-u", "--uninstall"], description = "Remove all deployed dotfile symlinks safely")
@@ -29,9 +29,9 @@ class DotfilesCommands {
         @Option(longNames = ["quiet"], shortNames = ['q'], description = "Suppress non-error output")
         quiet: Boolean = false
     ): String {
-        val verbose = !quiet
-        val ok = Orchestrator.uninstall(dryRun, verbose).ok
-        return if (ok) "Uninstall completed successfully." else "Uninstall failed."
+        val result = Orchestrator.uninstall(dryRun, !quiet)
+        if (!result.ok) throw CommandFailedException("uninstall failed: ${result.failures} failure(s)")
+        return "Uninstall completed successfully."
     }
 
 

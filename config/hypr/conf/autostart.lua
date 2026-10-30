@@ -1,8 +1,8 @@
 -- autostart.lua --- processes launched once Hyprland starts
 -- License: GPL-3.0-or-later
 --
--- Expects `imp_bin` to already be set as a global by the loader
--- (config/hypr/hyprland.lua) before this file is dofile'd.
+-- Expects `imp_bin` and `DOTFILES_DIR` to already be set as globals by the
+-- loader (config/hypr/hyprland.lua) before this file is dofile'd.
 
 hl.on("hyprland.start", function ()
   hl.exec_cmd("hyprpaper")
@@ -15,7 +15,7 @@ hl.on("hyprland.start", function ()
   -- clock, tray, battery. Needs astal.hyprland/.tray/.wireplumber/.notifd
   -- typelibs on GI_TYPELIB_PATH, which nixos/modules/hyprland.nix already
   -- lists in environment.systemPackages.
-  hl.exec_cmd("ags run " .. os.getenv("HOME") .. "/dotfiles/config/ags")
+  hl.exec_cmd("ags run " .. DOTFILES_DIR .. "/config/ags")
   -- Background notification logger for Tofi notification center
   hl.exec_cmd(imp_bin .. " notif-logger")
 end)

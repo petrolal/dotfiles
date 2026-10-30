@@ -11,7 +11,7 @@ import org.springframework.shell.command.annotation.Command
 import org.springframework.shell.command.annotation.Option
 
 @Command(group = "Desktop Operations")
-class DesktopCommands {
+class DesktopCommands : ImpCommandSupport() {
 
     @Command(command = ["browser"], alias = ["launch-browser"], description = "Launch Wayland & GPU-optimized browser")
     fun browser(
@@ -21,15 +21,12 @@ class DesktopCommands {
         @Option(longNames = ["args"], description = "Additional arguments to pass to the browser")
         args: List<String>? = null
     ): String {
-        val result = BrowserLauncher.launch(browser, args ?: emptyList())
-        return if (result.isOk()) "Browser launched." else "Failed to launch browser."
+        BrowserLauncher.launch(browser, args ?: emptyList()).orThrow()
+        return "Browser launched."
     }
 
     @Command(command = ["vhs"], alias = ["toggle-vhs"], description = "Toggle VHS / CRT screen shader in Hyprland")
-    fun toggleVhs(): String {
-        val result = VhsShader.toggle()
-        return if (result.isOk()) result.getOrNull() ?: "Toggled VHS mode." else "Failed to toggle VHS shader."
-    }
+    fun toggleVhs(): String = VhsShader.toggle().orThrow()
 
     @Command(command = ["notif-center"], description = "Open interactive Tofi notification center")
     fun notifCenter(): String {
@@ -48,14 +45,13 @@ class DesktopCommands {
         @Option(longNames = ["action"], description = "Action: up, down, mute, mic-mute", required = true)
         action: String
     ): String {
-        val result = VolumeControl.run(action)
-        return if (result.isOk()) result.getOrNull() ?: "Volume adjusted." else "Failed to adjust volume."
+        return VolumeControl.run(action).orThrow()
     }
 
     @Command(command = ["lock"], description = "Lock session with RetroVHSSucks retro lockscreen")
     fun lock(): String {
-        val result = ProcessRunner.run(listOf("qs", "ipc", "call", "lockscreen", "lock"))
-        return if (result.isOk()) "Session locked." else "Failed to lock session."
+        ProcessRunner.run(listOf("qs", "ipc", "call", "lockscreen", "lock")).orThrow()
+        return "Session locked."
     }
 
     @Command(command = ["keybinds"], alias = ["keys", "help-keys"], description = "Show a Tofi keybinding cheat sheet")

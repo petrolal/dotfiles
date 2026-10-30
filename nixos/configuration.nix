@@ -10,6 +10,7 @@
     ./modules/fonts.nix
     ./modules/users.nix
     ./modules/packages.nix
+    ./modules/nix-ld.nix
     ./modules/development.nix
     ./modules/jetbrains.nix
     ./modules/containers.nix

@@ -14,4 +14,13 @@ sealed interface DotfileError {
 
     @JvmRecord
     data class IoError(val message: String?) : DotfileError
+
+    /** Human-readable detail for [Result.orThrow]'s `CommandFailedException`
+     * message -- surfaced to the user as "imp: <describe()>" by
+     * ImpCommandSupport's exception resolver. */
+    fun describe(): String = when (this) {
+        is CommandFailed -> "command failed (" + exitCode + "): " + command
+        is FileNotFound -> "file not found: " + path
+        is IoError -> "I/O error: " + message
+    }
 }

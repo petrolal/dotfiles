@@ -1,6 +1,11 @@
 { pkgs, ... }:
 
 let
+  # libx11/libGL also appear in nix-ld.nix's `programs.nix-ld.libraries`
+  # (nix-ld needs its own copy of the option's value, so that overlap is
+  # inherent, not a leftover to merge away) -- here they're genuine
+  # environment.systemPackages entries appimage-run and other unpatched
+  # binaries can dlopen directly.
   dynamicLibs = with pkgs; [
     libx11
     libGL
@@ -154,9 +159,4 @@ in {
     ++ systemTools
     ++ mediaUtils
     ++ dailyTools;
-
-  # Lets unpatched/FHS binaries (AppImages, etc.) find dynamic libs without
-  # polluting every process on the system via a global LD_LIBRARY_PATH.
-  programs.nix-ld.enable = true;
-  programs.nix-ld.libraries = dynamicLibs;
 }

@@ -22,7 +22,12 @@ object VhsShader {
             """hl.config({ decoration = { screen_shader = "$shaderPath" } })""" to "Ativado"
         }
 
-        ProcessRunner.run(listOf("hyprctl", "eval", evalCmd))
+        when (val evalResult = ProcessRunner.run(listOf("hyprctl", "eval", evalCmd))) {
+            is Result.Err -> return Result.err(evalResult.error)
+            is Result.Ok -> {}
+        }
+        // Best-effort: a failed OSD toast shouldn't fail a shader toggle that
+        // already applied successfully.
         ProcessRunner.run(listOf("notify-send", "Modo VHS", notifStatus, "-i", "video-display"))
 
         return Result.ok("Modo VHS $notifStatus")

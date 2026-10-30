@@ -63,48 +63,7 @@ in
   # Toolbox into ~/.local/share/JetBrains/Toolbox and IDE instances pulled by
   # Gradle's `org.jetbrains.intellij.platform` plugin (`./gradlew runIde`) into
   # ~/.gradle/caches -- bundle a prebuilt JetBrains Runtime (JBR), JCEF, and
-  # native helpers that expect FHS paths.
-  #
-  # nix-ld provides the dynamic linker and libraries for those unpatched
-  # binaries when launched directly (e.g. via Toolbox-generated .desktop files,
-  # CLI scripts, or Gradle tasks).
-  programs.nix-ld.enable = true;
-  programs.nix-ld.libraries = with pkgs; [
-    libx11
-    libxext
-    libxrender
-    libxtst
-    libxi
-    libxrandr
-    libxcursor
-    libxfixes
-    libxcomposite
-    libxdamage
-    libxcb
-    libxxf86vm
-    libxkbcommon
-    wayland
-    freetype
-    fontconfig
-    expat
-    zlib
-    stdenv.cc.cc.lib
-    glib
-    gtk3
-    cairo
-    pango
-    atk
-    at-spi2-core
-    at-spi2-atk
-    dbus
-    libdrm
-    libgbm
-    mesa
-    alsa-lib
-    cups
-    nspr
-    nss
-    udev
-    e2fsprogs
-  ];
+  # native helpers that expect FHS paths. The dynamic linker and libraries
+  # those binaries need are provided by nix-ld.nix, not here -- see that
+  # module for why it's centralized rather than split per-tool.
 }
