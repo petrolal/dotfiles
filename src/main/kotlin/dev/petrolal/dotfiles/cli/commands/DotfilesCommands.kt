@@ -21,7 +21,7 @@ class DotfilesCommands {
         return if (ok) "Deployment completed successfully." else "Deployment failed."
     }
 
-    @Command(command = ["uninstall"], description = "Remove all deployed dotfile symlinks safely")
+    @Command(command = ["uninstall"], alias = ["-u", "--uninstall"], description = "Remove all deployed dotfile symlinks safely")
     fun uninstall(
         @Option(longNames = ["dry-run"], shortNames = ['n'], description = "Simulate actions without modifying filesystem")
         dryRun: Boolean = false,
@@ -36,7 +36,7 @@ class DotfilesCommands {
 
 
 
-    @Command(command = ["version"], alias = ["-v"], description = "Display version information")
+    @Command(command = ["version"], alias = ["-v", "--version"], description = "Display version information")
     fun version(): String {
         return buildString {
             appendLine("${Cli.PROGRAM_NAME} ${Cli.VERSION}")
