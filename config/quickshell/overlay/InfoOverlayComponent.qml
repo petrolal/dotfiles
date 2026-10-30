@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Layouts
 import QtQuick.Effects
 import Quickshell.Io
+import ".."
 
 Rectangle {
     id: root
@@ -27,33 +28,25 @@ Rectangle {
                 onRead: data => {
                     const percent = parseInt(data);
                     if (percent < 40)
-                        bat.source = "/home/petrolal/dotfiles/RetroVHSSucks/assets/battery_low.svg";
+                        bat.source = Env.assetsDir + "/battery_low.svg";
                     else if (percent < 80)
-                        bat.source = "/home/petrolal/dotfiles/RetroVHSSucks/assets/battery_mid.svg";
+                        bat.source = Env.assetsDir + "/battery_mid.svg";
                     else
-                        bat.source = "/home/petrolal/dotfiles/RetroVHSSucks/assets/battery_full.svg";
+                        bat.source = Env.assetsDir + "/battery_full.svg";
                 }
             }
         }
         Image {
             id: bat
             anchors.right: parent.right
-            source: "/home/petrolal/dotfiles/RetroVHSSucks/assets/battery_full.svg"
+            source: Env.assetsDir + "/battery_full.svg"
             sourceSize.width: 200
             opacity: 0.7
         }
 
-        Process {
-            id: dateProc
-            command: ["date", "+%H:%M"]
-            running: true
-            stdout: SplitParser {
-                onRead: data => timetxt.text = data
-            }
-        }
         Text {
             id: timetxt
-            text: "00:00"
+            text: Qt.formatTime(new Date(), "hh:mm")
             color: "#ffffff"
             font.pointSize: 64
             font.family: "BigBlueTermPlus Nerd Font"
@@ -68,16 +61,21 @@ Rectangle {
             interval: 1000
             running: true
             repeat: true
-            onTriggered: () => {
-                batProc.running = true;
-                dateProc.running = true;
-            }
+            onTriggered: timetxt.text = Qt.formatTime(new Date(), "hh:mm")
+        }
+
+        Timer {
+            interval: 15000
+            running: true
+            repeat: true
+            triggeredOnStart: true
+            onTriggered: batProc.running = true
         }
     }
 
     AnimatedImage {
         id: reflection
-        source: "/home/petrolal/dotfiles/RetroVHSSucks/assets/reflection.gif"
+        source: Env.assetsDir + "/reflection.gif"
         anchors.fill: parent
         fillMode: Image.FillMode.PreserveAspectCrop
         visible: false

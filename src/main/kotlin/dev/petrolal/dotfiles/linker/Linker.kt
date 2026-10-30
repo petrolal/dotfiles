@@ -27,11 +27,6 @@ object Linker {
         "config/gtk-2.0/gtkrc"
     )
 
-    /** Explicit (source -> target) pairs for paths that don't fit the generic
-     * root-mirrored layout: renames, or a source linked to more than one target.  */
-    @JvmField
-    val OVERRIDES: List<Mapping> = emptyList()
-
     @JvmStatic
     fun isExcluded(relpath: String): Boolean {
         for (prefix in EXCLUDES) {
@@ -98,7 +93,7 @@ object Linker {
 
     @JvmStatic
     fun collectAllMappings(root: Path): List<Mapping> {
-        val out = ArrayList<Mapping>(OVERRIDES)
+        val out = ArrayList<Mapping>()
         for (top in topLevelRoots()) {
             for (fileRel in scanTree(top, root)) {
                 val entry = rootTargetFor(fileRel) ?: continue
@@ -132,8 +127,8 @@ object Linker {
 
     @JvmStatic
     @Throws(IOException::class)
-    fun ensureRealDirectory(dir: Path?, home: Path) {
-        if (dir == null) return
+    fun ensureRealDirectory(dir: Path?, home: Path, ensuredDirs: MutableSet<Path> = HashSet()) {
+        if (dir == null || !ensuredDirs.add(dir)) return
         val rel: Path = try {
             home.relativize(dir)
         } catch (e: IllegalArgumentException) {
@@ -143,7 +138,7 @@ object Linker {
         var current = home
         for (part in rel) {
             current = current.resolve(part)
-            if (Files.isSymbolicLink(current)) {
+            if (ensuredDirs.add(current) && Files.isSymbolicLink(current)) {
                 Files.delete(current)
             }
         }
@@ -162,7 +157,7 @@ object Linker {
     @JvmStatic
     fun linkFile(
         sourceRel: String, targetRel: String, root: Path, home: Path,
-        dryRun: Boolean, verbose: Boolean
+        dryRun: Boolean, verbose: Boolean, ensuredDirs: MutableSet<Path> = HashSet()
     ): Result<Void?> {
         val src = root.resolve(sourceRel)
         val dest = home.resolve(targetRel)
@@ -175,7 +170,7 @@ object Linker {
             return Result.ok(null)
         }
         try {
-            ensureRealDirectory(dest.parent, home)
+            ensureRealDirectory(dest.parent, home, ensuredDirs)
             if (Files.isDirectory(src) && Files.isDirectory(dest) && !Files.isSymbolicLink(dest)) {
                 deleteRecursively(dest)
             }

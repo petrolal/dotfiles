@@ -4,6 +4,10 @@ package dev.petrolal.dotfiles.core
 
 import dev.petrolal.dotfiles.linker.Linker
 import dev.petrolal.dotfiles.linker.Linker.UnlinkOutcome
+import java.nio.file.Path
+import java.util.concurrent.Callable
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.Executors
 
 
 /**
@@ -27,9 +31,16 @@ object Orchestrator {
             println("Target: $home")
         }
 
-        for ((from, to) in Linker.collectAllMappings(root)) {
-            if (Linker.linkFile(from, to, root, home, dryRun, verbose).isOk()) successes++
-            else failures++
+        // Mappings are independent, mostly-blocking filesystem I/O, so they're linked
+        // concurrently on virtual threads; ensuredDirs must then be a thread-safe set.
+        val ensuredDirs: MutableSet<Path> = ConcurrentHashMap.newKeySet()
+        val mappings = Linker.collectAllMappings(root)
+        Executors.newVirtualThreadPerTaskExecutor().use { executor ->
+            val outcomes = mappings
+                .map { (from, to) -> executor.submit(Callable { Linker.linkFile(from, to, root, home, dryRun, verbose, ensuredDirs).isOk() }) }
+                .map { it.get() }
+            successes = outcomes.count { it }
+            failures = outcomes.size - successes
         }
 
         if (verbose) {
@@ -50,13 +61,13 @@ object Orchestrator {
         var removedCount = 0
         if (verbose) println("Target: $home")
 
-        for (mapping in Linker.collectAllMappings(root)) {
-            when (Linker.unlinkFile(mapping.to, home, dryRun, verbose)) {
-                UnlinkOutcome.REMOVED -> removedCount++
-                UnlinkOutcome.FAILED -> failures++
-                UnlinkOutcome.SKIPPED -> {
-                }
-            }
+        val mappings = Linker.collectAllMappings(root)
+        Executors.newVirtualThreadPerTaskExecutor().use { executor ->
+            val outcomes = mappings
+                .map { mapping -> executor.submit(Callable { Linker.unlinkFile(mapping.to, home, dryRun, verbose) }) }
+                .map { it.get() }
+            removedCount = outcomes.count { it == UnlinkOutcome.REMOVED }
+            failures = outcomes.count { it == UnlinkOutcome.FAILED }
         }
 
         if (verbose) {

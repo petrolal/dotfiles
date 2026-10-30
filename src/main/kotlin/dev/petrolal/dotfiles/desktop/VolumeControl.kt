@@ -5,7 +5,6 @@ package dev.petrolal.dotfiles.desktop
 import dev.petrolal.dotfiles.domain.DotfileError.CommandFailed
 import dev.petrolal.dotfiles.domain.Result
 import dev.petrolal.dotfiles.system.ProcessRunner
-import java.io.File
 import kotlin.math.roundToInt
 
 object VolumeControl {
@@ -54,36 +53,8 @@ object VolumeControl {
             body = "$volPct%"
         }
 
-        updateNotification(icon, summary, body, volPct)
-        return Result.ok("$summary: $body")
-    }
-
-    private fun updateNotification(icon: String, summary: String, body: String, volPct: Int) {
-        val runtimeDir = System.getenv("XDG_RUNTIME_DIR") ?: "/tmp"
-        val idFile = File(runtimeDir, "volume_notification_id")
-        var replacesId = "0"
-        if (idFile.exists()) {
-            replacesId = idFile.readText().trim().ifBlank { "0" }
-        }
-
         val hint = "{\"value\": <int32 $volPct>, \"synchronous\": <\"volume\">, \"x-canonical-private-synchronous\": <\"volume\">}"
-        val cmd = listOf(
-            "gdbus", "call", "--session",
-            "--dest", "org.freedesktop.Notifications",
-            "--object-path", "/org/freedesktop/Notifications",
-            "--method", "org.freedesktop.Notifications.Notify",
-            "Volume", replacesId, icon, summary, body, "[]",
-            hint, "1000"
-        )
-
-        val res = ProcessRunner.captureOutput(cmd).getOrNull() ?: ""
-        val match = "\\(uint32\\s+(\\d+),?\\)".toRegex().find(res)
-            ?: "\\b(\\d+)\\b".toRegex().find(res)
-        val newId = match?.groupValues?.get(1)
-        if (!newId.isNullOrEmpty() && newId != "0") {
-            try {
-                idFile.writeText(newId)
-            } catch (_: Exception) {}
-        }
+        Notifier.updateOsd("Volume", icon, summary, body, hint)
+        return Result.ok("$summary: $body")
     }
 }

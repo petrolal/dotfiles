@@ -15,7 +15,7 @@ function fish_prompt --description 'Imp98 prompt'
     end
 
     echo -n -s \
-        (set_color 606C38) (whoami) (set_color 555555) '@' \
+        (set_color 606C38) "$USER" (set_color 555555) '@' \
         (set_color 606C38) (prompt_hostname) (set_color normal) ' ' \
         (set_color BD7B2A) (prompt_pwd) (set_color normal) \
         "$branch" ' ' \

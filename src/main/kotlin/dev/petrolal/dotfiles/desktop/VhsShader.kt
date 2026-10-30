@@ -28,7 +28,7 @@ object VhsShader {
         }
         // Best-effort: a failed OSD toast shouldn't fail a shader toggle that
         // already applied successfully.
-        ProcessRunner.run(listOf("notify-send", "Modo VHS", notifStatus, "-i", "video-display"))
+        Notifier.toast("Modo VHS", notifStatus, "video-display")
 
         return Result.ok("Modo VHS $notifStatus")
     }

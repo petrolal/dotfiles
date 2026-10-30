@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Effects
 import Quickshell.Io
+import ".."
 
 Rectangle {
     id: root
@@ -27,20 +28,20 @@ Rectangle {
 
     Process {
         id: introSound
-        command: ["play", "-v", "4", "/home/petrolal/dotfiles/RetroVHSSucks/assets/hold_intro.wav"]
+        command: ["play", "-v", "4", Env.assetsDir + "/hold_intro.wav"]
         running: false
         onExited: music.running = root.visible
     }
     Process {
         id: music
-        command: ["ffplay", "-af", "volume=4", "-nodisp", "-loop", "0", "/home/petrolal/dotfiles/RetroVHSSucks/assets/hold_music.wav"]
+        command: ["ffplay", "-af", "volume=4", "-nodisp", "-loop", "0", Env.assetsDir + "/hold_music.wav"]
         onStarted: dvdEffect.visible = true
         running: false
     }
 
     Image {
         id: dvd
-        source: "/home/petrolal/dotfiles/RetroVHSSucks/assets/dvd.png"
+        source: Env.assetsDir + "/dvd.png"
         x: 0
         y: 0
         fillMode: Image.PreserveAspectFit

@@ -4,6 +4,7 @@ import dev.petrolal.dotfiles.desktop.BrowserLauncher
 import dev.petrolal.dotfiles.desktop.KeybindHelper
 import dev.petrolal.dotfiles.desktop.NotificationCenter
 import dev.petrolal.dotfiles.desktop.NotificationLogger
+import dev.petrolal.dotfiles.desktop.Screenshot
 import dev.petrolal.dotfiles.desktop.VhsShader
 import dev.petrolal.dotfiles.desktop.VolumeControl
 import dev.petrolal.dotfiles.system.ProcessRunner
@@ -58,5 +59,14 @@ class DesktopCommands : ImpCommandSupport() {
     fun keybinds(): String {
         val exitCode = KeybindHelper.show()
         return if (exitCode == 0) "Keybind helper closed." else "Keybind helper exited with code $exitCode."
+    }
+
+    @Command(command = ["screenshot"], description = "Capture a screenshot with grim/slurp (mode: area, full)")
+    fun screenshot(
+        @Option(longNames = ["mode"], description = "Capture mode: area or full", defaultValue = "area")
+        mode: String = "area"
+    ): String {
+        val file = Screenshot.capture(mode).orThrow()
+        return "Screenshot saved: $file"
     }
 }

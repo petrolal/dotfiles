@@ -15,15 +15,27 @@ function iconFor(percent: number) {
     return `${ASSET_DIR}/battery_full.svg`
 }
 
-export default function Battery() {
-    const percent = Variable(100).poll(
-        15000,
-        "sh -c 'cat /sys/class/power_supply/BAT*/capacity 2>/dev/null | head -n1'",
-        (out, prev) => {
-            const n = parseInt(out, 10)
+const POWER_SUPPLY_DIR = "/sys/class/power_supply"
+
+function readCapacity(prev: number): number {
+    try {
+        const dir = GLib.Dir.open(POWER_SUPPLY_DIR, 0)
+        let batteryName: string | null
+        while ((batteryName = dir.read_name()) !== null) {
+            if (!batteryName.startsWith("BAT")) continue
+            const [ok, bytes] = GLib.file_get_contents(`${POWER_SUPPLY_DIR}/${batteryName}/capacity`)
+            if (!ok) continue
+            const n = parseInt(new TextDecoder().decode(bytes), 10)
             return Number.isNaN(n) ? prev : n
-        },
-    )
+        }
+        return prev
+    } catch {
+        return prev
+    }
+}
+
+export default function Battery() {
+    const percent = Variable(100).poll(15000, readCapacity)
 
     return <box className="Battery" visible={percent().as(p => p >= 0)}>
         <icon icon={percent().as(iconFor)} />

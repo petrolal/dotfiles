@@ -66,10 +66,12 @@ hl.bind("ALT + SHIFT + Tab", hl.dsp.exec_cmd("hyprctl dispatch cyclenext prev"),
 
 -- Actions
 -- grim/slurp are Wayland-native (xfce4-screenshooter was X11-only and is
--- gone along with the rest of XFCE); region capture writes to ~/Pictures.
-hl.bind(mainMod .. " + PRINT", hl.dsp.exec_cmd("sh -c 'mkdir -p ~/Pictures && f=~/Pictures/screenshot-$(date +%s).png && grim -g \"$(slurp)\" \"$f\" && notify-send \"Screenshot saved\" \"$f\"'"), { description = "Take a screenshot" })
-hl.bind(mainMod .. " + ALT + F", hl.dsp.exec_cmd("sh -c 'mkdir -p ~/Pictures && f=~/Pictures/screenshot-$(date +%s).png && grim \"$f\" && notify-send \"Screenshot saved\" \"$f\"'"), { description = "Take an instant full-screen screenshot" })
-hl.bind(mainMod .. " + ALT + S", hl.dsp.exec_cmd("sh -c 'mkdir -p ~/Pictures && f=~/Pictures/screenshot-$(date +%s).png && grim -g \"$(slurp)\" \"$f\" && notify-send \"Screenshot saved\" \"$f\"'"), { description = "Take an instant area screenshot" })
+-- gone along with the rest of XFCE); routed through `imp screenshot`
+-- (Screenshot.kt) so the capture/save/notify pipeline lives in one place
+-- instead of being copy-pasted across these three bindings.
+hl.bind(mainMod .. " + PRINT", hl.dsp.exec_cmd(imp_bin .. " screenshot --mode area"), { description = "Take a screenshot" })
+hl.bind(mainMod .. " + ALT + F", hl.dsp.exec_cmd(imp_bin .. " screenshot --mode full"), { description = "Take an instant full-screen screenshot" })
+hl.bind(mainMod .. " + ALT + S", hl.dsp.exec_cmd(imp_bin .. " screenshot --mode area"), { description = "Take an instant area screenshot" })
 hl.bind(mainMod .. " + SHIFT + R", hl.dsp.exec_cmd("hyprctl reload"), { description = "Reload Hyprland config" })
 hl.bind(mainMod .. " + SHIFT + B", hl.dsp.exec_cmd("pkill -f quickshell; qs &"), { description = "Reload Quickshell HUD" })
 hl.bind(mainMod .. " + N",        hl.dsp.exec_cmd(imp_bin .. " notif-center"), { description = "Open Tofi notification center" })

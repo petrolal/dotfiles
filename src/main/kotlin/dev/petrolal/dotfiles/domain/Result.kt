@@ -15,22 +15,14 @@ sealed interface Result<T> {
 
     fun isErr(): Boolean = this is Err<*>
 
-    fun getOrNull(): T? {
-        return if (this is Ok<*>) {
-            @Suppress("UNCHECKED_CAST")
-            (this as Ok<T>).value
-        } else {
-            null
-        }
+    fun getOrNull(): T? = when (this) {
+        is Ok -> value
+        is Err -> null
     }
 
-    fun orElse(fallback: T): T {
-        return if (this is Ok<*>) {
-            @Suppress("UNCHECKED_CAST")
-            (this as Ok<T>).value
-        } else {
-            fallback
-        }
+    fun orElse(fallback: T): T = when (this) {
+        is Ok -> value
+        is Err -> fallback
     }
 
     companion object {

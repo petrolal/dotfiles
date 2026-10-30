@@ -4,6 +4,7 @@ import QtQuick.Layouts
 import QtQuick.Controls.Fusion
 import Quickshell.Io
 import "../overlay"
+import ".."
 
 Rectangle {
     id: root
@@ -99,7 +100,7 @@ Rectangle {
 
         Image {
             id: m
-            source: "/home/petrolal/dotfiles/RetroVHSSucks/assets/m_for_masterful.png"
+            source: Env.assetsDir + "/m_for_masterful.png"
             anchors.left: parent.left
             anchors.bottom: parent.bottom
             anchors.margins: {
@@ -110,7 +111,7 @@ Rectangle {
             fillMode: Image.PreserveAspectFit
         }
         Image {
-            source: "/home/petrolal/dotfiles/RetroVHSSucks/assets/warning_label.png"
+            source: Env.assetsDir + "/warning_label.png"
             anchors.left: m.right
             anchors.bottom: parent.bottom
             anchors.margins: {
@@ -121,7 +122,7 @@ Rectangle {
             fillMode: Image.PreserveAspectFit
         }
         Image {
-            source: "/home/petrolal/dotfiles/RetroVHSSucks/assets/barcode.png"
+            source: Env.assetsDir + "/barcode.png"
             anchors.right: parent.right
             anchors.bottom: parent.bottom
             anchors.margins: {
@@ -150,7 +151,7 @@ Rectangle {
 
     Process {
         id: tvOffSound
-        command: ["play", "--volume", "3", "/home/petrolal/dotfiles/RetroVHSSucks/assets/tv_off.wav"]
+        command: ["play", "--volume", "3", Env.assetsDir + "/tv_off.wav"]
         running: true
         onStarted: tvOffAnim.running = true
     }
@@ -206,14 +207,14 @@ Rectangle {
 
     Process {
         id: flickerSound
-        command: ["play", "--volume", "3", "/home/petrolal/dotfiles/RetroVHSSucks/assets/lights_flicker.wav"]
+        command: ["play", "--volume", "3", Env.assetsDir + "/lights_flicker.wav"]
         running: false
         onStarted: flickerAnim.running = true
         onExited: noiseSound.running = true
     }
     Process {
         id: noiseSound
-        command: ["ffplay", "-nodisp", "-loop", "0", "-af", "volume=3", "/home/petrolal/dotfiles/RetroVHSSucks/assets/lights_noise.wav"]
+        command: ["ffplay", "-nodisp", "-loop", "0", "-af", "volume=3", Env.assetsDir + "/lights_noise.wav"]
         running: false
     }
 

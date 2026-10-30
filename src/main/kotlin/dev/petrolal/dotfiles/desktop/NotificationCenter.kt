@@ -83,10 +83,9 @@ object NotificationCenter {
 
     @JvmStatic
     fun show(): Int {
+        var dndStatus = getDndStatus()
+        var history = loadHistory()
         while (true) {
-            val dndStatus = getDndStatus()
-            val history = loadHistory()
-
             val entryMap = mutableMapOf<String, NotificationEntry>()
             for (entry in history.asReversed()) {
                 val label = entry.toMenuLabel()
@@ -122,10 +121,12 @@ object NotificationCenter {
                 lower.contains("limpar") || lower.contains("clear") -> {
                     clearNotifications()
                     Thread.sleep(150)
+                    history = loadHistory()
                 }
                 lower.contains("perturbe") || lower.contains("dnd") -> {
                     toggleDnd()
                     Thread.sleep(150)
+                    dndStatus = getDndStatus()
                 }
                 selected.startsWith("(") -> {
                     return 0

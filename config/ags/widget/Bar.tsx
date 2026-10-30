@@ -24,7 +24,7 @@ export default function Bar(gdkmonitor: Gdk.Monitor) {
     >
         <centerbox>
             <box className="start" spacing={8}>
-                <label className="logo" label="📼 Shut the Fuck Up" />
+                <label className="logo" label="📼 SHUT THE FUCK UP!" />
                 <Workspaces />
             </box>
             <Media />

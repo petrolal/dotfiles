@@ -4,6 +4,7 @@ import Quickshell
 import Quickshell.Io
 import Quickshell.Wayland
 import Quickshell.Services.Notifications
+import ".."
 
 PanelWindow {
     id: root
@@ -22,7 +23,7 @@ PanelWindow {
     }
     Process {
         id: clickCmd
-        command: ["play", "/home/petrolal/dotfiles/RetroVHSSucks/assets/click.wav"]
+        command: ["play", Env.assetsDir + "/click.wav"]
     }
 
     Process {
@@ -31,7 +32,7 @@ PanelWindow {
 
     FileView {
         id: dndFile
-        path: "/home/petrolal/.cache/notifications/dnd"
+        path: Env.cacheDir + "/dnd"
         printErrors: false
     }
 
@@ -266,7 +267,7 @@ PanelWindow {
             }
 
             Image {
-                source: "/home/petrolal/dotfiles/RetroVHSSucks/assets/radio.png"
+                source: Env.assetsDir + "/radio.png"
                 anchors.bottom: parent.bottom
                 x: 300
                 fillMode: Image.PreserveAspectFit

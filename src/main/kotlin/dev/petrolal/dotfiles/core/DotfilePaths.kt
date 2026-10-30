@@ -3,7 +3,6 @@
 package dev.petrolal.dotfiles.core
 
 import java.io.IOException
-import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 
@@ -14,50 +13,17 @@ object DotfilePaths {
         return Paths.get(home ?: System.getProperty("user.home"))
     }
 
-    private fun normalizeDirParent(dir: Path): Path {
-        val last = dir.fileName
-        if (last != null && (last.toString() == "src" || last.toString() == "bin")) {
-            val parent = dir.parent
-            return parent ?: dir
-        }
-        return dir
-    }
-
+    /** Mirrors config/hypr/hyprland.lua's `DOTFILES_DIR` resolution exactly,
+     * so both halves of the config agree on the repo root for a clone
+     * living anywhere other than `~/dotfiles`.  */
     @JvmStatic
     fun findDotfilesRoot(): Path {
         val envDir = System.getenv("DOTFILES_DIR")
-        if (envDir != null) {
-            val p = Paths.get(envDir)
-            if (Files.exists(p)) {
-                try {
-                    return p.toRealPath()
-                } catch (ignored: IOException) {
-                    return p.toAbsolutePath().normalize()
-                }
-            }
+        val dir = if (envDir != null) Paths.get(envDir) else userHomeDirectory().resolve("dotfiles")
+        return try {
+            dir.toRealPath()
+        } catch (ignored: IOException) {
+            dir.toAbsolutePath().normalize()
         }
-        val exePath = ProcessHandle.current().info().command()
-        if (exePath.isPresent) {
-            val exe = Paths.get(exePath.get())
-            if (Files.exists(exe)) {
-                try {
-                    val real = exe.toRealPath()
-                    val dir = real.parent
-                    if (dir != null) {
-                        val candidate = normalizeDirParent(dir)
-                        if (Files.exists(candidate.resolve("config")) || Files.exists(candidate.resolve("build.gradle"))) {
-                            return candidate
-                        }
-                    }
-                } catch (ignored: IOException) {
-                    // fall through to cwd
-                }
-            }
-        }
-        val cwd = Paths.get("").toAbsolutePath().normalize()
-        if (Files.exists(cwd.resolve("config")) || Files.exists(cwd.resolve("build.gradle"))) {
-            return cwd
-        }
-        return cwd
     }
 }

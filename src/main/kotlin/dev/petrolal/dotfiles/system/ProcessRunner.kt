@@ -14,6 +14,12 @@ import java.util.concurrent.Executors
 import java.util.concurrent.Future
 
 object ProcessRunner {
+    /** Shared across calls: a virtual-thread executor is cheap per task, but this
+     * class is called repeatedly within a single process lifetime (e.g. the
+     * notif-center and volume OSD loops), so one long-lived executor avoids
+     * standing up and tearing down a pool on every invocation.  */
+    private val ioExecutor = Executors.newVirtualThreadPerTaskExecutor()
+
     /**
      * Executes CMD, utilizing Virtual Threads to concurrently drain standard output
      * and standard error without blocking or pipe deadlocks, returning the captured
@@ -22,26 +28,24 @@ object ProcessRunner {
     @JvmStatic
     fun captureOutput(cmd: List<String>): Result<String> {
         try {
-            Executors.newVirtualThreadPerTaskExecutor().use { executor ->
-                val p = ProcessBuilder(cmd).start()
-                val stdoutFuture: Future<String> = executor.submit(Callable {
-                    String(p.inputStream.readAllBytes(), StandardCharsets.UTF_8)
-                })
-                val stderrFuture: Future<String> = executor.submit(Callable {
-                    String(p.errorStream.readAllBytes(), StandardCharsets.UTF_8)
-                })
+            val p = ProcessBuilder(cmd).start()
+            val stdoutFuture: Future<String> = ioExecutor.submit(Callable {
+                String(p.inputStream.readAllBytes(), StandardCharsets.UTF_8)
+            })
+            val stderrFuture: Future<String> = ioExecutor.submit(Callable {
+                String(p.errorStream.readAllBytes(), StandardCharsets.UTF_8)
+            })
 
-                val exitCode = p.waitFor()
-                val stdout = stdoutFuture.get()
-                val stderr = stderrFuture.get()
+            val exitCode = p.waitFor()
+            val stdout = stdoutFuture.get()
+            val stderr = stderrFuture.get()
 
-                if (exitCode != 0) {
-                    val binary = if (cmd.isEmpty()) "" else cmd.first()
-                    val detail = if (stderr.isBlank()) binary else "$binary: ${stderr.trim()}"
-                    return Result.err(CommandFailed(detail, exitCode))
-                }
-                return Result.ok(stdout)
+            if (exitCode != 0) {
+                val binary = if (cmd.isEmpty()) "" else cmd.first()
+                val detail = if (stderr.isBlank()) binary else "$binary: ${stderr.trim()}"
+                return Result.err(CommandFailed(detail, exitCode))
             }
+            return Result.ok(stdout)
         } catch (e: IOException) {
             return Result.err(IoError(e.message ?: ""))
         } catch (_: InterruptedException) {
