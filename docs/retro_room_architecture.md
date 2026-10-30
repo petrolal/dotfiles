@@ -162,14 +162,55 @@ New directory, e.g. `config/quickshell/room/plugin/` (QML module name
   independent of actually rendering — mirrors how `KeybindHelperTest.kt`
   tests `KeybindHelper.kt`'s logic without needing a live Hyprland session.
 
-## 7. Open questions to settle before implementation
+## 7. Settled Decisions
 
-1. Exact set of anchors/destinations for v1 (how many bar tiles map to room
-   locations, and what each "does something" action actually does once the
-   camera arrives).
-2. Whether the "notebook closing" animation is a literal lid-closing sprite
-   or a more abstract tile-collapse — purely an AGS/GTK-side asset decision,
-   independent of this architecture.
-3. Idle behavior: does the camera return `home` automatically after N
-   seconds, or only on an explicit action (matches the existing
-   `hypridle` → screensaver pattern and could reuse the same idle trigger).
+1. **Anchors for v1**:
+   - `"home"`: Room overview (wide camera angle).
+   - `"terminal"`: CRT monitor on the desk.
+   - `"music"`: Retro boombox / stereo cassette deck.
+2. **Notebook Closing Animation**:
+   - Pure GTK/CSS 3D perspective fold that tilts and folds the bar downward like a closing laptop lid before triggering camera travel.
+3. **Idle Behavior**:
+   - Timed inactivity return: A 30-second inactivity timer automatically returns the camera to `"home"` and unfolds the bar.
+
+## 8. Implementation Status & Progress
+
+- [x] **Step 1: NixOS Packages & Environment**
+  - Added `qt6.qtquick3d` and `qt6.qtshadertools` to `environment.systemPackages` in `nixos/modules/hyprland.nix`.
+  - Configured `QML2_IMPORT_PATH` in `environment.sessionVariables` pointing to `lib/qt-6/qml` for Quickshell and QtQuick3D.
+  - Added `devShells.room` to root `flake.nix` with CMake, Ninja, and Qt6 development libraries.
+- [x] **Step 2: C++ QML Plugin (`RetroRoom 1.0`)**
+  - Scaffolded `config/quickshell/room/plugin/`:
+    - `SceneAnchorRegistry`: Maps `"home"`, `"terminal"`, and `"music"` strings to 3D nodes.
+    - `CameraRig`: Manages smooth camera interpolation with shortest-path angular math.
+    - `RoomSceneController`: Exposes `travelTo(anchorId)`, `transitioning`, and `currentAnchor` to QML with busy rejection.
+  - CMake setup using `qt_add_qml_module`.
+  - Automated Qt unit tests (`tests/test_retroroom.cpp`) passing 100%.
+  - Added `build.sh` build script.
+- [ ] **Step 3 (Post-reboot): 3D Scene & Quickshell Integration**
+  - Add `RoomScene.qml` with 3D anchors and VHS post-process material.
+  - Add `IpcHandler { target: "room" }` to `config/quickshell/shell.qml`.
+- [ ] **Step 4: AGS Bar Integration**
+  - Add perspective fold animation in `config/ags/style.scss` and tile click triggers in `config/ags/widget/Bar.tsx`.
+  - Wire 30s inactivity auto-reset timer.
+
+## 9. Ergonomics & Performance: Fast Tile Openings & Snappy Transitions
+
+For comfortable daily use, animations must not feel sluggish or introduce friction when launching windows or navigating points of interest:
+
+### 1. Hyprland Window Tiling (`SUPER + RETURN` / Kitty)
+- **Problem**: In `config/hypr/conf/input.lua`, no `animations` block is configured, causing Hyprland to fall back to default slow bezier curves (speed factor 7, ~400-500ms slide/popin) whenever a new tile is opened.
+- **Next optimization**: Add a tuned, snappy `animations` configuration in `config/hypr/conf/input.lua`:
+  - Quick ease-out curve (`easeOutExpo` or `popin 90%`) with speed factor `2` to `3` (~150ms).
+  - Or disable window popin animations (`windowsIn = false` or `animations.enabled = false` for instant retro Windows 98 window spawn).
+
+### 2. Room Camera Travel Speed
+- **Optimization**: Set the default camera travel duration in `CameraRig` and QML to **350ms - 450ms** (reduced from the initial 1200ms testing default) with `QEasingCurve::OutCubic`. The camera glides quickly to the destination without causing visual disorientation or making the desktop feel sluggish.
+
+### 3. AGS Bar Folding Transition Speed
+- **Optimization**: The GTK/CSS perspective fold transition in `config/ags/style.scss` should use a crisp **200ms - 250ms** duration (`ease-out`). The bar closes almost instantaneously when triggered, without blocking user input.
+
+### 4. Zero Interruption Principle
+- Camera dolly and 3D rendering take place entirely on the background layer-shell surface in Quickshell (`qs`). Keystrokes, terminal spawns (`SUPER + RETURN`), application launchers, and window management are handled directly by Hyprland without waiting on any 3D transition.
+
+

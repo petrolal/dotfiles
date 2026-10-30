@@ -49,3 +49,14 @@ Overlays run via `qs` (Quickshell), autostarted from `config/hypr/conf/autostart
 4. **Lockscreen** (`lock/LockSurface.qml`): Authenticates via PAM (`pam/password.conf`), bound to `SUPER + L` / `SUPER + CTRL + L` (`imp lock`).
 
 See `config/ags/README.md` for the separate AGS top bar.
+
+---
+
+## 3. Interactive 3D Retro Room (Qt Quick 3D Migration)
+
+The interactive 3D background room replaces the old C++ Hyprland compositor plugin with a clean userspace Qt Quick 3D scene inside Quickshell (`qs`).
+
+* Full architecture, design decisions, and implementation status: see [docs/retro_room_architecture.md](retro_room_architecture.md).
+* C++ QML Plugin: `config/quickshell/room/plugin/` (`RetroRoom 1.0` module with `CameraRig`, `SceneAnchorRegistry`, and `RoomSceneController`).
+* Bar signaling & transitions: AGS bar triggers notebook-fold animation and signals `qs ipc call room travel <anchorId>`.
+

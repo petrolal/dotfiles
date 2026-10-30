@@ -94,6 +94,12 @@
       pkgs.astal.notifd
       pkgs.astal.mpris
     ];
+
+    # QML2_IMPORT_PATH ensures Quickshell / QML finds QtQuick3D and Quickshell modules
+    QML2_IMPORT_PATH = lib.makeSearchPath "lib/qt-6/qml" [
+      pkgs.qt6.qtquick3d
+      pkgs.quickshell
+    ];
   };
 
   environment.systemPackages = with pkgs; [
@@ -122,8 +128,10 @@
     # vars need an actual theme on disk to point at.
     vanilla-dmz
 
-    # RetroVHSSucks ecosystem
+    # RetroVHSSucks & 3D Retro Room ecosystem
     quickshell
+    qt6.qtquick3d
+    qt6.qtshadertools
     sox
     ffmpeg
     tofi

@@ -37,6 +37,22 @@
             echo "[dotfiles-imp dev shell] ./gradlew, native-image, gradle available"
           '';
         };
+
+        room = pkgs.mkShell {
+          packages = [
+            pkgs.cmake
+            pkgs.ninja
+            pkgs.pkg-config
+            pkgs.qt6.qtbase
+            pkgs.qt6.qtdeclarative
+            pkgs.qt6.qtquick3d
+            pkgs.qt6.qtshadertools
+          ];
+
+          shellHook = ''
+            echo "[RetroRoom dev shell] cmake, Qt6, QtQuick3D, QtShaderTools available"
+          '';
+        };
       };
 
       formatter.${system} = pkgs.nixfmt;
