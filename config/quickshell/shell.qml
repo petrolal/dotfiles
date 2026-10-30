@@ -55,33 +55,42 @@ ShellRoot {
     //     }
     // }
 
+    property bool screensaverVisible: false
+
     IpcHandler {
         target: "screensaver"
 
         function on(): void {
-            screensaver.visible = true;
+            screensaverVisible = true;
             infoOverlay.showInfo = false;
         }
         function off(): void {
-            screensaver.visible = false;
+            screensaverVisible = false;
             infoOverlay.showInfo = true;
         }
     }
-    PanelWindow {
-        id: screensaver
-        exclusionMode: ExclusionMode.Ignore
-        color: "black"
-        visible: false
 
-        anchors {
-            left: true
-            top: true
-            bottom: true
-            right: true
-        }
+    Variants {
+        model: Quickshell.screens
 
-        ScreensaverComponent {
-            visible: screensaver.visible
+        PanelWindow {
+            required property var modelData
+            screen: modelData
+
+            exclusionMode: ExclusionMode.Ignore
+            color: "black"
+            visible: screensaverVisible
+
+            anchors {
+                left: true
+                top: true
+                bottom: true
+                right: true
+            }
+
+            ScreensaverComponent {
+                visible: screensaverVisible
+            }
         }
     }
 }
