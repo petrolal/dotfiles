@@ -25,10 +25,6 @@ local CONF = (os.getenv("HOME") or "") .. "/dotfiles/config/hypr/conf/"
 dofile(CONF .. "input.lua")
 dofile(CONF .. "monitors.lua")
 dofile(CONF .. "autostart.lua")
--- Declared before keybindings.lua because that module's astroland
--- keybinds (mod+ctrl+shift+S, mod+Escape) need hl.plugin.astroland loaded
--- first.
-dofile(CONF .. "astroland.lua")
 dofile(CONF .. "env.lua")
 dofile(CONF .. "cursor.lua")
 dofile(CONF .. "keybindings.lua")

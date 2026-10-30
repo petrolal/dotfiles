@@ -1,0 +1,87 @@
+Upstream Hyprland 0.56.2 bug (traced locally on 2026-10-30, not yet
+reported upstream): CGLElementRenderer::draw(WP<X> element, ...)
+dereferences `element->m_data` with no validity check, for every pass
+element type. IElementRenderer::drawElement()'s own `if (!element) return;`
+guard only catches a never-assigned weak pointer -- hyprutils'
+CWeakPointer::valid() (what `operator bool` calls) explicitly does NOT
+catch "target object mid-destruction" the way expired() does (see
+hyprutils' WeakPtr.hpp comment on valid() vs expired()). dynamicPointerCast
+itself checks expired() correctly and returns a null WP<X> in that case,
+but the draw() overloads below never check that null result before
+dereferencing it.
+
+In practice: a window's border/shadow/rect/etc. pass element gets queued
+for the current frame, then the window is destroyed (closed, or an
+XWayland/transient surface torn down) before that frame actually renders.
+The queued element is now a dangling/expired weak pointer, and whichever
+draw() overload handles it aborts (if CWeakPointer's internal assertion
+catches it) or segfaults (if not) -- confirmed via ~20 matching crash
+reports in ~/.cache/hyprland/, almost all firing seconds after Hyprland
+starts, when autostart apps and restored browser windows are mapping (and
+sometimes churning) in a burst. A prior workaround in
+config/hypr/conf/input.lua (shadow.enabled = false) silenced the
+CShadowPassElement instance of this same bug; this patch fixes it at the
+root for every pass element type, including CBorderPassElement, which
+that workaround didn't cover and which kept crashing on every boot.
+
+--- a/src/render/gl/GLElementRenderer.cpp
++++ b/src/render/gl/GLElementRenderer.cpp
+@@ -8,6 +8,8 @@
+ using namespace Render::GL;
+ 
+ void CGLElementRenderer::draw(WP<CBorderPassElement> element, const CRegion& damage) {
++    if (!element)
++        return;
+     const auto& m_data = element->m_data;
+     if (m_data.hasGrad2)
+         g_pHyprOpenGL->renderBorder(
+@@ -20,6 +22,8 @@
+ };
+ 
+ void CGLElementRenderer::draw(WP<CClearPassElement> element, const CRegion& damage) {
++    if (!element)
++        return;
+     const auto& color = element->m_data.color;
+     RASSERT(g_pHyprRenderer->m_renderData.pMonitor, "Tried to render without begin()!");
+ 
+@@ -81,6 +85,8 @@
+ };
+ 
+ void CGLElementRenderer::draw(WP<CRectPassElement> element, const CRegion& damage) {
++    if (!element)
++        return;
+     const auto& m_data = element->m_data;
+ 
+     if (m_data.color.a == 1.F || !m_data.blur)
+@@ -91,16 +97,22 @@
+ };
+ 
+ void CGLElementRenderer::draw(WP<CShadowPassElement> element, const CRegion& damage) {
++    if (!element)
++        return;
+     const auto& m_data = element->m_data;
+     m_data.deco->render(g_pHyprRenderer->m_renderData.pMonitor.lock(), m_data.a);
+ };
+ 
+ void CGLElementRenderer::draw(WP<CInnerGlowPassElement> element, const CRegion& damage) {
++    if (!element)
++        return;
+     const auto& m_data = element->m_data;
+     m_data.deco->render(g_pHyprRenderer->m_renderData.pMonitor.lock(), m_data.a);
+ };
+ 
+ void CGLElementRenderer::draw(WP<CTexPassElement> element, const CRegion& damage) {
++    if (!element)
++        return;
+     const auto& m_data = element->m_data;
+ 
+     g_pHyprOpenGL->renderTexture( //
+@@ -138,6 +150,8 @@
+ };
+ 
+ void CGLElementRenderer::draw(WP<CTextureMatteElement> element, const CRegion& damage) {
++    if (!element)
++        return;
+     const auto& m_data = element->m_data;
+ 
+     g_pHyprOpenGL->renderTextureMatte(m_data.tex, m_data.box, m_data.fb);

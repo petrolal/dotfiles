@@ -1,0 +1,6 @@
+{
+    "name": "dotfiles-ags-shell",
+    "dependencies": {
+        "astal": "/nix/store/jlc6jkwswf95jmpmqw1vc04si1yrkhr5-astal-gjs-0-unstable-2026-07-19/share/astal/gjs"
+    }
+}

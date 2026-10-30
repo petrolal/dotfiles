@@ -1,4 +1,4 @@
-// CRT screen shader for Hyprland / Astroland
+// CRT screen shader for Hyprland / RetroVHSSucks
 // Pure static CRT simulation: barrel curvature, scanlines, chromatic aberration, and tube vignette.
 // Uses NO 'time' uniform to keep GPU utilization and power consumption at 0% idle.
 

@@ -27,18 +27,18 @@ Rectangle {
                 onRead: data => {
                     const percent = parseInt(data);
                     if (percent < 40)
-                        bat.source = "/home/petrolal/dotfiles/astroland/assets/battery_low.svg";
+                        bat.source = "/home/petrolal/dotfiles/RetroVHSSucks/assets/battery_low.svg";
                     else if (percent < 80)
-                        bat.source = "/home/petrolal/dotfiles/astroland/assets/battery_mid.svg";
+                        bat.source = "/home/petrolal/dotfiles/RetroVHSSucks/assets/battery_mid.svg";
                     else
-                        bat.source = "/home/petrolal/dotfiles/astroland/assets/battery_full.svg";
+                        bat.source = "/home/petrolal/dotfiles/RetroVHSSucks/assets/battery_full.svg";
                 }
             }
         }
         Image {
             id: bat
             anchors.right: parent.right
-            source: "/home/petrolal/dotfiles/astroland/assets/battery_full.svg"
+            source: "/home/petrolal/dotfiles/RetroVHSSucks/assets/battery_full.svg"
             sourceSize.width: 200
             opacity: 0.7
         }
@@ -77,7 +77,7 @@ Rectangle {
 
     AnimatedImage {
         id: reflection
-        source: "/home/petrolal/dotfiles/astroland/assets/reflection.gif"
+        source: "/home/petrolal/dotfiles/RetroVHSSucks/assets/reflection.gif"
         anchors.fill: parent
         fillMode: Image.FillMode.PreserveAspectCrop
         visible: false

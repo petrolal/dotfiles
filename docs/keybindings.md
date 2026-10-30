@@ -61,20 +61,8 @@ hot-reloadable — only plugin changes need a full Hyprland restart).
 | `SUPER + N` | Open Tofi notification center (`imp notif-center`) |
 | `SUPER + /` | Show Tofi keybinding cheat sheet (`imp keybinds`) |
 | `SUPER + V` / `SUPER + SHIFT + V` | Toggle VHS / CRT screen shader (`imp toggle-vhs`) |
-| `SUPER + L` / `SUPER + CTRL + L` | Lock screen (Astroland retro lockscreen: `imp lock`) |
+| `SUPER + L` / `SUPER + CTRL + L` | Lock screen (RetroVHSSucks retro lockscreen: `imp lock`) |
 | `SUPER + CTRL + R` | Open screen recorder (gpu-screen-recorder-gtk) |
-
-## Astroland plugin (loaded via `hl.plugin.load` in `conf/astroland.lua`)
-
-| Keys | Action |
-|---|---|
-| `SUPER + CTRL + SHIFT + S` | Save current ship/bullet/moon state to `~/.config/hypr/save.lua` (auto-loaded on next Hyprland start) |
-| `SUPER + Escape` | Unfocus all windows to immediately pilot the ship |
-
-While the plugin is loaded (`general.layout = "astrolayout"`), normal window movement is supplemented
-by the game: **ASDF (a=left, s=down, d=up, f=right), HJKL (neovim-style), or arrow keys fly the ship,
-mouse aims, left-click shoots** (or focuses a window if one's under the cursor). See
-`docs/astroland_port_handoff.md` for how it is compiled and loaded into Hyprland.
 
 ## Idle / screensaver (automatic via hypridle & quickshell)
 

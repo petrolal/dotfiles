@@ -20,8 +20,26 @@ hl.config({
         disable_splash_rendering = true,
         background_color = 0x000000,
     },
+    -- Imp98's window-border colors, ported from the old xfwm4 themerc
+    -- (active_color_1/inactive_border_color) now that xfwm4 is gone and
+    -- Hyprland draws its own borders natively -- no window manager theme
+    -- engine needed.
+    general = {
+        col = {
+            active_border = 0xffB81424,
+            -- Imp98's mid_light_shadow gray (not black -- that's the
+            -- background color and would make unfocused windows borderless).
+            inactive_border = 0xff4a4a4a,
+        },
+        border_size = 2,
+    },
     decoration = {
-        screen_shader = os.getenv("HOME") .. "/.config/hypr/vhs.frag",
+        -- Square corners to match the Windows-98 look the old theme had.
+        rounding = 0,
+        -- VHS/CRT shader starts off; toggle with mainMod+V (see
+        -- VhsShader.kt / keybindings.lua "toggle-vhs"), which flips
+        -- decoration:screen_shader live via `hyprctl eval`.
+        screen_shader = "",
         -- Disabled: on this host's NVIDIA/Intel PRIME setup, Hyprland
         -- aborts every time a window's drop shadow gets rendered
         -- (CHyprDropShadowDecoration::render -> renderRoundedShadow),
@@ -33,11 +51,11 @@ hl.config({
         },
     },
     render = {
-        -- Direct scanout skips the compositor pass (screen_shader above,
-        -- Astroland's custom render pass) for newly mapped/fullscreen
-        -- windows, so they show as a blank frame until something forces a
-        -- full composite (e.g. grim screenshotting the output). Disabling
-        -- it routes every frame through the normal render path.
+        -- Direct scanout skips the compositor pass (screen_shader above)
+        -- for newly mapped/fullscreen windows, so they show as a blank
+        -- frame until something forces a full composite (e.g. grim
+        -- screenshotting the output). Disabling it routes every frame
+        -- through the normal render path.
         direct_scanout = false,
     },
 })

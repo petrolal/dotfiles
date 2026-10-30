@@ -99,7 +99,7 @@ Rectangle {
 
         Image {
             id: m
-            source: "/home/petrolal/dotfiles/astroland/assets/m_for_masterful.png"
+            source: "/home/petrolal/dotfiles/RetroVHSSucks/assets/m_for_masterful.png"
             anchors.left: parent.left
             anchors.bottom: parent.bottom
             anchors.margins: {
@@ -110,7 +110,7 @@ Rectangle {
             fillMode: Image.PreserveAspectFit
         }
         Image {
-            source: "/home/petrolal/dotfiles/astroland/assets/warning_label.png"
+            source: "/home/petrolal/dotfiles/RetroVHSSucks/assets/warning_label.png"
             anchors.left: m.right
             anchors.bottom: parent.bottom
             anchors.margins: {
@@ -121,7 +121,7 @@ Rectangle {
             fillMode: Image.PreserveAspectFit
         }
         Image {
-            source: "/home/petrolal/dotfiles/astroland/assets/barcode.png"
+            source: "/home/petrolal/dotfiles/RetroVHSSucks/assets/barcode.png"
             anchors.right: parent.right
             anchors.bottom: parent.bottom
             anchors.margins: {
@@ -150,7 +150,7 @@ Rectangle {
 
     Process {
         id: tvOffSound
-        command: ["play", "--volume", "3", "/home/petrolal/dotfiles/astroland/assets/tv_off.wav"]
+        command: ["play", "--volume", "3", "/home/petrolal/dotfiles/RetroVHSSucks/assets/tv_off.wav"]
         running: true
         onStarted: tvOffAnim.running = true
     }
@@ -206,14 +206,14 @@ Rectangle {
 
     Process {
         id: flickerSound
-        command: ["play", "--volume", "3", "/home/petrolal/dotfiles/astroland/assets/lights_flicker.wav"]
+        command: ["play", "--volume", "3", "/home/petrolal/dotfiles/RetroVHSSucks/assets/lights_flicker.wav"]
         running: false
         onStarted: flickerAnim.running = true
         onExited: noiseSound.running = true
     }
     Process {
         id: noiseSound
-        command: ["ffplay", "-nodisp", "-loop", "0", "-af", "volume=3", "/home/petrolal/dotfiles/astroland/assets/lights_noise.wav"]
+        command: ["ffplay", "-nodisp", "-loop", "0", "-af", "volume=3", "/home/petrolal/dotfiles/RetroVHSSucks/assets/lights_noise.wav"]
         running: false
     }
 

@@ -52,7 +52,7 @@ class DesktopCommands {
         return if (result.isOk()) result.getOrNull() ?: "Volume adjusted." else "Failed to adjust volume."
     }
 
-    @Command(command = ["lock"], description = "Lock session with Astroland retro lockscreen")
+    @Command(command = ["lock"], description = "Lock session with RetroVHSSucks retro lockscreen")
     fun lock(): String {
         val result = ProcessRunner.run(listOf("qs", "ipc", "call", "lockscreen", "lock"))
         return if (result.isOk()) "Session locked." else "Failed to lock session."

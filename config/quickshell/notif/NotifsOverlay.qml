@@ -22,7 +22,7 @@ PanelWindow {
     }
     Process {
         id: clickCmd
-        command: ["play", "/home/petrolal/dotfiles/astroland/assets/click.wav"]
+        command: ["play", "/home/petrolal/dotfiles/RetroVHSSucks/assets/click.wav"]
     }
 
     Process {
@@ -266,7 +266,7 @@ PanelWindow {
             }
 
             Image {
-                source: "/home/petrolal/dotfiles/astroland/assets/radio.png"
+                source: "/home/petrolal/dotfiles/RetroVHSSucks/assets/radio.png"
                 anchors.bottom: parent.bottom
                 x: 300
                 fillMode: Image.PreserveAspectFit

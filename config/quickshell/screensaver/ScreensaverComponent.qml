@@ -27,20 +27,20 @@ Rectangle {
 
     Process {
         id: introSound
-        command: ["play", "-v", "4", "/home/petrolal/dotfiles/astroland/assets/hold_intro.wav"]
+        command: ["play", "-v", "4", "/home/petrolal/dotfiles/RetroVHSSucks/assets/hold_intro.wav"]
         running: false
         onExited: music.running = root.visible
     }
     Process {
         id: music
-        command: ["ffplay", "-af", "volume=4", "-nodisp", "-loop", "0", "/home/petrolal/dotfiles/astroland/assets/hold_music.wav"]
+        command: ["ffplay", "-af", "volume=4", "-nodisp", "-loop", "0", "/home/petrolal/dotfiles/RetroVHSSucks/assets/hold_music.wav"]
         onStarted: dvdEffect.visible = true
         running: false
     }
 
     Image {
         id: dvd
-        source: "/home/petrolal/dotfiles/astroland/assets/dvd.png"
+        source: "/home/petrolal/dotfiles/RetroVHSSucks/assets/dvd.png"
         x: 0
         y: 0
         fillMode: Image.PreserveAspectFit

@@ -29,6 +29,22 @@
         then nixpkgs.lib.strings.trim (builtins.readFile /etc/hostname)
         else "nixos";
 
+      # Hyprland 0.56.2 crashes (SIGABRT/SIGSEGV, see
+      # patches/hyprland-fix-dangling-pass-element.patch's own header for
+      # the full trace) whenever a window's border/shadow/rect/etc. pass
+      # element gets queued for a frame and the window is destroyed before
+      # that frame renders -- which happens reliably at startup, when
+      # autostart apps and restored browser windows map/churn in a burst.
+      # This overlay patches the missing validity check at the root rather
+      # than disabling decorations (config/hypr/conf/input.lua's
+      # shadow.enabled = false was a prior, incomplete workaround for the
+      # same bug -- it silenced the shadow case but not borders).
+      hyprlandCrashFixOverlay = final: prev: {
+        hyprland = prev.hyprland.overrideAttrs (old: {
+          patches = (old.patches or [ ]) ++ [ ./patches/hyprland-fix-dangling-pass-element.patch ];
+        });
+      };
+
       # `user` defaults to null here deliberately: modules/users.nix's
       # `dotfiles.username` option default is the single source of truth for
       # "petrolal" as the normal account name. Duplicating that default here
@@ -38,7 +54,7 @@
           modules = [
             {
               nixpkgs.hostPlatform = system;
-              nixpkgs.overlays = [ claude-desktop.overlays.default ];
+              nixpkgs.overlays = [ claude-desktop.overlays.default hyprlandCrashFixOverlay ];
             }
             nix-flatpak.nixosModules.nix-flatpak
             ./configuration.nix

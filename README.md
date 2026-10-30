@@ -1,30 +1,23 @@
 # Dotfiles
 
 NixOS system configuration and Wayland desktop powered by [Hyprland](https://hyprland.org/),
-featuring a Kotlin port of [astroland_dots](https://codeberg.org/zacoons/astroland_dots) — a
-ship/moon arcade scene where real desktop windows become physics bodies — plus a unified Kotlin
-CLI/deployer and an integrated screen locker.
+with a retro VHS/camcorder visual identity (Quickshell overlays + an AGS/Astal top bar), a unified
+Kotlin CLI/deployer, and an integrated screen locker.
 
 ## Features
 
 - **Hyprland Desktop**: Minimal, modern Wayland environment managed via Lua
   (`config/hypr/hyprland.lua`), with [greetd](https://man.sr.ht/~kennylevinsen/greetd/)/
   [tuigreet](https://github.com/apognu/tuigreet) as the login manager.
-- **Astroland, the real Hyprland plugin** (`astroland/plugin/`, loaded via `hl.plugin.load(...)`):
-  a genuine C++ Hyprland plugin whose actual game logic lives in Kotlin
-  (`astroland/engine/`, compiled to a native `.so` and linked in). Flying your ship into a real
-  window and shooting it is a real `general.layout = "astrolayout"` tiled algorithm, not a
-  simulation. See [docs/astroland_port_handoff.md](docs/astroland_port_handoff.md) for the full
-  architecture, what's faithfully ported vs. simplified, and **known risks before you load it**.
-- **Astroland overlay windows** (`astroland/overlay/`, standalone JVM/LWJGL, no plugin required):
-  - `imp overlay` — the same ship/moon game as a standalone window (no real-window integration).
-  - `imp screensaver` — idle screensaver (bouncing DVD logo + hold music), triggered by `hypridle`.
-  - `imp infooverlay` — battery %/clock HUD, autostarted.
-  - `imp notifsoverlay` — a **real** `org.freedesktop.Notifications` D-Bus daemon + popup UI,
-    autostarted.
-- **Screen Locker**: PAM authentication via Java's Foreign Function & Memory API
-  (`src/main/kotlin/dev/petrolal/dotfiles/locker/`) — currently wired to no UI of its own; actual
-  session locking is `hyprlock` (see the port handoff doc for why).
+- **RetroVHSSucks retro-VHS overlays** (`RetroVHSSucks/assets/` + `config/quickshell/`, run via Quickshell (`qs`)):
+  - `overlay/` — battery %/clock HUD, autostarted.
+  - `notif/` — a `org.freedesktop.Notifications` D-Bus daemon + popup UI, autostarted.
+  - `screensaver/` — idle screensaver (bouncing DVD logo + hold music), triggered by `hypridle`.
+  - `lock/` — the retro lockscreen (`imp lock` → `qs ipc call lockscreen lock`), PAM auth via
+    `config/quickshell/pam/password.conf`.
+  - `config/ags/` — a separate AGS/Astal top bar in the same visual style (workspaces, clock,
+    tray, battery). See `config/ags/README.md`.
+  See [docs/retrovhssucks_port_handoff.md](docs/retrovhssucks_port_handoff.md) for the full architecture.
 - **Unified Kotlin CLI & Deployer** (`imp`): Kotlin + Spring Shell + GraalVM Native Image.
   Deterministic dotfiles symlink management plus all of the above as subcommands.
 
@@ -45,9 +38,7 @@ The bootstrap script only needs what base NixOS provides (`sh`, `git`, `sudo`, `
 3. Build the native `imp` binary (Gradle + GraalVM native-image)
 4. Deploy dotfiles
 
-Log in to Hyprland for all changes to take effect. The real Hyprland plugin (`astroland/plugin/`)
-is **not** built by `bootstrap.sh` -- it needs its own build step and real-headers toolchain, see
-the port handoff doc.
+Log in to Hyprland for all changes to take effect.
 
 ## Day-to-Day Usage
 
@@ -80,7 +71,7 @@ For quick CLI deployment during development, `./gradlew quick-deploy` runs direc
 
 See [docs/keybindings.md](docs/keybindings.md) for the full, current list (generated from
 `config/hypr/hyprland.lua`'s `hl.bind(...)` calls) -- it covers windows, workspaces, screenshots,
-multimedia keys, and controls while the astroland plugin is loaded.
+and multimedia keys.
 
 ### Shell Integration
 
@@ -93,9 +84,8 @@ dotfiles/
 ├── bootstrap.sh                 # First-time setup script
 ├── build.gradle / settings.gradle / gradlew
 │
-├── astroland/                   # Official Astroland (https://codeberg.org/zacoons/astroland_dots)
-│   ├── assets/                    Sprites, audio, animated GIFs
-│   └── plugin/                    Hyprland C++ plugin (`libastroland.so`)
+├── RetroVHSSucks/                   # Retro-VHS assets (sprites, audio, GIFs) shared by the
+│   └── assets/                    Quickshell overlays and the AGS bar
 │
 ├── nixos/                       # NixOS system configuration (flake.nix, modules/)
 │
@@ -109,19 +99,20 @@ dotfiles/
 ├── src/test/kotlin/...           # Unit tests
 │
 ├── config/                       # Dotfiles (symlinked to ~/.config/)
+│   ├── ags/                        AGS/Astal top bar (VHS styling)
 │   ├── hypr/                       hyprland.lua, hypridle.conf, vhs.frag
-│   ├── quickshell/                 Astroland Quickshell overlays (HUD, lockscreen, screensaver)
+│   ├── quickshell/                 RetroVHSSucks Quickshell overlays (HUD, lockscreen, screensaver)
 │   ├── fish/, fastfetch/, scripts/
 │
 └── docs/
-    ├── astroland_port_handoff.md  # Astroland integration & build guide
+    ├── retrovhssucks_port_handoff.md  # RetroVHSSucks visual-identity integration guide
     └── keybindings.md             # Keybindings & autostart reference
 ```
 
 ## Documentation
 
-- [docs/astroland_port_handoff.md](docs/astroland_port_handoff.md): Guide to Astroland plugin
-  building, Quickshell components, and layout controls.
+- [docs/retrovhssucks_port_handoff.md](docs/retrovhssucks_port_handoff.md): Guide to the Quickshell
+  overlays, lockscreen, screensaver, and AGS bar.
 - [docs/keybindings.md](docs/keybindings.md): Complete list of Hyprland keybinds and shortcuts.
 
 ## License

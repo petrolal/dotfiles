@@ -74,21 +74,37 @@
     # self-contained GTK app's own nixpkgs derivation would.
     GSETTINGS_SCHEMA_DIR =
       "${pkgs.astal.notifd}/share/gsettings-schemas/${pkgs.astal.notifd.name}/glib-2.0/schemas";
+
+    # Same story as GSETTINGS_SCHEMA_DIR above, for `gi://Astal*` imports
+    # themselves: the `ags` binary is a plain Go executable with no
+    # wrapGAppsHook-injected GI_TYPELIB_PATH, so without this every
+    # astal.{hyprland,tray,wireplumber,notifd} typelib sits on disk
+    # (installed via environment.systemPackages below) but is invisible to
+    # gjs's `gi://` resolver, which fails with "Typelib file for namespace
+    # '...' not found" even though the package is installed.
+    GI_TYPELIB_PATH = lib.makeSearchPath "lib/girepository-1.0" [
+      pkgs.astal.hyprland
+      pkgs.astal.tray
+      pkgs.astal.wireplumber
+      pkgs.astal.notifd
+      pkgs.astal.mpris
+    ];
   };
 
   environment.systemPackages = with pkgs; [
     ags
 
-    # AstalNotifd/AstalWp/AstalTray/AstalHyprland GI typelibs -- `ags`
-    # itself only pulls in the core astal-io/astal-gjs/astal3/astal4 libs
-    # it needs to run any Astal app at all; each service library is a
+    # AstalNotifd/AstalWp/AstalTray/AstalHyprland/AstalMpris GI typelibs --
+    # `ags` itself only pulls in the core astal-io/astal-gjs/astal3/astal4
+    # libs it needs to run any Astal app at all; each service library is a
     # separate package and has to be listed explicitly for its
     # `gi://Astal*` import to resolve (see config/ags/widget/Bar.tsx,
-    # Notifications.tsx, Osd.tsx).
+    # Osd.tsx, Media.tsx, Hud.tsx).
     astal.notifd
     astal.wireplumber
     astal.tray
     astal.hyprland
+    astal.mpris
 
     hyprpaper
     hyprlock
@@ -101,7 +117,7 @@
     # vars need an actual theme on disk to point at.
     vanilla-dmz
 
-    # Astroland ecosystem
+    # RetroVHSSucks ecosystem
     quickshell
     sox
     ffmpeg

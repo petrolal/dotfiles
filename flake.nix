@@ -37,26 +37,6 @@
             echo "[dotfiles-imp dev shell] ./gradlew, native-image, gradle available"
           '';
         };
-
-        astroland = pkgs.mkShell {
-          inputsFrom = [ pkgs.hyprland ];
-          nativeBuildInputs = [
-            pkgs.cmake
-            pkgs.pkg-config
-            pkgs.gcc
-          ];
-          buildInputs = [
-            pkgs.hyprland.dev
-            pkgs.libdrm
-            pkgs.pixman
-            pkgs.pango
-            pkgs.cairo
-          ];
-
-          shellHook = ''
-            echo "[astroland dev shell] cmake, hyprland headers available to build astroland plugin"
-          '';
-        };
       };
 
       formatter.${system} = pkgs.nixfmt;

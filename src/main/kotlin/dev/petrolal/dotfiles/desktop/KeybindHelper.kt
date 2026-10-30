@@ -1,4 +1,4 @@
-// KeybindHelper.kt --- Tofi-based keybinding cheat sheet for Hyprland/Astroland
+// KeybindHelper.kt --- Tofi-based keybinding cheat sheet for Hyprland
 // License: GPL-3.0-or-later
 package dev.petrolal.dotfiles.desktop
 
@@ -52,9 +52,6 @@ object KeybindHelper {
         Bind("SUPER + L / SUPER + CTRL + L", "Lock screen"),
         Bind("SUPER + CTRL + R", "Open screen recorder"),
         Bind("SUPER + V / SUPER + SHIFT + V", "Toggle VHS / CRT screen shader"),
-
-        Bind("SUPER + CTRL + SHIFT + S", "Save astroland ship/bullet/moon state"),
-        Bind("SUPER + Escape", "Unfocus windows to pilot the astroland ship"),
 
         Bind("XF86AudioRaiseVolume / LowerVolume", "Adjust volume"),
         Bind("XF86AudioMute / MicMute", "Mute audio / microphone"),

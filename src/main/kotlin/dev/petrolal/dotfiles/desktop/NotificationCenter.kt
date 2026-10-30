@@ -1,4 +1,4 @@
-// NotificationCenter.kt --- Interactive Tofi-based Notification Center for Hyprland/Astroland
+// NotificationCenter.kt --- Interactive Tofi-based Notification Center for Hyprland/RetroVHSSucks
 // License: GPL-3.0-or-later
 package dev.petrolal.dotfiles.desktop
 
