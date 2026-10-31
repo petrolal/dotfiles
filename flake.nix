@@ -1,12 +1,11 @@
-# This flake packages dotfiles-imp, the Java CLI in src/ (see
-# nix/dotfiles-imp.nix), separately from nixos/flake.nix, which owns
-# this machine's nixosConfigurations. The two are independent concerns: one
-# is "what runs this repo's deploy/wallpaper tooling", the other is "what
-# NixOS system this machine boots".
+# Root Flake for dotfiles polyglot monorepo:
+# - CLI deployer (cli/ -> packages.dotfiles-imp)
+# - C++ QtQuick3D plugin (plugins/retroroom -> packages.retroroom)
+# - Unified developer shells (devShells.default)
 {
-  description = "dotfiles-imp: Java CLI that links dotfiles and runs the OpenGL wallpaper daemon";
+  description = "Dotfiles polyglot monorepo: Kotlin deployer CLI & Qt Quick 3D RetroRoom plugin";
 
-  inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+  inputs.nixpkgs.url = "github:NixOS/nixpkgs/151fa4e8ddfdd8dd25d945ad94ed54a13de9f6e4";
 
   outputs =
     { self, nixpkgs }:
@@ -17,29 +16,16 @@
     {
       packages.${system} = {
         dotfiles-imp = pkgs.callPackage ./nix/dotfiles-imp.nix { };
+        retroroom = pkgs.callPackage ./nix/retroroom.nix { };
         default = self.packages.${system}.dotfiles-imp;
       };
 
-      # Full dev loop (Gradle + tests + `./gradlew nativeCompile` with
-      # -march=native, the default task's whole task graph, etc.) still
-      # needs network for the test-only Maven Central deps -- that's what
-      # this devShell is for, the same toolchain bootstrap.sh relies on,
-      # just reachable via `nix develop` too.
       devShells.${system} = {
         default = pkgs.mkShell {
           packages = [
             pkgs.gradle
             pkgs.graalvmPackages.graalvm-ce
             pkgs.git
-          ];
-
-          shellHook = ''
-            echo "[dotfiles-imp dev shell] ./gradlew, native-image, gradle available"
-          '';
-        };
-
-        room = pkgs.mkShell {
-          packages = [
             pkgs.cmake
             pkgs.ninja
             pkgs.pkg-config
@@ -50,9 +36,11 @@
           ];
 
           shellHook = ''
-            echo "[RetroRoom dev shell] cmake, Qt6, QtQuick3D, QtShaderTools available"
+            echo "[dotfiles polyglot dev shell] gradle, graalvm, cmake, ninja, Qt6 available"
           '';
         };
+
+        room = self.devShells.${system}.default;
       };
 
       formatter.${system} = pkgs.nixfmt;

@@ -1,0 +1,42 @@
+{
+  "palette": {
+    "tv_blue_glow": "#80c8ff",
+    "desk_amber_glow": "#ffaa33",
+    "clock_red_led": "#ff2222",
+    "carpet_dark_base": "#282a2e",
+    "wood_furniture_base": "#3c291d",
+    "wall_shadow_ink": "#101014"
+  },
+  "materials": {
+    "Mat_CRT_Screen": {
+      "type": "DefaultMaterial",
+      "lighting": "NoLighting",
+      "emissiveColor": "#80c8ff",
+      "emissiveMap": "props/crt_tv_static_emissive.png"
+    },
+    "Mat_Posters": {
+      "type": "PrincipledMaterial",
+      "roughness": 0.85,
+      "metalness": 0.05,
+      "baseColorMap": "atlases/posters_nu_metal_left.png"
+    },
+    "Mat_Furniture_Wood": {
+      "type": "PrincipledMaterial",
+      "roughness": 0.9,
+      "metalness": 0.0,
+      "baseColorMap": "environment/retro_dark_wood_tile.png"
+    },
+    "Mat_Floor_Carpet": {
+      "type": "PrincipledMaterial",
+      "roughness": 1.0,
+      "metalness": 0.0,
+      "baseColorMap": "environment/carpet_dither_tile.png"
+    },
+    "Mat_Wall": {
+      "type": "PrincipledMaterial",
+      "roughness": 0.95,
+      "metalness": 0.0,
+      "baseColorMap": "environment/wall_dark_grunge_tile.png"
+    }
+  }
+}

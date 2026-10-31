@@ -1,0 +1,154 @@
+{
+  "scene_dimensions": {
+    "room_width": 400.0,
+    "room_height": 240.0,
+    "room_depth": 400.0
+  },
+  "anchors": {
+    "home": {
+      "position": [
+        0,
+        180,
+        320
+      ],
+      "eulerRotation": [
+        -20,
+        0,
+        0
+      ]
+    },
+    "terminal": {
+      "position": [
+        85,
+        95,
+        45
+      ],
+      "eulerRotation": [
+        0,
+        -15,
+        0
+      ]
+    },
+    "music": {
+      "position": [
+        90,
+        60,
+        120
+      ],
+      "eulerRotation": [
+        -10,
+        -45,
+        0
+      ]
+    }
+  },
+  "objects_mapping": [
+    {
+      "name": "room_floor",
+      "mesh": "models_obj/room_floor.obj",
+      "texture": "textures/environment/carpet_dither_tile.png"
+    },
+    {
+      "name": "wall_left",
+      "mesh": "models_obj/wall_left.obj",
+      "texture": "textures/atlases/posters_nu_metal_left.png"
+    },
+    {
+      "name": "wall_center",
+      "mesh": "models_obj/wall_center.obj",
+      "texture": "textures/atlases/posters_center_band.png"
+    },
+    {
+      "name": "wall_right",
+      "mesh": "models_obj/wall_right.obj",
+      "texture": "textures/atlases/posters_ps1_games.png"
+    },
+    {
+      "name": "dresser_tv_stand",
+      "mesh": "models_obj/dresser_tv_stand.obj",
+      "texture": "textures/environment/retro_dark_wood_tile.png"
+    },
+    {
+      "name": "crt_tv_unit",
+      "mesh": "models_obj/crt_tv_unit.obj",
+      "texture": "textures/props/prop_crt_tv_screen.png",
+      "emissive": "textures/props/crt_tv_static_emissive.png"
+    },
+    {
+      "name": "ps1_console",
+      "mesh": "models_obj/ps1_console.obj",
+      "texture": "textures/props/prop_ps1_console.png"
+    },
+    {
+      "name": "bed_frame",
+      "mesh": "models_obj/bed_frame.obj",
+      "texture": "textures/environment/retro_dark_wood_tile.png"
+    },
+    {
+      "name": "bed_mattress_duvet",
+      "mesh": "models_obj/bed_mattress_duvet.obj",
+      "texture": "textures/environment/duvet_charcoal_cloth_tile.png"
+    },
+    {
+      "name": "nightstand",
+      "mesh": "models_obj/nightstand.obj",
+      "texture": "textures/environment/retro_dark_wood_tile.png"
+    },
+    {
+      "name": "alarm_clock",
+      "mesh": "models_obj/cd_jewel_case.obj",
+      "texture": "textures/props/prop_alarm_clock_1207.png",
+      "emissive": "textures/emissive/clock_led_1207_emissive.png"
+    },
+    {
+      "name": "computer_desk",
+      "mesh": "models_obj/computer_desk.obj",
+      "texture": "textures/environment/retro_dark_wood_tile.png"
+    },
+    {
+      "name": "crt_pc_monitor",
+      "mesh": "models_obj/crt_pc_monitor.obj",
+      "texture": "textures/props/prop_retro_pc_monitor.png"
+    },
+    {
+      "name": "retro_laptop_base",
+      "mesh": "models_obj/retro_laptop_base.obj",
+      "texture": "textures/props/prop_retro_laptop_base.png"
+    },
+    {
+      "name": "retro_laptop_lid",
+      "mesh": "models_obj/retro_laptop_lid.obj",
+      "texture": "textures/props/prop_retro_laptop_lid.png"
+    },
+    {
+      "name": "electric_guitar",
+      "mesh": "models_obj/room_floor.obj",
+      "texture": "textures/props/prop_electric_guitar.png"
+    },
+    {
+      "name": "compact_disc",
+      "mesh": "models_obj/cd_jewel_case.obj",
+      "texture": "textures/props/prop_compact_disc.png"
+    },
+    {
+      "name": "cd_jewel_case",
+      "mesh": "models_obj/cd_jewel_case.obj",
+      "texture": "textures/props/prop_cd_jewel_cases.png"
+    },
+    {
+      "name": "skateboard",
+      "mesh": "models_obj/skateboard.obj",
+      "texture": "textures/props/prop_skateboard.png"
+    },
+    {
+      "name": "soda_can",
+      "mesh": "models_obj/soda_can.obj",
+      "texture": "textures/props/prop_soda_can_cola.png"
+    },
+    {
+      "name": "band_tshirt_floor",
+      "mesh": "models_obj/room_floor.obj",
+      "texture": "textures/props/prop_band_shirt_skull.png"
+    }
+  ]
+}

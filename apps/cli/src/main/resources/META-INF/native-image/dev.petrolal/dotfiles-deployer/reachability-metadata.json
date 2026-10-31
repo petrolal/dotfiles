@@ -1,0 +1,42 @@
+{
+  "reflection": [
+    {
+      "type": "java.lang.Boolean",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "getBoolean",
+          "parameterTypes": [
+            "java.lang.String"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "sun.text.resources.cldr.FormatData"
+    },
+    {
+      "type": "sun.text.resources.cldr.FormatData_en"
+    },
+    {
+      "type": "sun.text.resources.cldr.FormatData_en_US"
+    },
+    {
+      "type": "dev.petrolal.dotfiles.cli.commands.ImpCommandSupport",
+      "allDeclaredMethods": true,
+      "methods": [
+        {
+          "name": "handleCommandFailed",
+          "parameterTypes": [
+            "dev.petrolal.dotfiles.cli.commands.CommandFailedException"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "dev.petrolal.dotfiles.cli.commands.CommandFailedException",
+      "allDeclaredConstructors": true,
+      "allDeclaredMethods": true
+    }
+  ]
+}

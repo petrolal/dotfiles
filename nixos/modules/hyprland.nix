@@ -109,7 +109,7 @@
     # `ags` itself only pulls in the core astal-io/astal-gjs/astal3/astal4
     # libs it needs to run any Astal app at all; each service library is a
     # separate package and has to be listed explicitly for its
-    # `gi://Astal*` import to resolve (see config/ags/widget/Bar.tsx,
+    # `gi://Astal*` import to resolve (see apps/ags/widget/Bar.tsx,
     # Osd.tsx, Media.tsx, Hud.tsx).
     astal.notifd
     astal.wireplumber

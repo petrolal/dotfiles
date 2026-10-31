@@ -11,11 +11,9 @@ hl.on("hyprland.start", function ()
   -- Quickshell handles RetroVHSSucks overlays: battery/clock info overlay,
   -- robot notification popups, lockscreen, and screensaver.
   hl.exec_cmd("qs")
-  -- AGS bar (config/ags/) -- VHS/camcorder-styled top bar: workspaces,
-  -- clock, tray, battery. Needs astal.hyprland/.tray/.wireplumber/.notifd
-  -- typelibs on GI_TYPELIB_PATH, which nixos/modules/hyprland.nix already
-  -- lists in environment.systemPackages.
-  hl.exec_cmd("ags run " .. DOTFILES_DIR .. "/config/ags")
+  -- AGS bar (apps/ags/) -- VHS/camcorder-styled top bar: workspaces,
+  -- clock, tray, battery. Launched via imp bar to safely wait for Wayland & D-Bus.
+  hl.exec_cmd(imp_bin .. " bar")
   -- Background notification logger for Tofi notification center
   hl.exec_cmd(imp_bin .. " notif-logger")
 end)

@@ -1,124 +1,15 @@
-import org.graalvm.buildtools.gradle.tasks.BuildNativeImageTask
 import java.nio.file.Files
 import java.nio.file.Paths
 
 plugins {
-    id 'java'
-    id 'application'
-    id 'org.graalvm.buildtools.native' version '0.11.5'
-    id 'org.jetbrains.kotlin.jvm'
-    // Required for GraalVM native-image builds of a @SpringBootApplication:
-    // inside a native image, Spring Boot's AotDetector unconditionally
-    // expects an AOT-generated ApplicationContextInitializer to exist
-    // (NativeDetector.inNativeImage() short-circuits that check to true,
-    // with no opt-out), so without this plugin's `processAot` task wired
-    // into `nativeCompile`, every native `imp` invocation fails at startup
-    // with AotInitializerNotFoundException. processAot generates the
-    // initializer named after `application.mainClass` (Cli), which also
-    // matches what SpringApplication deduces at runtime from the "main"
-    // stack frame -- so both sides agree on `Cli__ApplicationContextInitializer`.
-    id 'org.springframework.boot' version '3.5.15'
+    id 'org.jetbrains.kotlin.jvm' apply false
+    id 'org.graalvm.buildtools.native' apply false
+    id 'org.springframework.boot' apply false
 }
-
-group = 'dev.petrolal'
-version = '1.0.0'
 
 defaultTasks 'all'
 
-kotlin {
-    jvmToolchain(25)
-}
-
-tasks.withType(JavaCompile).configureEach {
-    def graalHome = resolveGraalVmHome()
-    if (graalHome != null) {
-        options.fork = true
-        options.forkOptions.javaHome = new File(graalHome)
-    }
-}
-
-tasks.withType(Test).configureEach {
-    def graalHome = resolveGraalVmHome()
-    if (graalHome != null) {
-        executable = new File(graalHome, 'bin/java').absolutePath
-    }
-}
-
-tasks.withType(JavaExec).configureEach {
-    // processAot/processTestAot (Spring Boot AOT plugin) set their own
-    // `javaLauncher` toolchain and conflict if `executable` is also forced here.
-    if (name == 'processAot' || name == 'processTestAot') return
-    def graalHome = resolveGraalVmHome()
-    if (graalHome != null) {
-        executable = new File(graalHome, 'bin/java').absolutePath
-    }
-}
-
-application {
-    mainClass.set('dev.petrolal.dotfiles.cli.Cli')
-}
-
-tasks.jar {
-    enabled = true
-    archiveBaseName.set('dotfiles-deployer')
-    manifest {
-        attributes 'Main-Class': 'dev.petrolal.dotfiles.cli.Cli',
-                   'Implementation-Title': 'dotfiles-deployer',
-                   'Implementation-Version': project.version
-    }
-}
-
-// The plain jar (above) is what the native-image build and the fat-jar-free
-// `java -jar` path both expect; bootJar's own fat jar isn't used anywhere.
-tasks.named('bootJar') {
-    enabled = false
-}
-
-repositories {
-    mavenCentral()
-}
-
-dependencies {
-    testImplementation(platform(libs.junit.bom))
-    testImplementation(libs.junit.jupiter)
-    testRuntimeOnly(libs.junit.platform.launcher)
-    testImplementation 'org.jetbrains.kotlin:kotlin-test'
-
-    implementation 'org.springframework.shell:spring-shell-starter:3.4.3'
-}
-
-tasks.test {
-    useJUnitPlatform()
-}
-
-// processTestAot (wired in by the Spring Boot plugin for native *test*
-// images, which this project doesn't build) fails outright since there's no
-// spring-boot-test dependency on the test classpath, and nothing here needs
-// native test support -- only the main `imp` binary does.
-tasks.named('processTestAot') {
-    enabled = false
-}
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-static String resolveGraalVmHome() {
-    def env = System.getenv('GRAALVM_HOME')
-    if (env) {
-        return env
-    }
-    try {
-        def proc = new ProcessBuilder(
-            'sh', '-c',
-            'dirname $(dirname $(readlink -f $(command -v native-image 2>/dev/null) 2>/dev/null))'
-        ).redirectErrorStream(true).start()
-        def out = proc.inputStream.text.trim()
-        return (proc.waitFor() == 0 && out && new File(out).isDirectory()) ? out : null
-    } catch (Exception ignored) {
-        return null
-    }
-}
+def impFile = layout.projectDirectory.file('bin/imp').asFile
 
 List<String> getDeployFlags() {
     def raw = (
@@ -131,75 +22,93 @@ List<String> getDeployFlags() {
     return raw.split(/\s+/).findAll { it }
 }
 
-def impFile = layout.projectDirectory.file('bin/imp').asFile
-
-// ---------------------------------------------------------------------------
-// Native Image Configuration
-// ---------------------------------------------------------------------------
-
-graalvmNative {
-    toolchainDetection.set(false)
-    binaries {
-        named('main') {
-            imageName.set('imp')
-            mainClass.set('dev.petrolal.dotfiles.cli.Cli')
-            fallback.set(true)
-            // Epsilon GC never reclaims memory -- fine for a short benchmark,
-            // fatal for this long-running desktop daemon: it allocates a small
-            // state record every frame forever, so epsilon leaked unbounded
-            // native/heap memory (confirmed: >1GB RSS after ~3.5 minutes,
-            // growing linearly with no plateau). Serial GC actually collects,
-            // while still being the lowest-footprint real collector for a
-            // small, mostly single-threaded background process like this.
-            buildArgs.addAll('-O3', '--gc=serial', '-march=native', '--enable-native-access=ALL-UNNAMED')
-            environmentVariables.putAll([
-                NIX_BINTOOLS: '',
-                NIX_BINTOOLS_WRAPPER_TARGET_HOST_x86_64_unknown_linux_gnu: '',
-                NIX_BUILD_CORES: '',
-                NIX_BUILD_TOP: '',
-                NIX_CC: '',
-                NIX_CC_WRAPPER_TARGET_HOST_x86_64_unknown_linux_gnu: '',
-                NIX_CFLAGS_COMPILE: '',
-                NIX_HARDENING_ENABLE: '',
-                NIX_LDFLAGS: ''
-            ])
-        }
-    }
-}
-
-tasks.named('nativeCompile', BuildNativeImageTask).configure { task ->
-    task.outputDirectory.set(layout.projectDirectory.dir('bin'))
-    task.doFirst {
-        layout.projectDirectory.dir('bin').asFile.mkdirs()
-        layout.buildDirectory.dir('native/nativeCompile').get().asFile.mkdirs()
-    }
-    def graalHome = resolveGraalVmHome()
-    if (graalHome != null) {
-        try {
-            def field = BuildNativeImageTask.class.getDeclaredField('graalvmHomeProvider')
-            field.accessible = true
-            field.set(task, providers.provider { graalHome })
-        } catch (Exception e) {
-            logger.warn("Could not set graalvmHomeProvider via reflection: " + e.message)
-        }
+static boolean isCommandAvailable(String cmd) {
+    try {
+        def proc = new ProcessBuilder('which', cmd).redirectErrorStream(true).start()
+        return proc.waitFor() == 0
+    } catch (Exception ignored) {
+        return false
     }
 }
 
 // ---------------------------------------------------------------------------
-// Build Tasks
+// Native Plugins (C++ / Qt6 Quick 3D)
 // ---------------------------------------------------------------------------
+
+tasks.register('compileRetroRoom', Exec) {
+    group = 'Plugins'
+    description = 'Compile C++ RetroRoom Qt6 QML plugin using CMake & Ninja.'
+    def pluginSrc = layout.projectDirectory.dir('plugins/retroroom').asFile
+    def pluginBuild = layout.projectDirectory.dir('build/plugins/retroroom').asFile
+    workingDir = pluginSrc
+    doFirst {
+        pluginBuild.mkdirs()
+    }
+
+    def hasNinja = isCommandAvailable('ninja')
+    def hasQt6 = System.getenv('Qt6_DIR') != null || (System.getenv('CMAKE_PREFIX_PATH')?.contains('qtbase') ?: false)
+    if (hasNinja && hasQt6) {
+        commandLine('sh', '-c', """
+            cmake -B "${pluginBuild.absolutePath}" -S "${pluginSrc.absolutePath}" -G Ninja -DCMAKE_BUILD_TYPE=Release
+            cmake --build "${pluginBuild.absolutePath}" --parallel
+        """)
+    } else {
+        commandLine('nix', 'develop', projectDir.absolutePath + '#room', '--command', 'sh', '-c', """
+            cmake -B "${pluginBuild.absolutePath}" -S "${pluginSrc.absolutePath}" -G Ninja -DCMAKE_BUILD_TYPE=Release
+            cmake --build "${pluginBuild.absolutePath}" --parallel
+        """)
+    }
+}
+
+tasks.register('testRetroRoom', Exec) {
+    group = 'Plugins'
+    description = 'Run Qt Test suite for RetroRoom C++ plugin.'
+    dependsOn('compileRetroRoom')
+    def pluginBuild = layout.projectDirectory.dir('build/plugins/retroroom').asFile
+    workingDir = pluginBuild
+
+    def hasNinja = isCommandAvailable('ninja')
+    def hasQt6 = System.getenv('Qt6_DIR') != null || (System.getenv('CMAKE_PREFIX_PATH')?.contains('qtbase') ?: false)
+    if (hasNinja && hasQt6 && isCommandAvailable('ctest')) {
+        commandLine('ctest', '--test-dir', pluginBuild.absolutePath, '--output-on-failure')
+    } else {
+        commandLine('nix', 'develop', projectDir.absolutePath + '#room', '--command', 'ctest', '--test-dir', pluginBuild.absolutePath, '--output-on-failure')
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Unified Build & Verification Tasks
+// ---------------------------------------------------------------------------
+
+tasks.register('nativeCompile') {
+    group = 'Build'
+    description = 'Compile native binary of imp CLI.'
+    dependsOn(':cli:nativeCompile')
+}
 
 tasks.register('all') {
     group = 'Build'
-    description = 'Compile the native GraalVM imp (default goal).'
-    dependsOn('nativeCompile')
+    description = 'Compile native GraalVM imp and C++ QML plugin (default goal).'
+    dependsOn(':cli:nativeCompile', 'compileRetroRoom')
 }
 
-// ---------------------------------------------------------------------------
-// Verification & Check Tasks
-// ---------------------------------------------------------------------------
+tasks.register('checkAgs', Exec) {
+    group = 'Verification'
+    description = 'Verify and bundle AGS TypeScript bar application.'
+    def agsDir = layout.projectDirectory.dir('apps/ags').asFile
+    workingDir = agsDir
+    commandLine('ags', 'bundle', 'app.ts', '/dev/null', '-r', agsDir.absolutePath)
+}
 
-tasks.named('check') {
+tasks.register('test') {
+    group = 'Verification'
+    description = 'Run all test suites across modules (Kotlin JUnit + C++ Qt Test + AGS bundle).'
+    dependsOn(':cli:test', 'testRetroRoom', 'checkAgs')
+}
+
+tasks.register('check') {
+    group = 'Verification'
+    description = 'Run tests and verify imp dry-run deploy.'
     dependsOn('test', 'nativeCompile')
     doLast {
         println('==> Running dry-run deploy check...')
@@ -222,7 +131,7 @@ tasks.register('install-check', Exec) {
 
 tasks.register('deploy') {
     group = 'Deploy'
-    description = 'Link dotfiles and (re)start the wallpaper daemon via the native imp.'
+    description = 'Link dotfiles and apply configuration via the native imp.'
     dependsOn('nativeCompile')
     doLast {
         def cmd = [impFile.absolutePath] + getDeployFlags()
@@ -243,22 +152,39 @@ tasks.register('dry-run') {
         }
     }
 }
+
+static String resolveGraalVmHome() {
+    def env = System.getenv('GRAALVM_HOME')
+    if (env) {
+        return env
+    }
+    try {
+        def proc = new ProcessBuilder(
+            'sh', '-c',
+            'dirname $(dirname $(readlink -f $(command -v native-image 2>/dev/null) 2>/dev/null))'
+        ).redirectErrorStream(true).start()
+        def out = proc.inputStream.text.trim()
+        return (proc.waitFor() == 0 && out && new File(out).isDirectory()) ? out : null
+    } catch (Exception ignored) {
+        return null
+    }
+}
+
 tasks.register('quick-deploy', JavaExec) {
     group = 'Deploy'
     description = 'Deploy via the JVM directly, without a native-image build.'
-    dependsOn('classes')
-    classpath = sourceSets.main.runtimeClasspath
+    dependsOn(':cli:classes')
+    classpath = project(':cli').sourceSets.main.runtimeClasspath
     mainClass.set('dev.petrolal.dotfiles.cli.Cli')
+    def graalHome = resolveGraalVmHome()
+    if (graalHome != null) {
+        executable = new File(graalHome, 'bin/java').absolutePath
+    }
     environment('DOTFILES_DIR', projectDir.absolutePath)
+    environment('DOTFILES_ASSETS_DIR', layout.projectDirectory.dir('assets').asFile.absolutePath)
     args = getDeployFlags()
-    // This runs for its side effects (symlinks, the wallpaper daemon), not
-    // for any declared output Gradle can track -- without this,
-    // Gradle can mark it UP-TO-DATE and skip it entirely on a re-run with
-    // unchanged classpath/args, same bug fixed below for quick-overlay.
     outputs.upToDateWhen { false }
 }
-
-
 
 tasks.register('uninstall') {
     group = 'Deploy'
@@ -273,7 +199,7 @@ tasks.register('uninstall') {
 }
 
 // ---------------------------------------------------------------------------
-// NixOS Tasks
+// NixOS System Tasks
 // ---------------------------------------------------------------------------
 
 tasks.register('bootstrap', Exec) {
@@ -300,10 +226,6 @@ tasks.register('nix-link') {
         def needsConf = !Files.isSymbolicLink(confLink) || Files.readSymbolicLink(confLink).toString() != confTarget
         def needsFlake = !Files.isSymbolicLink(flakeLink) || Files.readSymbolicLink(flakeLink).toString() != flakeTarget
 
-        // sudo (no -S) prompts on /dev/tty directly rather than reading the
-        // password from stdin -- robust under the Gradle daemon, which can
-        // detach from the invoking terminal's stdin and leave `-S` blocked
-        // or failing with no password ever delivered.
         if (needsConf) {
             exec {
                 commandLine('sudo', 'ln', '-sfn', confTarget, '/etc/nixos/configuration.nix')
@@ -376,7 +298,6 @@ tasks.register('upgrade') {
     dependsOn('nix-update', 'system-install')
 }
 
-// Ensure proper task execution sequence
 tasks.named('deploy') {
     mustRunAfter('nix-switch')
 }
@@ -386,32 +307,18 @@ tasks.named('system-install') {
 }
 
 // ---------------------------------------------------------------------------
-// Cleaning Tasks
+// Clean Tasks
 // ---------------------------------------------------------------------------
 
-tasks.register('mostly-clean') {
+tasks.register('clean') {
     group = 'Clean'
-    description = 'Remove the build directory and editor backup files.'
-    dependsOn('clean')
+    description = 'Delete the root build directory and output binaries.'
+    dependsOn(':cli:clean')
     doLast {
-        projectDir.eachFileRecurse { f ->
-            if (f.isFile() && (f.name.endsWith('~') || (f.name.startsWith('#') && f.name.endsWith('#')))) {
-                f.delete()
-            }
-        }
-    }
-}
-
-tasks.named('clean') {
-    doLast {
+        delete(layout.buildDirectory)
         if (impFile.exists()) {
             impFile.delete()
             println("==> Removed ${impFile.absolutePath}")
-        }
-        def legacyInvoker = layout.projectDirectory.file('bin/invoker').asFile
-        if (legacyInvoker.exists()) {
-            legacyInvoker.delete()
-            println("==> Removed ${legacyInvoker.absolutePath}")
         }
     }
 }
@@ -419,16 +326,10 @@ tasks.named('clean') {
 tasks.register('dist-clean') {
     group = 'Clean'
     description = 'clean + remove Nix result links.'
-    dependsOn('clean', 'mostly-clean')
+    dependsOn('clean')
     doLast {
         projectDir.listFiles()
             ?.findAll { it.name == 'result' || it.name.startsWith('result-') }
             ?.each { it.delete() }
     }
-}
-
-tasks.register('maintainer-clean') {
-    group = 'Clean'
-    description = 'dist-clean + remove additional maintainer files.'
-    dependsOn('dist-clean')
 }

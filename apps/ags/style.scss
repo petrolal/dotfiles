@@ -1,0 +1,369 @@
+// style.scss --- VHS/VCR deck front-panel look for the bar and its HUD
+// popup: brushed-metal chassis with beveled plastic buttons, inset VFD
+// (green phosphor) screens, and the deck's four signal colors. Shares its
+// font stack with apps/quickshell/overlay/InfoOverlayComponent.qml so
+// the AGS bar and the Quickshell HUD read as one retro system; the
+// Share Tech Mono/VT323 fallbacks aren't packaged in nixos/modules/
+// fonts.nix, so they only kick in if the system happens to have them --
+// BigBlueTermPlus Nerd Font (which is packaged) is tried first.
+
+@use "sass:color";
+
+$font-stack: "BigBlueTermPlus Nerd Font", "Share Tech Mono", "VT323", monospace;
+
+$fg: #e8f6ff;
+$chassis-bg: #121418;
+$chassis-highlight: #2c323d;
+$chassis-shadow: #0a0b0d;
+$vfd-bg: #040906;
+
+$green: #33ff66;
+$amber: #ffaa00;
+$red: #ff3344;
+// Imp98 theme's main color (active_title_color in
+// themes/Imp98/gtk-3.0/gtk.css), now the bar's accent instead of cyan.
+$accent: #b81424;
+
+window.Bar, window.Hud {
+    background: transparent;
+    font-family: $font-stack;
+    font-weight: bold;
+}
+
+// --- Chassis (shared bevel look for the bar shell and HUD popup) ----------
+@mixin chassis {
+    background-color: $chassis-bg;
+    background-image: repeating-linear-gradient(
+        to bottom,
+        rgba(255, 255, 255, 0.035) 0px,
+        rgba(255, 255, 255, 0.035) 1px,
+        transparent 1px,
+        transparent 3px
+    );
+    border-top: 1px solid $chassis-highlight;
+    border-bottom: 1px solid $chassis-shadow;
+    border-left: 1px solid rgba($chassis-highlight, 0.5);
+    border-right: 1px solid rgba($chassis-shadow, 0.5);
+    border-radius: 3px;
+    color: $fg;
+}
+
+@mixin vfd-screen {
+    background-color: $vfd-bg;
+    border-radius: 2px;
+    border: 1px solid rgba($green, 0.2);
+    box-shadow: inset 0 0 6px rgba($green, 0.18);
+}
+
+@mixin deck-button {
+    background-color: color.adjust($chassis-bg, $lightness: 4%);
+    border-top: 1px solid $chassis-highlight;
+    border-bottom: 1px solid $chassis-shadow;
+    border-radius: 2px;
+    color: rgba($fg, 0.8);
+    padding: 1px 6px;
+    min-width: 0;
+
+    &:hover {
+        background-color: color.adjust($chassis-bg, $lightness: 8%);
+    }
+
+    &:disabled {
+        color: rgba($fg, 0.25);
+    }
+}
+
+window.Bar > centerbox {
+    @include chassis;
+    margin: 2px 6px;
+    padding: 2px 10px;
+    transition: transform 250ms cubic-bezier(0.1, 0.9, 0.2, 1), opacity 200ms ease;
+    transform-origin: top center;
+
+    &.folded {
+        transform: perspective(600px) rotateX(-85deg) scaleY(0.1);
+        opacity: 0.15;
+    }
+}
+
+button.logo-btn, button.tape-btn {
+    all: unset;
+    background: transparent;
+    background-color: transparent;
+    background-image: none;
+    border: none;
+    padding: 0;
+    margin: 0;
+    min-width: 0;
+    min-height: 0;
+    box-shadow: none;
+    outline: none;
+    font: inherit;
+    color: inherit;
+
+    &:hover, &:focus, &:active {
+        background: transparent;
+        background-color: transparent;
+        border: none;
+        box-shadow: none;
+        outline: none;
+    }
+}
+
+.start, .end {
+    padding: 0 4px;
+}
+
+.logo {
+    color: $accent;
+    letter-spacing: 1px;
+    text-shadow: 0 0 6px rgba($accent, 0.6);
+    padding-right: 6px;
+}
+
+// --- Workspaces ("TAPE:" program selector) ---------------------------------
+.Workspaces {
+    .tape-label {
+        color: $amber;
+        font-size: 11px;
+        letter-spacing: 1px;
+        padding-right: 2px;
+    }
+
+    .channel-btn {
+        background: transparent;
+        border: 1px solid rgba($accent, 0.3);
+        border-radius: 2px;
+        margin: 2px;
+        padding: 1px 6px;
+        color: rgba($fg, 0.45);
+        min-width: 0;
+
+        label {
+            font-size: 12px;
+        }
+
+        &:hover {
+            border-color: $accent;
+        }
+
+        &.occupied {
+            color: rgba($fg, 0.8);
+            border-color: rgba($accent, 0.6);
+        }
+
+        &.active {
+            color: $accent;
+            border-color: $accent;
+            background-color: rgba($accent, 0.12);
+            text-shadow: 0 0 6px rgba($accent, 0.7);
+        }
+    }
+}
+
+// --- Media (VFD track readout + transport buttons) -------------------------
+.Media {
+    padding: 0 6px;
+
+    .vfd {
+        @include vfd-screen;
+        padding: 1px 10px;
+        margin-right: 6px;
+
+        .vfd-text {
+            color: $green;
+            font-size: 12px;
+            letter-spacing: 1px;
+            text-shadow: 0 0 4px rgba($green, 0.8), 0 0 10px rgba($green, 0.4);
+        }
+    }
+
+    .transport {
+        .deck-btn {
+            @include deck-button;
+            font-size: 11px;
+
+            &.play.is-playing {
+                color: $green;
+                border-top-color: $green;
+                box-shadow: 0 0 6px rgba($green, 0.6);
+            }
+        }
+
+        .hud-btn {
+            color: $amber;
+        }
+    }
+}
+
+// --- Osd (REC / SP / INDEX / TRK telemetry strip) ---------------------------
+.Osd {
+    padding: 2px 10px;
+    background-color: rgba(0, 0, 0, 0.55);
+    border: 1px solid rgba($green, 0.2);
+    border-radius: 2px;
+
+    .rec-dot {
+        color: transparent;
+        font-size: 10px;
+
+        &.lit {
+            color: $red;
+            text-shadow: 0 0 6px rgba($red, 0.8);
+        }
+    }
+
+    .rec-text {
+        color: $red;
+        font-size: 11px;
+        letter-spacing: 1px;
+    }
+
+    .speed {
+        font-size: 10px;
+        color: $amber;
+        border: 1px solid rgba($amber, 0.4);
+        border-radius: 2px;
+        padding: 0 3px;
+        letter-spacing: 1px;
+    }
+
+    .index-label {
+        font-size: 9px;
+        color: rgba($fg, 0.5);
+        letter-spacing: 1px;
+    }
+
+    .counter {
+        font-size: 16px;
+        letter-spacing: 2px;
+        color: $green;
+        text-shadow: 0 0 4px rgba($green, 0.9), 0 0 10px rgba($green, 0.5);
+    }
+
+    .trk-label {
+        font-size: 10px;
+        color: $accent;
+    }
+
+    .trk-value {
+        font-size: 11px;
+        color: $accent;
+        text-shadow: 0 0 4px rgba($accent, 0.6);
+    }
+}
+
+// --- Vu (passive audio level meter) -----------------------------------------
+.Vu {
+    padding: 0 4px;
+
+    .vu-label {
+        font-size: 9px;
+        color: rgba($fg, 0.5);
+        padding-right: 3px;
+    }
+
+    .vu-tick {
+        min-width: 3px;
+        min-height: 10px;
+        margin: 0 1px;
+        border-radius: 1px;
+        background-color: rgba($fg, 0.12);
+
+        &.on.lo { background-color: $green; }
+        &.on.mid { background-color: $amber; }
+        &.on.hi { background-color: $red; }
+    }
+}
+
+// --- Tray --------------------------------------------------------------------
+.Tray {
+    .tray-item {
+        background: transparent;
+        border: none;
+        padding: 0 4px;
+        min-width: 0;
+
+        &:hover {
+            background-color: rgba($accent, 0.12);
+            border-radius: 2px;
+        }
+    }
+}
+
+// --- Battery -------------------------------------------------------------------
+.Battery {
+    padding: 0 4px;
+
+    icon {
+        padding-right: 2px;
+    }
+
+    label {
+        font-size: 12px;
+        color: $fg;
+    }
+}
+
+// --- Hud (cassette-inspection popup) -----------------------------------------
+window.Hud {
+    .shell {
+        @include chassis;
+        margin: 0 10px;
+        padding: 14px 18px;
+        min-width: 360px;
+    }
+
+    .spools {
+        .spool-art {
+            color: $amber;
+            font-size: 14px;
+            letter-spacing: 1px;
+        }
+    }
+
+    .scrub label {
+        font-size: 11px;
+        color: $green;
+        min-width: 36px;
+    }
+
+    .faders {
+        .fader-label {
+            font-size: 9px;
+            color: rgba($fg, 0.6);
+            letter-spacing: 1px;
+        }
+
+        .fader-value {
+            font-size: 10px;
+            color: $accent;
+        }
+    }
+
+    .matrix label {
+        font-size: 10px;
+        color: rgba($fg, 0.75);
+    }
+
+    slider {
+        trough {
+            background-color: $vfd-bg;
+            border: 1px solid rgba($accent, 0.25);
+            border-radius: 2px;
+            min-width: 4px;
+            min-height: 4px;
+        }
+
+        slider {
+            background-color: $accent;
+            border-radius: 1px;
+            min-width: 10px;
+            min-height: 10px;
+        }
+
+        &:disabled slider {
+            background-color: $amber;
+        }
+    }
+}

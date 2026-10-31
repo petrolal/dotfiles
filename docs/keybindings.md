@@ -63,7 +63,8 @@ carry.
 | Keys | Action |
 |---|---|
 | `SUPER + SHIFT + R` | Reload Hyprland config (`hyprctl reload`) — does **not** reload plugins |
-| `SUPER + SHIFT + B` | Reload Quickshell HUD (`pkill -f quickshell; qs &`) |
+| `SUPER + SHIFT + B` | Restart AGS bar (`imp bar --action restart`) |
+| `SUPER + SHIFT + H` | Restart Quickshell HUD (`imp hud --action restart`) |
 | `SUPER + N` | Open Tofi notification center (`imp notif-center`) |
 | `SUPER + /` | Show Tofi keybinding cheat sheet (`imp keybinds`) |
 | `SUPER + V` / `SUPER + SHIFT + V` | Toggle VHS / CRT screen shader (`imp toggle-vhs`) |
@@ -92,12 +93,27 @@ every other `imp_bin`-fronted binding above. The media transport keys need `play
 After 300s idle, `hypridle` runs `qs ipc call screensaver on` (bouncing DVD logo + hold music). Moving
 the mouse or keyboard runs `qs ipc call screensaver off`. See `config/hypr/hypridle.conf`.
 
+## Interactive 3D Retro Room (Quickshell background)
+
+A persistent 3D retro room runs behind all desktop windows on the primary display (`apps/quickshell/room/RoomScene.qml`).
+
+| Method | Action |
+|---|---|
+| Click `"TAPE:"` on AGS bar | Folds bar down and travels camera to CRT Computer (`"terminal"`) |
+| Click VFD readout on AGS bar | Folds bar down and travels camera to Cassette Boombox (`"music"`) |
+| Click `"📼 SHUT THE FUCK UP!"` logo | Restores camera to room overview (`"home"`) and unfolds bar |
+| `imp room --action travel <anchor>` | Command-line camera travel (`home`, `terminal`, `music`) |
+| `imp room --action reset` | Reset camera to `"home"` overview |
+| `imp room --action vhs` | Toggle 3D scene VHS post-processing effect |
+
+Inactivity return: After 30s of idle time away from home, the camera automatically returns to `"home"` and unfolds the top bar.
+
 ## Info overlay (autostarted via quickshell)
 
 Quickshell (`qs`) starts automatically at Hyprland launch, rendering the HUD battery percentage and
-analog/digital clock (`config/quickshell/overlay/InfoOverlay.qml`).
+analog/digital clock (`apps/quickshell/overlay/InfoOverlay.qml`).
 
 ## Notifications overlay (autostarted via quickshell)
 
-Quickshell implements an `org.freedesktop.Notifications` D-Bus daemon (`config/quickshell/notif/NotifsOverlay.qml`)
+Quickshell implements an `org.freedesktop.Notifications` D-Bus daemon (`apps/quickshell/notif/NotifsOverlay.qml`)
 at Hyprland launch — any app's notifications land here as a sliding panel with audio feedback.

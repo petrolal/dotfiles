@@ -1,0 +1,138 @@
+import org.graalvm.buildtools.gradle.tasks.BuildNativeImageTask
+
+plugins {
+    id 'java'
+    id 'application'
+    id 'org.graalvm.buildtools.native'
+    id 'org.jetbrains.kotlin.jvm'
+    id 'org.springframework.boot'
+}
+
+group = 'dev.petrolal'
+version = '1.0.0'
+
+kotlin {
+    jvmToolchain(25)
+}
+
+tasks.withType(JavaCompile).configureEach {
+    def graalHome = resolveGraalVmHome()
+    if (graalHome != null) {
+        options.fork = true
+        options.forkOptions.javaHome = new File(graalHome)
+    }
+}
+
+tasks.withType(Test).configureEach {
+    def graalHome = resolveGraalVmHome()
+    if (graalHome != null) {
+        executable = new File(graalHome, 'bin/java').absolutePath
+    }
+}
+
+tasks.withType(JavaExec).configureEach {
+    if (name == 'processAot' || name == 'processTestAot') return
+    def graalHome = resolveGraalVmHome()
+    if (graalHome != null) {
+        executable = new File(graalHome, 'bin/java').absolutePath
+    }
+}
+
+application {
+    mainClass.set('dev.petrolal.dotfiles.cli.Cli')
+}
+
+tasks.jar {
+    enabled = true
+    archiveBaseName.set('dotfiles-deployer')
+    manifest {
+        attributes 'Main-Class': 'dev.petrolal.dotfiles.cli.Cli',
+                   'Implementation-Title': 'dotfiles-deployer',
+                   'Implementation-Version': project.version
+    }
+}
+
+tasks.named('bootJar') {
+    enabled = false
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    testImplementation(platform(libs.junit.bom))
+    testImplementation(libs.junit.jupiter)
+    testRuntimeOnly(libs.junit.platform.launcher)
+    testImplementation 'org.jetbrains.kotlin:kotlin-test'
+
+    implementation 'org.springframework.shell:spring-shell-starter:3.4.3'
+}
+
+tasks.test {
+    useJUnitPlatform()
+}
+
+tasks.named('processTestAot') {
+    enabled = false
+}
+
+static String resolveGraalVmHome() {
+    def env = System.getenv('GRAALVM_HOME')
+    if (env) {
+        return env
+    }
+    try {
+        def proc = new ProcessBuilder(
+            'sh', '-c',
+            'dirname $(dirname $(readlink -f $(command -v native-image 2>/dev/null) 2>/dev/null))'
+        ).redirectErrorStream(true).start()
+        def out = proc.inputStream.text.trim()
+        return (proc.waitFor() == 0 && out && new File(out).isDirectory()) ? out : null
+    } catch (Exception ignored) {
+        return null
+    }
+}
+
+def rootDir = rootProject.layout.projectDirectory
+
+graalvmNative {
+    toolchainDetection.set(false)
+    binaries {
+        named('main') {
+            imageName.set('imp')
+            mainClass.set('dev.petrolal.dotfiles.cli.Cli')
+            fallback.set(true)
+            buildArgs.addAll('-O3', '--gc=serial', '-march=native', '--enable-native-access=ALL-UNNAMED')
+            environmentVariables.putAll([
+                NIX_BINTOOLS: '',
+                NIX_BINTOOLS_WRAPPER_TARGET_HOST_x86_64_unknown_linux_gnu: '',
+                NIX_BUILD_CORES: '',
+                NIX_BUILD_TOP: '',
+                NIX_CC: '',
+                NIX_CC_WRAPPER_TARGET_HOST_x86_64_unknown_linux_gnu: '',
+                NIX_CFLAGS_COMPILE: '',
+                NIX_HARDENING_ENABLE: '',
+                NIX_LDFLAGS: ''
+            ])
+        }
+    }
+}
+
+tasks.named('nativeCompile', BuildNativeImageTask).configure { task ->
+    task.outputDirectory.set(rootDir.dir('bin'))
+    task.doFirst {
+        rootDir.dir('bin').asFile.mkdirs()
+        layout.buildDirectory.dir('native/nativeCompile').get().asFile.mkdirs()
+    }
+    def graalHome = resolveGraalVmHome()
+    if (graalHome != null) {
+        try {
+            def field = BuildNativeImageTask.class.getDeclaredField('graalvmHomeProvider')
+            field.accessible = true
+            field.set(task, providers.provider { graalHome })
+        } catch (Exception e) {
+            logger.warn("Could not set graalvmHomeProvider via reflection: " + e.message)
+        }
+    }
+}

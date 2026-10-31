@@ -21,7 +21,7 @@ stdenv.mkDerivation {
   pname = "dotfiles-imp";
   version = "1.3.0";
 
-  src = ../src/main;
+  src = ../apps/cli/src/main;
 
   nativeBuildInputs = [ graalvmPackages.graalvm-ce ];
 

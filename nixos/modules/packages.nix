@@ -14,6 +14,7 @@ let
   buildTools = with pkgs; [
     gnumake
     cmake
+    ninja
     pkg-config
     git
     gcc  # C compiler for Tree-sitter parsers & telescope-fzf-native (TetraVim/nvim)
@@ -125,6 +126,7 @@ let
     thunar  # standalone GTK file manager; no longer pulled in transitively now that desktopManager.xfce is gone
     grim         # Wayland screenshot capture, bound in config/hypr/hyprland.lua
     slurp        # region selection for grim
+    wl-clipboard
   ];
 
   mediaUtils = with pkgs; [
@@ -135,6 +137,22 @@ let
     spotify
     playerctl
     gpu-screen-recorder-gtk
+  ];
+
+  # 3D modeling, animation, mesh processing, and viewing tools.
+  threeDTools = with pkgs; [
+    blender
+    blockbench  # low-poly 3D model editor & animator
+    f3d         # fast, lightweight 3D viewer (glTF, OBJ, FBX, STL, etc.)
+    meshlab     # 3D mesh inspection, cleaning, and processing
+  ];
+
+  # Raster and vector image editors.
+  imageEditors = with pkgs; [
+    gimp        # raster image editor & photo retouching
+    krita       # digital painting and 2D illustration
+    inkscape    # vector graphics editor (SVG)
+    pinta       # lightweight paint and image editing
   ];
 
   # General-purpose apps reached for daily, outside any dev/media workflow.
@@ -156,5 +174,8 @@ in {
     ++ languageTools
     ++ systemTools
     ++ mediaUtils
+    ++ threeDTools
+    ++ imageEditors
     ++ dailyTools;
 }
+

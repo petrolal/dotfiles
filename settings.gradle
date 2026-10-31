@@ -2,9 +2,13 @@ pluginManagement {
     plugins {
         id 'org.jetbrains.kotlin.jvm' version '2.4.21'
         id 'org.jetbrains.kotlin.multiplatform' version '2.4.21'
+        id 'org.graalvm.buildtools.native' version '0.11.5'
+        id 'org.springframework.boot' version '3.5.15'
     }
 }
 plugins {
     id 'org.gradle.toolchains.foojay-resolver-convention' version '0.10.0'
 }
-rootProject.name = 'dotfiles-deployer'
+rootProject.name = 'dotfiles'
+include 'cli'
+project(':cli').projectDir = file('apps/cli')

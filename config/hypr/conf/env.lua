@@ -11,3 +11,8 @@ hl.env("HYPRCURSOR_SIZE", "24")
 -- loading it as an XCursor theme instead of its own default.
 hl.env("XCURSOR_THEME", "DMZ-Black")
 hl.env("HYPRCURSOR_THEME", "DMZ-Black")
+
+-- Include RetroRoom C++ QML plugin build in QML2_IMPORT_PATH
+local current_qml_path = os.getenv("QML2_IMPORT_PATH") or ""
+hl.env("QML2_IMPORT_PATH", DOTFILES_DIR .. "/build/plugins/retroroom" .. (current_qml_path ~= "" and (":" .. current_qml_path) or ""))
+

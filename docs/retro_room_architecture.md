@@ -50,7 +50,7 @@ Hyprland (compositor, untouched)
  │   │            LockSurface, ScreensaverComponent
  │   └─ IpcHandler { target: "room" }            ← new, see §3
  │
- ├─ ags run config/ags  (AGS/Astal bar, GTK)     ← top layer, unchanged process
+ ├─ ags run apps/ags    (AGS/Astal bar, GTK)     ← top layer, unchanged process
  │   └─ tile click handler → plays "notebook     ← local GTK/CSS animation
  │       closing" animation, then on completion:
  │       exec("qs ipc call room travel <id>")
@@ -92,7 +92,7 @@ IpcHandler {
 }
 ```
 
-**AGS bar tile click handler (`config/ags/widget/Bar.tsx` or wherever the
+**AGS bar tile click handler (`apps/ags/widget/Bar.tsx` or wherever the
 tile lives):**
 
 1. Play the local "notebook closing" animation (GTK/CSS transform — tiles
@@ -110,8 +110,7 @@ tile lives):**
 
 ## 4. C++ plugin module boundaries
 
-New directory, e.g. `config/quickshell/room/plugin/` (QML module name
-`RetroRoom`):
+Modular directory: `plugins/retroroom/` (QML module name `RetroRoom 1.0`):
 
 - **`RoomSceneController`** (`QObject`, exposed to QML) — owns the
   `travelTo(anchorId)` entry point, debounces/queues travel requests
@@ -136,9 +135,10 @@ New directory, e.g. `config/quickshell/room/plugin/` (QML module name
 
 ## 5. Visual continuity with existing retro theme
 
-- Reuse `RetroVHSSucks/assets/` for textures/sprites inside the room
-  (posters, CRT monitor decals, VHS tapes as props) rather than sourcing new
-  art.
+- Reuse `assets/` and `assets/room/` for textures and props inside the room
+  (band posters: Deftones/Korn/Slipknot/Linkin Park, CRT PC screens, PS1 console,
+  alarm clock, guitar, skateboard, wood furniture, VHS tapes) ensuring full visual
+  continuity with authentic 90s bedroom aesthetics.
 - Port `config/hypr/vhs.frag` (the compositor-wide CRT/VHS post-process
   shader) as a Qt Quick 3D `CustomMaterial`/post-processing `Effect` applied
   to the `View3D`'s output, so the room's render matches the same VHS
@@ -151,16 +151,13 @@ New directory, e.g. `config/quickshell/room/plugin/` (QML module name
   the runtime closure in `nixos/modules/hyprland.nix` next to `quickshell`;
   add Qt6 dev packages (`qt6.qtbase.dev`, `qt6.qtdeclarative.dev`, `cmake`)
   to the dev shell used to build the `RetroRoom` QML plugin.
-- **Kotlin CLI (`imp`)**: no new runtime command needed — Quickshell already
-  autostarts via `hl.exec_cmd("qs")` in `autostart.lua`, and the plugin is
-  just another QML import Quickshell loads at startup, built like any other
-  native QML module (`cmake --build` producing the plugin `.so` +
-  `qmldir`, deployed into `config/quickshell/room/plugin/` by whatever
-  symlinks `config/quickshell/` today).
+- **Kotlin CLI (`imp`)**: Integrated via `imp room [--action travel|reset|status|vhs]`
+  and `dev.petrolal.dotfiles.desktop.RetroRoomControl`. The plugin is
+  loaded by Quickshell at startup via `QML2_IMPORT_PATH` set in `env.lua`
+  pointing to `build/plugins/retroroom`.
 - **Tests**: the C++ `CameraRig`/`SceneAnchorRegistry` logic (pure
   transform/state math, no GPU calls) is unit-testable with Qt Test,
-  independent of actually rendering — mirrors how `KeybindHelperTest.kt`
-  tests `KeybindHelper.kt`'s logic without needing a live Hyprland session.
+  independent of actually rendering — automated via `./gradlew testRetroRoom`.
 
 ## 7. Settled Decisions
 
@@ -180,35 +177,59 @@ New directory, e.g. `config/quickshell/room/plugin/` (QML module name
   - Configured `QML2_IMPORT_PATH` in `environment.sessionVariables` pointing to `lib/qt-6/qml` for Quickshell and QtQuick3D.
   - Added `devShells.room` to root `flake.nix` with CMake, Ninja, and Qt6 development libraries.
 - [x] **Step 2: C++ QML Plugin (`RetroRoom 1.0`)**
-  - Scaffolded `config/quickshell/room/plugin/`:
+  - Implemented in `plugins/retroroom/`:
     - `SceneAnchorRegistry`: Maps `"home"`, `"terminal"`, and `"music"` strings to 3D nodes.
     - `CameraRig`: Manages smooth camera interpolation with shortest-path angular math.
     - `RoomSceneController`: Exposes `travelTo(anchorId)`, `transitioning`, and `currentAnchor` to QML with busy rejection.
   - CMake setup using `qt_add_qml_module`.
   - Automated Qt unit tests (`tests/test_retroroom.cpp`) passing 100%.
-  - Added `build.sh` build script.
-- [ ] **Step 3 (Post-reboot): 3D Scene & Quickshell Integration**
-  - Add `RoomScene.qml` with 3D anchors and VHS post-process material.
-  - Add `IpcHandler { target: "room" }` to `config/quickshell/shell.qml`.
-- [ ] **Step 4: AGS Bar Integration**
-  - Add perspective fold animation in `config/ags/style.scss` and tile click triggers in `config/ags/widget/Bar.tsx`.
-  - Wire 30s inactivity auto-reset timer.
+  - Added `build.sh` build script and Gradle integration (`./gradlew compileRetroRoom`, `./gradlew testRetroRoom`).
+- [x] **Step 3: 3D Scene & Quickshell Integration**
+  - Created `apps/quickshell/room/RoomScene.qml`:
+    - Full `View3D` layer surface with `SceneEnvironment` (MSAA antialiasing, dark retro room palette).
+    - 3D Room geometry: floor, back & side walls, industrial workbench/desk.
+    - 3D CRT Computer workstation at `"terminal"` anchor with authentic 90s chassis, keyboard, warning label, and phosphor glow point light.
+    - Retro Boombox & Cassette Stereo at `"music"` anchor with textured faceplate (`radio.png`), spinning cassette/disc accent (`dvd.png`), and warm amber LED glow.
+    - Masterful retro logo poster (`m_for_masterful.png`) on the back wall.
+    - Connected `CameraRig`, `SceneAnchorRegistry`, and `RoomSceneController` with 400ms cubic travel curves.
+  - Mounted in `apps/quickshell/shell.qml`:
+    - `PanelWindow` on primary display with `WlrLayershell.layer: WlrLayer.Background`, `exclusionMode: ExclusionMode.Ignore`, and click passthrough `mask: Region {}`.
+    - `IpcHandler { target: "room" }` with `travel(anchorId)`, `reset()`, and `status()` endpoints.
+- [x] **Step 4: AGS Bar Integration & 30s Auto-Reset**
+  - Created `apps/ags/widget/RoomManager.ts`:
+    - Manages `isFolded` state and 30-second inactivity timer.
+    - Folds the top bar down like a laptop lid before signaling camera travel.
+    - Automatically restores camera to `"home"` and unfolds bar after 30s of inactivity.
+  - Updated `apps/ags/widget/Bar.tsx`:
+    - Bound `roomManager.isFolded` to `centerbox.folded`.
+    - Made `"📼 SHUT THE FUCK UP!"` logo button trigger `roomManager.reset()`.
+  - Updated `apps/ags/widget/Workspaces.tsx` and `apps/ags/widget/Media.tsx`:
+    - Clicking `"TAPE:"` triggers travel to `"terminal"`.
+    - Clicking cassette VFD / HUD button triggers travel to `"music"`.
+  - Updated `apps/ags/style.scss`:
+    - Added 3D perspective fold transition: `transform: perspective(600px) rotateX(-85deg) scaleY(0.1)` with 250ms duration.
+    - Kept 100% of the exact existing visual style of the bar intact when unfolded.
+- [x] **Step 5: Snappy Window Tiling & Animations**
+  - Added tuned `animations` block to `config/hypr/conf/input.lua`:
+    - Custom snappy bezier curve: `"0.05, 0.9, 0.1, 1.05"`.
+    - Window spawn/popin speed factor `2` (~150ms `popin 90%`) eliminating tile lag on `<meta> + RETURN`.
+- [x] **Step 6: VHS Post-Processing Effect for 3D Room**
+  - Created `apps/quickshell/room/vhs_effect.frag` and `VhsEffect.qml` porting CRT curvature, scanlines, chromatic aberration, and tube vignette.
+  - Attached to `SceneEnvironment.effects` in `RoomScene.qml`.
+  - Added dynamic toggling via `qs ipc call room toggleVhs` and `imp room --action vhs`.
 
 ## 9. Ergonomics & Performance: Fast Tile Openings & Snappy Transitions
 
 For comfortable daily use, animations must not feel sluggish or introduce friction when launching windows or navigating points of interest:
 
 ### 1. Hyprland Window Tiling (`SUPER + RETURN` / Kitty)
-- **Problem**: In `config/hypr/conf/input.lua`, no `animations` block is configured, causing Hyprland to fall back to default slow bezier curves (speed factor 7, ~400-500ms slide/popin) whenever a new tile is opened.
-- **Next optimization**: Add a tuned, snappy `animations` configuration in `config/hypr/conf/input.lua`:
-  - Quick ease-out curve (`easeOutExpo` or `popin 90%`) with speed factor `2` to `3` (~150ms).
-  - Or disable window popin animations (`windowsIn = false` or `animations.enabled = false` for instant retro Windows 98 window spawn).
+- **Implemented**: Tuned `animations` block in `config/hypr/conf/input.lua` using `snappy = "0.05, 0.9, 0.1, 1.05"` with speed factor 2 (~150ms `popin 90%`). Spawning terminals or tiling windows is virtually instantaneous.
 
 ### 2. Room Camera Travel Speed
-- **Optimization**: Set the default camera travel duration in `CameraRig` and QML to **350ms - 450ms** (reduced from the initial 1200ms testing default) with `QEasingCurve::OutCubic`. The camera glides quickly to the destination without causing visual disorientation or making the desktop feel sluggish.
+- **Implemented**: Camera travel duration in `CameraRig` is set to **400ms** with `QEasingCurve::InOutCubic` and shortest-path spherical angular math.
 
 ### 3. AGS Bar Folding Transition Speed
-- **Optimization**: The GTK/CSS perspective fold transition in `config/ags/style.scss` should use a crisp **200ms - 250ms** duration (`ease-out`). The bar closes almost instantaneously when triggered, without blocking user input.
+- **Implemented**: The GTK/CSS perspective fold transition in `apps/ags/style.scss` uses a crisp **250ms** duration.
 
 ### 4. Zero Interruption Principle
 - Camera dolly and 3D rendering take place entirely on the background layer-shell surface in Quickshell (`qs`). Keystrokes, terminal spawns (`SUPER + RETURN`), application launchers, and window management are handled directly by Hyprland without waiting on any 3D transition.
