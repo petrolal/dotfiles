@@ -77,37 +77,6 @@ window.Bar > centerbox {
     @include chassis;
     margin: 2px 6px;
     padding: 2px 10px;
-    transition: transform 250ms cubic-bezier(0.1, 0.9, 0.2, 1), opacity 200ms ease;
-    transform-origin: top center;
-
-    &.folded {
-        transform: perspective(600px) rotateX(-85deg) scaleY(0.1);
-        opacity: 0.15;
-    }
-}
-
-button.logo-btn, button.tape-btn {
-    all: unset;
-    background: transparent;
-    background-color: transparent;
-    background-image: none;
-    border: none;
-    padding: 0;
-    margin: 0;
-    min-width: 0;
-    min-height: 0;
-    box-shadow: none;
-    outline: none;
-    font: inherit;
-    color: inherit;
-
-    &:hover, &:focus, &:active {
-        background: transparent;
-        background-color: transparent;
-        border: none;
-        box-shadow: none;
-        outline: none;
-    }
 }
 
 .start, .end {

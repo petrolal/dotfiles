@@ -6,7 +6,6 @@ import "./notif"
 import "./overlay"
 import "./lock"
 import "./screensaver"
-import "./room"
 
 ShellRoot {
     NotifsOverlay {
@@ -58,68 +57,6 @@ ShellRoot {
     // }
 
     property bool screensaverVisible: false
-    property var activeRoomScene: null
-
-    IpcHandler {
-        target: "room"
-
-        function travel(anchorId: string): string {
-            if (!activeRoomScene) return "ERROR: NO_SCENE";
-            if (activeRoomScene.controller.transitioning) return "BUSY";
-            return activeRoomScene.controller.travelTo(anchorId) ? "OK" : "ERROR";
-        }
-
-        function reset(): string {
-            if (!activeRoomScene) return "ERROR: NO_SCENE";
-            activeRoomScene.controller.reset();
-            return "OK";
-        }
-
-        function status(): string {
-            if (!activeRoomScene) return "UNKNOWN";
-            return activeRoomScene.controller.currentAnchor;
-        }
-
-        function toggleVhs(): string {
-            if (!activeRoomScene) return "ERROR";
-            activeRoomScene.vhsShaderEnabled = !activeRoomScene.vhsShaderEnabled;
-            return activeRoomScene.vhsShaderEnabled ? "ON" : "OFF";
-        }
-    }
-
-    Variants {
-        model: Quickshell.screens
-
-        PanelWindow {
-            id: roomPanel
-            required property var modelData
-            screen: modelData
-
-            property bool isPrimary: modelData === Quickshell.screens[0]
-
-            visible: isPrimary && !screensaverVisible
-            exclusionMode: ExclusionMode.Ignore
-            WlrLayershell.layer: WlrLayer.Background
-            color: "#050508"
-            mask: Region {}
-
-            anchors {
-                left: true
-                top: true
-                bottom: true
-                right: true
-            }
-
-            RoomScene {
-                anchors.fill: parent
-                Component.onCompleted: {
-                    if (roomPanel.isPrimary) {
-                        activeRoomScene = this;
-                    }
-                }
-            }
-        }
-    }
 
     IpcHandler {
         target: "screensaver"

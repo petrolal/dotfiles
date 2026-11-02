@@ -54,9 +54,6 @@ void MAIN() {
     vig = clamp(pow(vig, 0.20), 0.0, 1.0);
     col.rgb *= vig;
 
-    // Deep inky shadows & high-contrast chiaroscuro curve
-    col.rgb = pow(col.rgb, vec3(1.15));
-
     // PS1 15-bit RGB555 quantization with Bayer dithering
     float dither = bayer4x4(FRAGCOORD.xy);
     col.rgb += (dither / 32.0) * 0.9;

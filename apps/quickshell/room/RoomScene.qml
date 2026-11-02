@@ -75,14 +75,14 @@ Item {
 
         Node {
             id: anchorTerminal
-            position: Qt.vector3d(85, 95, 45)
-            eulerRotation: Qt.vector3d(0, -15, 0)
+            position: Qt.vector3d(78, 64, 34)
+            eulerRotation: Qt.vector3d(-8, 38, 0)
         }
 
         Node {
             id: anchorMusic
-            position: Qt.vector3d(90, 60, 120)
-            eulerRotation: Qt.vector3d(-10, -45, 0)
+            position: Qt.vector3d(92, 52, 92)
+            eulerRotation: Qt.vector3d(-6, 36, 0)
         }
 
         Component.onCompleted: {
@@ -95,52 +95,81 @@ Item {
         // LIGHTING (Chiaroscuro & Hard Cel-Shaded Contrast)
         // =====================================================================
 
-        // Very low ambient/fill light for pitch-black shadowed corners
+        // Ambient & Directional Fill with Crisp Shadow Casting
         DirectionalLight {
-            eulerRotation: Qt.vector3d(-45, 30, 0)
-            color: "#1a1a24"
-            ambientColor: "#08080c"
-            brightness: 0.8
+            eulerRotation: Qt.vector3d(-42, 32, 0)
+            color: "#ded8ee"
+            ambientColor: "#141318"
+            brightness: 1.15
+            castsShadow: true
+            shadowFactor: 70.0
+            shadowBias: 0.05
+            shadowMapQuality: Light.ShadowMapQualityHigh
         }
 
-        // CRT Television Cold Bluish-White Light (#80C8FF)
+        // CRT Television Cold Bluish-White Light (#80C8FF) with CRT Phosphor Flicker
         PointLight {
             id: tvLight
-            position: Qt.vector3d(-115, 98.5, 45)
+            position: Qt.vector3d(-105, 46, 12)
             color: "#80c8ff"
-            brightness: 120.0
-            linearFade: 0.02
+            brightness: 115.0
+            linearFade: 0.018
+            castsShadow: true
+            shadowFactor: 65.0
+            shadowMapQuality: Light.ShadowMapQualityMedium
+
+            SequentialAnimation on brightness {
+                loops: Animation.Infinite
+                running: true
+                NumberAnimation { to: 124.0; duration: 90; easing.type: Easing.InOutQuad }
+                NumberAnimation { to: 106.0; duration: 130; easing.type: Easing.InOutQuad }
+                NumberAnimation { to: 128.0; duration: 70; easing.type: Easing.InOutQuad }
+                NumberAnimation { to: 112.0; duration: 110; easing.type: Easing.InOutQuad }
+            }
         }
 
         // Bedside Lamp Warm Amber-Yellow Light (#FFAA33)
         PointLight {
             id: deskLampLight
-            position: Qt.vector3d(62, 65, -120)
+            position: Qt.vector3d(62, 54, -120)
             color: "#ffaa33"
-            brightness: 80.0
-            linearFade: 0.04
+            brightness: 88.0
+            linearFade: 0.032
+            castsShadow: true
+            shadowFactor: 60.0
+            shadowMapQuality: Light.ShadowMapQualityMedium
         }
 
-        // PC Workstation / Laptop Phosphor Glow
+        // PC Workstation / Laptop Phosphor Glow (#40E0D0)
         PointLight {
             id: monitorLight
-            position: Qt.vector3d(85, 88, 15)
+            position: Qt.vector3d(112, 60, 10)
             color: "#40e0d0"
-            brightness: 35.0
-            linearFade: 0.03
+            brightness: 40.0
+            linearFade: 0.025
+        }
+
+        // Digital Alarm Clock Red LED Bloom Light (#FF1A1A)
+        PointLight {
+            id: clockLight
+            position: Qt.vector3d(54, 22, -104)
+            color: "#ff1a1a"
+            brightness: 18.0
+            linearFade: 0.12
         }
 
         // =====================================================================
-        // 1. ARCHITECTURAL SHELL & UVS (models_obj: floor, left, center, right)
+        // 1. ARCHITECTURAL SHELL & ENVIRONMENT
         // =====================================================================
         Node {
             id: architecturalShell
 
-            // Floor (models_obj/room_floor.obj)
+            // Floor (floorFull_mesh.mesh)
             Model {
                 id: floorMesh
-                source: root.assetsRoot + "models_obj/room_floor.obj"
+                source: root.assetsRoot + "models_mesh/meshes/floorFull_mesh.mesh"
                 position: Qt.vector3d(0, 0, 0)
+                scale: Qt.vector3d(40, 1, 40)
                 materials: [
                     PrincipledMaterial {
                         baseColorMap: Texture {
@@ -151,15 +180,18 @@ Item {
                         roughness: 1.0
                         specularAmount: 0.0
                         metalness: 0.0
+                        cullMode: Material.NoCulling
                     }
                 ]
             }
 
-            // Left Wall (models_obj/wall_left.obj) - Posters Atlas: Nu-Metal (Korn, Slipknot, Deftones)
+            // Left Wall (wall_mesh.mesh) - Posters Atlas: Nu-Metal (Korn, Slipknot)
             Model {
                 id: wallLeftMesh
-                source: root.assetsRoot + "models_obj/wall_left.obj"
+                source: root.assetsRoot + "models_mesh/meshes/wall_mesh.mesh"
                 position: Qt.vector3d(-200, 120, 0)
+                eulerRotation: Qt.vector3d(0, 90, 0)
+                scale: Qt.vector3d(40, 18.6, 1)
                 materials: [
                     PrincipledMaterial {
                         baseColorMap: Texture {
@@ -167,15 +199,18 @@ Item {
                         }
                         roughness: 0.85
                         metalness: 0.05
+                        cullMode: Material.NoCulling
                     }
                 ]
             }
 
-            // Center Wall (models_obj/wall_center.obj) - Posters Atlas: Center Band (Linkin Park, Deftones)
+            // Center Wall (wall_mesh.mesh) - Posters Atlas: Center Band (Linkin Park, Deftones)
             Model {
                 id: wallCenterMesh
-                source: root.assetsRoot + "models_obj/wall_center.obj"
+                source: root.assetsRoot + "models_mesh/meshes/wall_mesh.mesh"
                 position: Qt.vector3d(0, 120, -200)
+                eulerRotation: Qt.vector3d(0, 0, 0)
+                scale: Qt.vector3d(40, 18.6, 1)
                 materials: [
                     PrincipledMaterial {
                         baseColorMap: Texture {
@@ -183,15 +218,18 @@ Item {
                         }
                         roughness: 0.85
                         metalness: 0.05
+                        cullMode: Material.NoCulling
                     }
                 ]
             }
 
-            // Right Wall (models_obj/wall_right.obj) - Posters Atlas: PS1 Game Boxes
+            // Right Wall (wall_mesh.mesh) - Posters Atlas: PS1 Game Boxes & Mecha
             Model {
                 id: wallRightMesh
-                source: root.assetsRoot + "models_obj/wall_right.obj"
+                source: root.assetsRoot + "models_mesh/meshes/wall_mesh.mesh"
                 position: Qt.vector3d(200, 120, 0)
+                eulerRotation: Qt.vector3d(0, -90, 0)
+                scale: Qt.vector3d(40, 18.6, 1)
                 materials: [
                     PrincipledMaterial {
                         baseColorMap: Texture {
@@ -199,442 +237,705 @@ Item {
                         }
                         roughness: 0.85
                         metalness: 0.05
+                        cullMode: Material.NoCulling
+                    }
+                ]
+            }
+
+            // Floor Area Rug (rugRectangle_mesh.mesh)
+            Model {
+                id: rugMesh
+                source: root.assetsRoot + "models_mesh/meshes/rugRectangle_mesh.mesh"
+                position: Qt.vector3d(5, 0.4, 25)
+                eulerRotation: Qt.vector3d(0, 5, 0)
+                scale: Qt.vector3d(12.5, 1, 14.5)
+                materials: [
+                    PrincipledMaterial {
+                        baseColorMap: Texture {
+                            source: root.assetsRoot + "textures/environment/rug_rectangle.png"
+                        }
+                        roughness: 0.95
+                        metalness: 0.0
+                        cullMode: Material.NoCulling
                     }
                 ]
             }
         }
 
         // =====================================================================
-        // 2. FURNITURE & LARGE PROPS
+        // 2. BED & SLEEP AREA
         // =====================================================================
         Node {
-            id: furnitureSection
+            id: bedArea
 
-            // TV Dresser (models_obj/dresser_tv_stand.obj)
+            // Bed Single (bedSingle_mesh.mesh)
             Model {
-                id: tvDresserMesh
-                source: root.assetsRoot + "models_obj/dresser_tv_stand.obj"
-                position: Qt.vector3d(-110, 36, 15)
-                materials: [
-                    PrincipledMaterial {
-                        baseColorMap: Texture {
-                            source: root.assetsRoot + "textures/environment/retro_dark_wood_tile.png"
-                        }
-                        roughness: 0.9
-                        metalness: 0.0
-                    }
-                ]
-            }
-
-            // Bed Frame (models_obj/bed_frame.obj)
-            Model {
-                id: bedFrameMesh
-                source: root.assetsRoot + "models_obj/bed_frame.obj"
-                position: Qt.vector3d(-10, 18.5, -95)
-                materials: [
-                    PrincipledMaterial {
-                        baseColorMap: Texture {
-                            source: root.assetsRoot + "textures/environment/retro_dark_wood_tile.png"
-                        }
-                        roughness: 0.9
-                        metalness: 0.0
-                    }
-                ]
-            }
-
-            // Bedding (models_obj/bed_mattress_duvet.obj)
-            Model {
-                id: bedDuvetMesh
-                source: root.assetsRoot + "models_obj/bed_mattress_duvet.obj"
-                position: Qt.vector3d(-10, 38.0, -95)
+                id: bedSingleMesh
+                source: root.assetsRoot + "models_mesh/meshes/bedSingle_mesh.mesh"
+                position: Qt.vector3d(-25, 0, -95)
+                eulerRotation: Qt.vector3d(0, 90, 0)
+                scale: Qt.vector3d(9.5, 9.5, 9.5)
                 materials: [
                     PrincipledMaterial {
                         baseColorMap: Texture {
                             source: root.assetsRoot + "textures/environment/duvet_charcoal_cloth_tile.png"
                         }
-                        roughness: 1.0
+                        roughness: 0.95
                         metalness: 0.0
+                    },
+                    PrincipledMaterial {
+                        baseColorMap: Texture {
+                            source: root.assetsRoot + "textures/environment/retro_dark_wood_tile.png"
+                        }
+                        roughness: 0.85
+                        metalness: 0.0
+                    },
+                    PrincipledMaterial {
+                        baseColor: "#6a6e74"
+                        roughness: 0.4
+                        metalness: 0.6
                     }
                 ]
             }
 
-            // Folded Band T-Shirt Graphic Skull Decal on Bed Duvet
+            // Long Head Pillow (pillowLong_mesh.mesh)
             Model {
-                source: "#Rectangle"
-                scale: Qt.vector3d(0.48, 0.42, 1)
-                position: Qt.vector3d(-10, 49.2, -75)
-                eulerRotation: Qt.vector3d(-90, 8, 0)
+                id: pillowLongMesh
+                source: root.assetsRoot + "models_mesh/meshes/pillowLong_mesh.mesh"
+                position: Qt.vector3d(-25, 29.5, -138)
+                eulerRotation: Qt.vector3d(15, 90, 0)
+                scale: Qt.vector3d(9.0, 9.0, 9.0)
+                materials: [
+                    PrincipledMaterial {
+                        baseColorMap: Texture {
+                            source: root.assetsRoot + "textures/environment/pillow_fabric_tile.png"
+                        }
+                        roughness: 0.9
+                    }
+                ]
+            }
+
+            // Band T-Shirt Spread Across Bed (t_Shirt_male_mesh.mesh)
+            Model {
+                id: bedShirtMesh
+                source: root.assetsRoot + "models_mesh/meshes/t_Shirt_male_mesh.mesh"
+                position: Qt.vector3d(-22, 28.5, -85)
+                eulerRotation: Qt.vector3d(0, 25, 0)
+                scale: Qt.vector3d(36, 36, 36)
                 materials: [
                     PrincipledMaterial {
                         baseColorMap: Texture {
                             source: root.assetsRoot + "textures/props/prop_band_shirt_skull.png"
                         }
-                        roughness: 1.0
+                        roughness: 0.95
                     }
                 ]
             }
 
-            // Nightstand (models_obj/nightstand.obj)
+            // Bedside Nightstand (cabinetBedDrawerTable_mesh.mesh)
             Model {
                 id: nightstandMesh
-                source: root.assetsRoot + "models_obj/nightstand.obj"
-                position: Qt.vector3d(62, 26, -120)
+                source: root.assetsRoot + "models_mesh/meshes/cabinetBedDrawerTable_mesh.mesh"
+                position: Qt.vector3d(62, 0, -120)
+                eulerRotation: Qt.vector3d(0, -90, 0)
+                scale: Qt.vector3d(11.0, 11.0, 11.0)
                 materials: [
                     PrincipledMaterial {
                         baseColorMap: Texture {
                             source: root.assetsRoot + "textures/environment/retro_dark_wood_tile.png"
                         }
-                        roughness: 0.9
-                        metalness: 0.0
+                        roughness: 0.85
                     }
                 ]
             }
 
-            // Bedside Brass Lamp (propped on nightstand top)
-            Node {
-                position: Qt.vector3d(62, 51, -120)
-
-                Model {
-                    source: "#Cylinder"
-                    scale: Qt.vector3d(0.18, 0.28, 0.18)
-                    position: Qt.vector3d(0, 14, 0)
-                    materials: [
-                        PrincipledMaterial {
-                            baseColorMap: Texture {
-                                source: root.assetsRoot + "textures/props/prop_nightstand_lamp.png"
-                            }
-                            emissiveFactor: Qt.vector3d(0.8, 0.6, 0.2)
-                            roughness: 0.8
-                        }
-                    ]
-                }
-            }
-
-            // Computer Desk (models_obj/computer_desk.obj)
+            // Bedside Round Table Lamp (lampRoundTable_mesh.mesh)
             Model {
-                id: computerDeskMesh
-                source: root.assetsRoot + "models_obj/computer_desk.obj"
-                position: Qt.vector3d(115, 38.5, 10)
+                id: lampMesh
+                source: root.assetsRoot + "models_mesh/meshes/lampRoundTable_mesh.mesh"
+                position: Qt.vector3d(62, 29.0, -120)
+                scale: Qt.vector3d(9.0, 9.0, 9.0)
                 materials: [
                     PrincipledMaterial {
                         baseColorMap: Texture {
-                            source: root.assetsRoot + "textures/environment/retro_dark_wood_tile.png"
+                            source: root.assetsRoot + "textures/props/prop_nightstand_lamp.png"
                         }
-                        roughness: 0.9
-                        metalness: 0.0
-                    }
-                ]
-            }
-        }
-
-        // =====================================================================
-        // 3. ELECTRONICS & EMISSIVES (CRT TV, PS1 Console, Alarm Clock, CRT PC)
-        // =====================================================================
-        Node {
-            id: electronicsSection
-
-            // Heavy beige/black 1990s CRT Television Unit
-            Node {
-                id: crtTvNode
-                position: Qt.vector3d(-115, 98.5, 15)
-                eulerRotation: Qt.vector3d(0, 18, 0)
-
-                // TV Chassis
-                Model {
-                    source: root.assetsRoot + "models_obj/crt_tv_unit.obj"
-                    position: Qt.vector3d(0, 0, 0)
-                    materials: [
-                        PrincipledMaterial {
-                            baseColorMap: Texture {
-                                source: root.assetsRoot + "textures/props/prop_crt_tv_screen.png"
-                            }
-                            roughness: 0.6
-                        }
-                    ]
-                }
-
-                // CRT Static Screen (DefaultMaterial, NoLighting, Emissive)
-                Model {
-                    source: "#Rectangle"
-                    scale: Qt.vector3d(0.48, 0.38, 1)
-                    position: Qt.vector3d(0, 0, 25.4)
-                    materials: [
-                        DefaultMaterial {
-                            lighting: DefaultMaterial.NoLighting
-                            diffuseColor: "#80c8ff"
-                            emissiveFactor: Qt.vector3d(0.5, 0.78, 1.0)
-                            emissiveMap: Texture {
-                                source: root.assetsRoot + "textures/props/crt_tv_static_emissive.png"
-                            }
-                        }
-                    ]
-                }
-            }
-
-            // Classic 32-bit Home Game Console (PS1 aesthetic)
-            Model {
-                id: ps1ConsoleMesh
-                source: root.assetsRoot + "models_obj/ps1_console.obj"
-                position: Qt.vector3d(-58, 74.5, 20)
-                eulerRotation: Qt.vector3d(0, 12, 0)
-                materials: [
-                    PrincipledMaterial {
-                        baseColorMap: Texture {
-                            source: root.assetsRoot + "textures/props/prop_ps1_console.png"
-                        }
-                        roughness: 0.7
+                        emissiveFactor: Qt.vector3d(0.85, 0.65, 0.25)
+                        roughness: 0.5
+                        metalness: 0.3
                     }
                 ]
             }
 
-            // Digital Alarm Clock ("12:07" Red Glowing Digits on Nightstand Front)
+            // Digital Alarm Clock ("12:07" Red Glowing Digits)
             Model {
                 id: alarmClockScreen
                 source: "#Rectangle"
                 scale: Qt.vector3d(0.18, 0.10, 1)
-                position: Qt.vector3d(55, 42, -97)
+                position: Qt.vector3d(54, 21.5, -107)
                 eulerRotation: Qt.vector3d(0, -15, 0)
                 materials: [
                     DefaultMaterial {
                         lighting: DefaultMaterial.NoLighting
-                        diffuseColor: "#ff2222"
-                        emissiveFactor: Qt.vector3d(1.0, 0.13, 0.13)
+                        diffuseColor: "#ff1a1a"
+                        emissiveFactor: Qt.vector3d(1.0, 0.1, 0.1)
                         emissiveMap: Texture {
                             source: root.assetsRoot + "textures/emissive/clock_led_1207_emissive.png"
                         }
                     }
                 ]
             }
+        }
 
-            // Bulky Beige 90s CRT PC Monitor
+        // =====================================================================
+        // 3. TV DRESSER & PLAYSTATION 1 SETUP
+        // =====================================================================
+        Node {
+            id: tvConsoleSection
+
+            // TV Dresser (cabinetTelevision_mesh.mesh)
             Model {
-                id: crtPcMonitorMesh
-                source: root.assetsRoot + "models_obj/crt_pc_monitor.obj"
-                position: Qt.vector3d(130, 97.0, -12)
-                eulerRotation: Qt.vector3d(0, -25, 0)
+                id: dresserMesh
+                source: root.assetsRoot + "models_mesh/meshes/cabinetTelevision_mesh.mesh"
+                position: Qt.vector3d(-122, 0, 20)
+                eulerRotation: Qt.vector3d(0, 90, 0)
+                scale: Qt.vector3d(10.5, 10.5, 10.5)
+                materials: [
+                    PrincipledMaterial {
+                        baseColorMap: Texture {
+                            source: root.assetsRoot + "textures/environment/retro_dark_wood_tile.png"
+                        }
+                        roughness: 0.85
+                    }
+                ]
+            }
+
+            // Dresser Doors (cabinetTelevisionDoors_mesh.mesh)
+            Model {
+                id: dresserDoorsMesh
+                source: root.assetsRoot + "models_mesh/meshes/cabinetTelevisionDoors_mesh.mesh"
+                position: Qt.vector3d(-122, 0, 20)
+                eulerRotation: Qt.vector3d(0, 90, 0)
+                scale: Qt.vector3d(10.5, 10.5, 10.5)
+                materials: [
+                    PrincipledMaterial {
+                        baseColorMap: Texture {
+                            source: root.assetsRoot + "textures/environment/retro_dark_wood_tile.png"
+                        }
+                        roughness: 0.85
+                    }
+                ]
+            }
+
+            // CRT TV Chassis Unit (televisionVintage_mesh.mesh)
+            Model {
+                id: crtTvMesh
+                source: root.assetsRoot + "models_mesh/meshes/televisionVintage_mesh.mesh"
+                position: Qt.vector3d(-118, 32.5, 2)
+                eulerRotation: Qt.vector3d(0, 110, 0)
+                scale: Qt.vector3d(9.5, 9.5, 9.5)
+                materials: [
+                    PrincipledMaterial {
+                        baseColorMap: Texture {
+                            source: root.assetsRoot + "textures/props/prop_crt_tv_unit.png"
+                        }
+                        roughness: 0.65
+                    }
+                ]
+            }
+
+            // CRT Television Antenna (televisionAntenna_mesh.mesh)
+            Model {
+                id: antennaMesh
+                source: root.assetsRoot + "models_mesh/meshes/televisionAntenna_mesh.mesh"
+                position: Qt.vector3d(-118, 58.2, 2)
+                eulerRotation: Qt.vector3d(0, 110, 0)
+                scale: Qt.vector3d(8.5, 8.5, 8.5)
+                materials: [
+                    PrincipledMaterial {
+                        baseColor: "#989ca0"
+                        roughness: 0.25
+                        metalness: 0.85
+                    }
+                ]
+            }
+
+            // CRT Static Glowing Screen (DefaultMaterial, NoLighting)
+            Model {
+                id: crtTvScreenMesh
+                source: "#Rectangle"
+                scale: Qt.vector3d(0.38, 0.28, 1)
+                position: Qt.vector3d(-105, 45.0, 6.5)
+                eulerRotation: Qt.vector3d(0, 110, 0)
+                materials: [
+                    DefaultMaterial {
+                        lighting: DefaultMaterial.NoLighting
+                        diffuseColor: "#80c8ff"
+                        emissiveFactor: Qt.vector3d(0.6, 0.85, 1.0)
+                        emissiveMap: Texture {
+                            source: root.assetsRoot + "textures/props/crt_tv_static_emissive.png"
+                        }
+                    }
+                ]
+            }
+
+            // PlayStation 1 Console (ps1_console_mesh.mesh)
+            Model {
+                id: ps1ConsoleMesh
+                source: root.assetsRoot + "models_mesh/meshes/ps1_console_mesh.mesh"
+                position: Qt.vector3d(-112, 32.8, 38)
+                eulerRotation: Qt.vector3d(0, 85, 0)
+                scale: Qt.vector3d(6.8, 6.8, 6.8)
+                materials: [
+                    PrincipledMaterial {
+                        baseColorMap: Texture {
+                            source: root.assetsRoot + "textures/props/prop_ps1_console.png"
+                        }
+                        roughness: 0.65
+                        metalness: 0.05
+                    }
+                ]
+            }
+
+            // PlayStation 1 Controller (ps1_controller_mesh.mesh)
+            Model {
+                id: ps1ControllerMesh
+                source: root.assetsRoot + "models_mesh/meshes/ps1_controller_mesh.mesh"
+                position: Qt.vector3d(-96, 33.0, 48)
+                eulerRotation: Qt.vector3d(0, 40, 0)
+                scale: Qt.vector3d(6.5, 6.5, 6.5)
+                materials: [
+                    PrincipledMaterial {
+                        baseColorMap: Texture {
+                            source: root.assetsRoot + "textures/props/prop_ps1_controller.png"
+                        }
+                        roughness: 0.7
+                        metalness: 0.05
+                    }
+                ]
+            }
+
+            // PS1 Game Case on Dresser (pal_case_front_mesh.mesh)
+            Model {
+                id: ps1GameCaseDresser
+                source: root.assetsRoot + "models_mesh/meshes/pal_case_front_mesh.mesh"
+                position: Qt.vector3d(-115, 33.0, 56)
+                eulerRotation: Qt.vector3d(0, 75, 0)
+                scale: Qt.vector3d(2.2, 2.2, 2.2)
+                materials: [
+                    PrincipledMaterial {
+                        baseColorMap: Texture {
+                            source: root.assetsRoot + "textures/props/prop_cd_jewel_cases.png"
+                        }
+                        roughness: 0.35
+                        metalness: 0.1
+                    }
+                ]
+            }
+        }
+
+        // =====================================================================
+        // 4. COMPUTER WORKSTATION & RETRO LAPTOP ("terminal" ANCHOR)
+        // =====================================================================
+        Node {
+            id: computerWorkstation
+
+            // Computer Desk (desk_mesh.mesh)
+            Model {
+                id: deskMesh
+                source: root.assetsRoot + "models_mesh/meshes/desk_mesh.mesh"
+                position: Qt.vector3d(120, 0, 10)
+                eulerRotation: Qt.vector3d(0, -90, 0)
+                scale: Qt.vector3d(11.5, 11.5, 11.5)
+                materials: [
+                    PrincipledMaterial {
+                        baseColorMap: Texture {
+                            source: root.assetsRoot + "textures/environment/retro_dark_wood_tile.png"
+                        }
+                        roughness: 0.85
+                    }
+                ]
+            }
+
+            // Swivel Desk Chair (chairDesk_mesh.mesh)
+            Model {
+                id: chairMesh
+                source: root.assetsRoot + "models_mesh/meshes/chairDesk_mesh.mesh"
+                position: Qt.vector3d(76, 0, 12)
+                eulerRotation: Qt.vector3d(0, 80, 0)
+                scale: Qt.vector3d(7.5, 7.5, 7.5)
+                materials: [
+                    PrincipledMaterial {
+                        baseColorMap: Texture {
+                            source: root.assetsRoot + "textures/environment/duvet_charcoal_cloth_tile.png"
+                        }
+                        roughness: 0.95
+                    }
+                ]
+            }
+
+            // Bulky Beige 90s CRT PC Monitor (computerScreen_mesh.mesh)
+            Model {
+                id: pcMonitorMesh
+                source: root.assetsRoot + "models_mesh/meshes/computerScreen_mesh.mesh"
+                position: Qt.vector3d(130, 44.5, -15)
+                eulerRotation: Qt.vector3d(0, -115, 0)
+                scale: Qt.vector3d(8.5, 8.5, 8.5)
                 materials: [
                     PrincipledMaterial {
                         baseColorMap: Texture {
                             source: root.assetsRoot + "textures/props/prop_retro_pc_monitor.png"
                         }
-                        roughness: 0.6
-                    }
-                ]
-            }
-        }
-
-        // =====================================================================
-        // 4. INTERACTIVE RETRO LAPTOP WORKSTATION ("terminal" ANCHOR)
-        // =====================================================================
-        Node {
-            id: retroLaptopWorkstation
-            position: Qt.vector3d(85, 77.8, 5)
-            eulerRotation: Qt.vector3d(0, -15, 0)
-
-            // Laptop Base Unit (models_obj/retro_laptop_base.obj)
-            Model {
-                id: laptopBaseMesh
-                source: root.assetsRoot + "models_obj/retro_laptop_base.obj"
-                position: Qt.vector3d(0, 0, 0)
-                materials: [
-                    PrincipledMaterial {
-                        baseColorMap: Texture {
-                            source: root.assetsRoot + "textures/props/prop_retro_laptop_base.png"
-                        }
-                        roughness: 0.7
+                        roughness: 0.75
                     }
                 ]
             }
 
-            // Laptop Clamshell Lid Hinge Pivot at Rear Edge of Base (Z = -14, Y = 1.75)
-            Node {
-                id: laptopHinge
-                position: Qt.vector3d(0, 1.75, -14)
-                eulerRotation: Qt.vector3d(root.laptopLidAngle, 0, 0)
-
-                // Clamshell Lid Mesh
-                Model {
-                    id: laptopLidMesh
-                    source: root.assetsRoot + "models_obj/retro_laptop_lid.obj"
-                    position: Qt.vector3d(0, 1.25, 13)
-                    eulerRotation: Qt.vector3d(90, 0, 0)
-                    materials: [
-                        PrincipledMaterial {
-                            baseColorMap: Texture {
-                                source: root.assetsRoot + "textures/props/prop_retro_laptop_lid.png"
-                            }
-                            roughness: 0.7
-                        }
-                    ]
-                }
-
-                // Inside Screen: Reveals the active tiled workspace screen when opened!
-                Model {
-                    id: laptopScreenMesh
-                    source: "#Rectangle"
-                    scale: Qt.vector3d(0.32, 0.22, 1)
-                    position: Qt.vector3d(0, 1.35, 13)
-                    eulerRotation: Qt.vector3d(90, 0, 0)
-                    materials: [
-                        DefaultMaterial {
-                            lighting: DefaultMaterial.NoLighting
-                            diffuseColor: "#40e0d0"
-                            emissiveFactor: Qt.vector3d(0.25, 0.88, 0.82)
-                        }
-                    ]
-                }
-            }
-        }
-
-        // =====================================================================
-        // 5. CLUTTER & FLOOR SCATTER (Skateboard, CDs, Cans, Guitar, Audio)
-        // =====================================================================
-        Node {
-            id: clutterPropsSection
-
-            // Complete Skateboard Lying Wheels-Down on Floor Beside Bed
+            // Active CRT Monitor Screen Display (Winamp / Windows 98)
             Model {
-                id: skateboardMesh
-                source: root.assetsRoot + "models_obj/skateboard.obj"
-                position: Qt.vector3d(35, 6.5, 35)
-                eulerRotation: Qt.vector3d(0, 20, 0)
+                id: pcMonitorScreenMesh
+                source: "#Rectangle"
+                scale: Qt.vector3d(0.24, 0.18, 1)
+                position: Qt.vector3d(125, 57.0, -13)
+                eulerRotation: Qt.vector3d(0, -115, 0)
+                materials: [
+                    DefaultMaterial {
+                        lighting: DefaultMaterial.NoLighting
+                        diffuseColor: "#00ff88"
+                        emissiveFactor: Qt.vector3d(0.4, 0.95, 0.6)
+                        emissiveMap: Texture {
+                            source: root.assetsRoot + "textures/props/prop_pc_screen_display.png"
+                        }
+                    }
+                ]
+            }
+
+            // PC Desktop Horizontal Tower (pc_tower_unit_mesh.mesh)
+            Model {
+                id: pcTowerMesh
+                source: root.assetsRoot + "models_mesh/meshes/pc_tower_unit_mesh.mesh"
+                position: Qt.vector3d(142, 0, -25)
+                eulerRotation: Qt.vector3d(0, -90, 0)
+                scale: Qt.vector3d(8.5, 8.5, 8.5)
                 materials: [
                     PrincipledMaterial {
                         baseColorMap: Texture {
-                            source: root.assetsRoot + "textures/props/prop_skateboard.png"
+                            source: root.assetsRoot + "textures/props/prop_pc_tower.png"
+                        }
+                        roughness: 0.75
+                        metalness: 0.1
+                    }
+                ]
+            }
+
+            // Beige PC Keyboard (computerKeyboard_mesh.mesh)
+            Model {
+                id: keyboardMesh
+                source: root.assetsRoot + "models_mesh/meshes/computerKeyboard_mesh.mesh"
+                position: Qt.vector3d(116, 44.8, -10)
+                eulerRotation: Qt.vector3d(0, -115, 0)
+                scale: Qt.vector3d(7.5, 7.5, 7.5)
+                materials: [
+                    PrincipledMaterial {
+                        baseColorMap: Texture {
+                            source: root.assetsRoot + "textures/props/prop_retro_pc_monitor.png"
                         }
                         roughness: 0.8
                     }
                 ]
             }
 
-            // CD Jewel Case on TV Dresser
+            // Beige PC Mouse (computerMouse_mesh.mesh)
             Model {
-                id: cdCaseDresser
-                source: root.assetsRoot + "models_obj/cd_jewel_case.obj"
-                position: Qt.vector3d(-50, 71.5, 30)
-                eulerRotation: Qt.vector3d(0, 25, 0)
+                id: mouseMesh
+                source: root.assetsRoot + "models_mesh/meshes/computerMouse_mesh.mesh"
+                position: Qt.vector3d(112, 44.8, -25)
+                eulerRotation: Qt.vector3d(0, -115, 0)
+                scale: Qt.vector3d(7.5, 7.5, 7.5)
                 materials: [
                     PrincipledMaterial {
                         baseColorMap: Texture {
-                            source: root.assetsRoot + "textures/props/prop_cd_jewel_cases.png"
+                            source: root.assetsRoot + "textures/props/prop_retro_pc_monitor.png"
                         }
-                        roughness: 0.4
+                        roughness: 0.8
                     }
                 ]
             }
 
-            // CD Jewel Case on Floor
+            // Interactive Retro Laptop Workstation (laptop_mesh.mesh)
+            Node {
+                id: laptopStation
+                position: Qt.vector3d(96, 44.5, 20)
+                eulerRotation: Qt.vector3d(0, -105, 0)
+
+                // Laptop Base
+                Model {
+                    id: laptopBaseMesh
+                    source: root.assetsRoot + "models_mesh/meshes/laptop_mesh.mesh"
+                    position: Qt.vector3d(0, 0, 0)
+                    scale: Qt.vector3d(7.5, 7.5, 7.5)
+                    materials: [
+                        PrincipledMaterial {
+                            baseColorMap: Texture {
+                                source: root.assetsRoot + "textures/props/prop_retro_laptop_base.png"
+                            }
+                            roughness: 0.7
+                            metalness: 0.1
+                        }
+                    ]
+                }
+
+                // Clamshell Opening Screen Lid
+                Node {
+                    id: laptopHinge
+                    position: Qt.vector3d(0, 3.5, -8)
+                    eulerRotation: Qt.vector3d(root.laptopLidAngle, 0, 0)
+
+                    Model {
+                        source: "#Rectangle"
+                        scale: Qt.vector3d(0.20, 0.14, 1)
+                        position: Qt.vector3d(0, 7.0, 0)
+                        eulerRotation: Qt.vector3d(90, 0, 0)
+                        materials: [
+                            DefaultMaterial {
+                                lighting: DefaultMaterial.NoLighting
+                                diffuseColor: "#40e0d0"
+                                emissiveFactor: Qt.vector3d(0.3, 0.9, 0.85)
+                                emissiveMap: Texture {
+                                    source: root.assetsRoot + "textures/props/prop_pc_screen_display.png"
+                                }
+                            }
+                        ]
+                    }
+                }
+            }
+        }
+
+        // =====================================================================
+        // 5. AUDIO CORNER & ELECTRIC GUITAR ("music" ANCHOR)
+        // =====================================================================
+        Node {
+            id: audioCorner
+
+            // Electric Guitar Component (body / neck / headstock)
+            Node {
+                id: guitarComponent
+                position: Qt.vector3d(142, 0, 42)
+                eulerRotation: Qt.vector3d(-12, -25, 14)
+                scale: Qt.vector3d(82.0, 82.0, 82.0)
+            }
+
+            // 90s Dual-Cassette Boombox Stereo (radio_mesh.mesh)
             Model {
-                id: cdCaseFloor
-                source: root.assetsRoot + "models_obj/cd_jewel_case.obj"
-                position: Qt.vector3d(-35, 1.5, 70)
-                eulerRotation: Qt.vector3d(0, 35, 0)
+                id: boomboxMesh
+                source: root.assetsRoot + "models_mesh/meshes/radio_mesh.mesh"
+                position: Qt.vector3d(135, 44.5, 32)
+                eulerRotation: Qt.vector3d(0, -110, 0)
+                scale: Qt.vector3d(5.5, 5.5, 5.5)
                 materials: [
                     PrincipledMaterial {
                         baseColorMap: Texture {
-                            source: root.assetsRoot + "textures/props/prop_cd_jewel_cases.png"
+                            source: root.assetsRoot + "textures/props/prop_boombox_radio.png"
                         }
-                        roughness: 0.4
+                        roughness: 0.6
+                        metalness: 0.3
                     }
                 ]
             }
 
-            // Exposed Compact Disc (High Specular & Metalness Reflection)
+            // Studio Over-Ear Headphones Component
+            Node {
+                id: headphonesComponent
+                position: Qt.vector3d(122, 44.8, 38)
+                eulerRotation: Qt.vector3d(80, 15, -45)
+                scale: Qt.vector3d(4.5, 4.5, 4.5)
+            }
+
+            // Bookshelf Speaker (speaker_mesh.mesh)
             Model {
-                id: compactDiscMesh
-                source: root.assetsRoot + "models_obj/cd_jewel_case.obj"
-                position: Qt.vector3d(-48, 1.5, 85)
-                eulerRotation: Qt.vector3d(0, -15, 0)
+                id: speakerMesh
+                source: root.assetsRoot + "models_mesh/meshes/speaker_mesh.mesh"
+                position: Qt.vector3d(145, 0, -45)
+                eulerRotation: Qt.vector3d(0, -75, 0)
+                scale: Qt.vector3d(9.5, 9.5, 9.5)
+                materials: [
+                    PrincipledMaterial {
+                        baseColorMap: Texture {
+                            source: root.assetsRoot + "textures/props/prop_speaker.png"
+                        }
+                        roughness: 0.8
+                        metalness: 0.05
+                    }
+                ]
+            }
+
+            // Portable CD Discman (portable_discman_mesh.mesh)
+            Model {
+                id: discmanMesh
+                source: root.assetsRoot + "models_mesh/meshes/portable_discman_mesh.mesh"
+                position: Qt.vector3d(105, 44.5, 36)
+                eulerRotation: Qt.vector3d(0, -30, 0)
+                scale: Qt.vector3d(5.5, 5.5, 5.5)
+                materials: [
+                    PrincipledMaterial {
+                        baseColor: "#808a96"
+                        roughness: 0.3
+                        metalness: 0.7
+                    }
+                ]
+            }
+
+            // Exposed Compact Disc on Desk (compact_disc_mesh.mesh)
+            Model {
+                id: deskDiscMesh
+                source: root.assetsRoot + "models_mesh/meshes/compact_disc_mesh.mesh"
+                position: Qt.vector3d(112, 44.6, 30)
+                eulerRotation: Qt.vector3d(0, -10, 0)
+                scale: Qt.vector3d(5.5, 5.5, 5.5)
                 materials: [
                     PrincipledMaterial {
                         baseColorMap: Texture {
                             source: root.assetsRoot + "textures/props/prop_compact_disc.png"
                         }
-                        roughness: 0.2
-                        metalness: 0.8
+                        roughness: 0.15
+                        metalness: 0.85
                     }
                 ]
             }
+        }
 
-            // Soda Can on Desk
-            Model {
-                id: sodaCanDesk
-                source: root.assetsRoot + "models_obj/soda_can.obj"
-                position: Qt.vector3d(65, 82.0, 5)
-                materials: [
-                    PrincipledMaterial {
-                        baseColorMap: Texture {
-                            source: root.assetsRoot + "textures/props/prop_soda_can_cola.png"
-                        }
-                        roughness: 0.35
-                        metalness: 0.6
-                    }
-                ]
+        // =====================================================================
+        // 6. CLUTTER & FLOOR SCATTER PROPS
+        // =====================================================================
+        Node {
+            id: clutterPropsSection
+
+            // Skateboard Component Lying Wheels-Down on Floor
+            Node {
+                id: skateboardComponent
+                position: Qt.vector3d(25, 0, 50)
+                eulerRotation: Qt.vector3d(0, 25, 0)
+                scale: Qt.vector3d(28.0, 28.0, 28.0)
             }
 
-            // Crushed Soda Can on Floor
+            // Discarded Band T-Shirt on Floor (t_Shirt_male_mesh.mesh)
             Model {
-                id: sodaCanFloor
-                source: root.assetsRoot + "models_obj/soda_can.obj"
-                position: Qt.vector3d(48, 4.0, 80)
-                eulerRotation: Qt.vector3d(80, 25, 0)
-                materials: [
-                    PrincipledMaterial {
-                        baseColorMap: Texture {
-                            source: root.assetsRoot + "textures/props/prop_soda_can_cola.png"
-                        }
-                        roughness: 0.35
-                        metalness: 0.6
-                    }
-                ]
-            }
-
-            // Discarded Band T-Shirt on Floor (Foreground)
-            Model {
-                source: "#Rectangle"
-                scale: Qt.vector3d(0.55, 0.42, 1)
-                position: Qt.vector3d(-18, 1.2, 110)
-                eulerRotation: Qt.vector3d(-90, -5, 0)
+                id: floorShirtMesh
+                source: root.assetsRoot + "models_mesh/meshes/t_Shirt_male_mesh.mesh"
+                position: Qt.vector3d(-15, 0.5, 95)
+                eulerRotation: Qt.vector3d(0, 18, 0)
+                scale: Qt.vector3d(42.0, 42.0, 42.0)
                 materials: [
                     PrincipledMaterial {
                         baseColorMap: Texture {
                             source: root.assetsRoot + "textures/props/prop_band_shirt_skull.png"
                         }
-                        roughness: 1.0
+                        roughness: 0.95
                     }
                 ]
             }
 
-            // Electric Guitar Propped Against Desk Frame
+            // Upright Classic Soda Can on Desk (soda_can_mesh.mesh)
             Model {
-                source: "#Cube"
-                scale: Qt.vector3d(0.30, 0.90, 0.08)
-                position: Qt.vector3d(155, 38, 25)
-                eulerRotation: Qt.vector3d(-14, -30, 18)
+                id: sodaCanDesk
+                source: root.assetsRoot + "models_mesh/meshes/soda_can_mesh.mesh"
+                position: Qt.vector3d(108, 44.5, 5)
+                scale: Qt.vector3d(32.0, 32.0, 32.0)
                 materials: [
                     PrincipledMaterial {
                         baseColorMap: Texture {
-                            source: root.assetsRoot + "textures/props/prop_electric_guitar.png"
+                            source: root.assetsRoot + "textures/props/prop_soda_can_cola.png"
                         }
-                        roughness: 0.4
-                        metalness: 0.2
+                        roughness: 0.35
+                        metalness: 0.65
                     }
                 ]
             }
 
-            // Boombox / Stereo Audio Unit on Desk ("music" anchor framing)
+            // Crushed Soda Can on Floor (soda_can_crushed_mesh.mesh)
             Model {
-                source: "#Cube"
-                scale: Qt.vector3d(0.55, 0.30, 0.22)
-                position: Qt.vector3d(150, 84, -15)
-                eulerRotation: Qt.vector3d(0, -25, 0)
+                id: sodaCanFloor
+                source: root.assetsRoot + "models_mesh/meshes/soda_can_crushed_mesh.mesh"
+                position: Qt.vector3d(45, 0.5, 75)
+                eulerRotation: Qt.vector3d(75, 40, -15)
+                scale: Qt.vector3d(32.0, 32.0, 32.0)
                 materials: [
                     PrincipledMaterial {
                         baseColorMap: Texture {
-                            source: root.assetsRoot + "textures/atlases/desk_boombox_audio.png"
+                            source: root.assetsRoot + "textures/props/prop_soda_can_cola.png"
                         }
-                        roughness: 0.5
+                        roughness: 0.35
+                        metalness: 0.65
+                    }
+                ]
+            }
+
+            // PS1 Game CD Jewel Case on Floor (pal_case_front_mesh.mesh)
+            Model {
+                id: cdCaseFloor
+                source: root.assetsRoot + "models_mesh/meshes/pal_case_front_mesh.mesh"
+                position: Qt.vector3d(-35, 0.5, 68)
+                eulerRotation: Qt.vector3d(0, 35, 0)
+                scale: Qt.vector3d(2.2, 2.2, 2.2)
+                materials: [
+                    PrincipledMaterial {
+                        baseColorMap: Texture {
+                            source: root.assetsRoot + "textures/props/prop_cd_jewel_cases.png"
+                        }
+                        roughness: 0.35
+                        metalness: 0.1
+                    }
+                ]
+            }
+
+            // Loose Compact Disc on Floor (compact_disc_mesh.mesh)
+            Model {
+                id: cdLooseFloor
+                source: root.assetsRoot + "models_mesh/meshes/compact_disc_mesh.mesh"
+                position: Qt.vector3d(-48, 0.5, 82)
+                eulerRotation: Qt.vector3d(0, -15, 0)
+                scale: Qt.vector3d(5.5, 5.5, 5.5)
+                materials: [
+                    PrincipledMaterial {
+                        baseColorMap: Texture {
+                            source: root.assetsRoot + "textures/props/prop_compact_disc.png"
+                        }
+                        roughness: 0.15
+                        metalness: 0.85
+                    }
+                ]
+            }
+
+            // Cardboard Box Closed on Floor (cardboardBoxClosed_mesh.mesh)
+            Model {
+                id: boxClosedMesh
+                source: root.assetsRoot + "models_mesh/meshes/cardboardBoxClosed_mesh.mesh"
+                position: Qt.vector3d(140, 0, 75)
+                eulerRotation: Qt.vector3d(0, 18, 0)
+                scale: Qt.vector3d(9.5, 9.5, 9.5)
+                materials: [
+                    PrincipledMaterial {
+                        baseColorMap: Texture {
+                            source: root.assetsRoot + "textures/props/prop_cardboard_box.png"
+                        }
+                        roughness: 0.95
+                    }
+                ]
+            }
+
+            // Wire Mesh Wastebasket Trashcan (trashcan_mesh.mesh)
+            Model {
+                id: trashcanMesh
+                source: root.assetsRoot + "models_mesh/meshes/trashcan_mesh.mesh"
+                position: Qt.vector3d(142, 0, -2)
+                scale: Qt.vector3d(7.5, 7.5, 7.5)
+                materials: [
+                    PrincipledMaterial {
+                        baseColorMap: Texture {
+                            source: root.assetsRoot + "textures/props/prop_trashcan.png"
+                        }
+                        roughness: 0.7
+                        metalness: 0.4
                     }
                 ]
             }

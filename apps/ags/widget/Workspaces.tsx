@@ -5,18 +5,12 @@
 // holding client windows (a tape "side" that isn't blank).
 import { bind } from "astal"
 import AstalHyprland from "gi://AstalHyprland"
-import { roomManager } from "./RoomManager"
 
 export default function Workspaces() {
     const hypr = AstalHyprland.get_default()
 
     return <box className="Workspaces" spacing={4}>
-        <button
-            className="tape-btn"
-            onClicked={() => roomManager.travel("terminal")}
-        >
-            <label className="tape-label" label="TAPE:" />
-        </button>
+        <label className="tape-label" label="TAPE:" />
         {bind(hypr, "workspaces").as(workspaces =>
             workspaces
                 .slice()

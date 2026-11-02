@@ -145,6 +145,11 @@ let
     blockbench  # low-poly 3D model editor & animator
     f3d         # fast, lightweight 3D viewer (glTF, OBJ, FBX, STL, etc.)
     meshlab     # 3D mesh inspection, cleaning, and processing
+    qtcreator   # IDE for editing QML with graphical form and kit inspection
+    qt6.qtdeclarative   # Provides qml and qmlscene CLI binaries for direct previewing
+    qt6.qtquick3d       # Provides Qt Quick 3D engine, QML plugins, and balsam CLI tool
+    qt6.qtquicktimeline # Dependency for keyframe-based animations inside Quick 3D
+    qt6.qtshadertools   # Compiles runtime and offline shaders (.frag / .vert to .qsb)
   ];
 
   # Raster and vector image editors.

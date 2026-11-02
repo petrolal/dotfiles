@@ -7,7 +7,6 @@
 import { Variable } from "astal"
 import { App } from "astal/gtk3"
 import AstalMpris from "gi://AstalMpris"
-import { roomManager } from "./RoomManager"
 
 function fmt(seconds: number) {
     if (!Number.isFinite(seconds) || seconds < 0)
@@ -32,10 +31,7 @@ export default function Media() {
     const tick = Variable(0).poll(1000, () => Date.now())
 
     return <box className="Media">
-        <button className="vfd" onClicked={() => {
-            roomManager.travel("music");
-            App.toggleWindow("vhs-hud");
-        }}>
+        <button className="vfd" onClicked={() => App.toggleWindow("vhs-hud")}>
             <box spacing={6}>
                 {player().as(p => {
                     if (!p)
