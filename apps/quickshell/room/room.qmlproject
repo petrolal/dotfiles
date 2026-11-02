@@ -1,0 +1,22 @@
+import QmlProject
+
+Project {
+    mainFile: "RoomScene.qml"
+
+    QmlFiles {
+        directory: "."
+    }
+
+    JavaScriptFiles {
+        directory: "."
+    }
+
+    ImageFiles {
+        directory: "assets"
+    }
+
+    Files {
+        filter: "*.mesh"
+        directory: "assets"
+    }
+}

@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Exec=qtcreator %F
+Name=Qt Design Studio (Qt Creator)
+GenericName=Qt QML & 3D Scene Designer
+Icon=QtProject-qtcreator
+StartupWMClass=qtcreator
+Terminal=false
+Categories=Development;IDE;Qt;
+Keywords=studio;qt;creator;3d;qml;design;

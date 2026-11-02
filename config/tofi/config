@@ -35,3 +35,4 @@ num-results = 8
 
 horizontal = false
 hide-cursor = false
+fuzzy-match = true
